@@ -292,11 +292,17 @@
               <button class="secondary-button" type="button" id="openModelTest">测试模型</button>
             </div>
 
-            <div class="data-actions">
-              <button class="secondary-button" type="button" id="exportDataButton">导出数据</button>
-              <button class="secondary-button" type="button" id="importDataButton">导入数据</button>
+            <section class="data-transfer">
+              <div>
+                <h4 id="dataTransferTitle">数据导入 / 导出</h4>
+                <p id="dataTransferHint">从本地 JSON 导入到 Chrome，或从 Chrome 导出本地备份。API Key 不会被导出。</p>
+              </div>
+              <div class="data-actions">
+                <button class="secondary-button" type="button" id="importDataButton">本地 JSON 导入 Chrome</button>
+                <button class="secondary-button" type="button" id="exportDataButton">从 Chrome 导出本地 JSON</button>
+              </div>
               <input id="importDataInput" type="file" accept="application/json,.json" hidden />
-            </div>
+            </section>
           </form>
         </section>
       </main>

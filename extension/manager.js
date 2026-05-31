@@ -136,10 +136,12 @@ const translations = {
     defaultModel: "默认模型",
     saveSettings: "保存设置",
     testModel: "测试模型",
-    exportData: "导出数据",
-    importData: "导入数据",
-    dataExported: "数据已导出",
-    dataImported: "数据已导入",
+    dataTransfer: "数据导入 / 导出",
+    dataTransferHint: "从本地 JSON 导入到 Chrome，或从 Chrome 导出本地备份。API Key 不会被导出。",
+    exportData: "从 Chrome 导出本地 JSON",
+    importData: "本地 JSON 导入 Chrome",
+    dataExported: (paperCount, tagCount) => `已从 Chrome 导出 ${paperCount} 篇论文、${tagCount} 个标签`,
+    dataImported: (paperCount, tagCount) => `已导入到 Chrome：${paperCount} 篇论文、${tagCount} 个标签`,
     noPapers: "暂无论文",
     noTags: "暂无标签",
     noAbstract: "暂无摘要",
@@ -217,10 +219,12 @@ const translations = {
     defaultModel: "Default Model",
     saveSettings: "Save Settings",
     testModel: "Test Model",
-    exportData: "Export Data",
-    importData: "Import Data",
-    dataExported: "Data exported",
-    dataImported: "Data imported",
+    dataTransfer: "Data Import / Export",
+    dataTransferHint: "Import a local JSON file into Chrome, or export a local JSON backup from Chrome. API keys are not exported.",
+    exportData: "Export Chrome to Local JSON",
+    importData: "Import Local JSON to Chrome",
+    dataExported: (paperCount, tagCount) => `Exported ${paperCount} papers and ${tagCount} tags from Chrome`,
+    dataImported: (paperCount, tagCount) => `Imported to Chrome: ${paperCount} papers and ${tagCount} tags`,
     noPapers: "No papers yet",
     noTags: "No tags yet",
     noAbstract: "No abstract",
@@ -508,6 +512,8 @@ function applyLanguage() {
   setText("#view-settings legend", t("defaultModel"));
   setText("#settingsForm .primary-button", t("saveSettings"));
   setText("#openModelTest", t("testModel"));
+  setText("#dataTransferTitle", t("dataTransfer"));
+  setText("#dataTransferHint", t("dataTransferHint"));
   setText("#exportDataButton", t("exportData"));
   setText("#importDataButton", t("importData"));
 
@@ -1493,7 +1499,7 @@ els.exportDataButton.addEventListener("click", async () => {
   try {
     const payload = await api("/api/export");
     downloadJson(`paper-tag-library-${new Date().toISOString().slice(0, 10)}.json`, payload);
-    toast(t("dataExported"));
+    toast(t("dataExported", payload.store?.papers?.length || 0, payload.store?.tags?.length || 0));
   } catch (err) {
     toast(err.message);
   } finally {
@@ -1509,7 +1515,11 @@ els.importDataInput.addEventListener("change", async () => {
   const file = els.importDataInput.files?.[0];
   els.importDataInput.value = "";
   if (!file) return;
-  const confirmed = window.confirm(state.language === "en" ? "Importing will replace the current extension library. Continue?" : "导入会替换当前插件里的论文和标签库，是否继续？");
+  const confirmed = window.confirm(
+    state.language === "en"
+      ? "Importing will replace the current Chrome paper library. You can import an old data/store.json file or a JSON exported by this extension. Continue?"
+      : "导入会替换当前 Chrome 插件里的论文和标签库。你可以选择旧本地服务的 data/store.json，或本插件导出的 JSON。是否继续？"
+  );
   if (!confirmed) return;
 
   const done = setBusy(els.importDataButton, state.language === "en" ? "Importing..." : "导入中...");
@@ -1526,7 +1536,7 @@ els.importDataInput.addEventListener("change", async () => {
     state.activePaperId = null;
     state.activeTagId = null;
     renderAll();
-    toast(t("dataImported"));
+    toast(t("dataImported", state.papers.length, state.tags.length));
   } catch (err) {
     toast(err.message);
   } finally {

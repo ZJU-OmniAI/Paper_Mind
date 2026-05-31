@@ -710,6 +710,28 @@ fieldset {
   align-items: center;
 }
 
+.data-transfer {
+  display: grid;
+  gap: 10px;
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+}
+
+.data-transfer h4,
+.data-transfer p {
+  margin: 0;
+}
+
+.data-transfer h4 {
+  font-size: 15px;
+}
+
+.data-transfer p {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
 .data-actions {
   display: flex;
   flex-wrap: wrap;

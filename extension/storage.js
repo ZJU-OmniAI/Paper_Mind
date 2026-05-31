@@ -815,7 +815,9 @@ export async function handleApi(path, options = {}) {
   if (method === "GET" && url.pathname === "/api/export") {
     return response(200, {
       exportedAt: nowIso(),
-      version: 1,
+      format: "paper-tag-library-store",
+      version: 2,
+      storage: "indexeddb",
       store
     });
   }
