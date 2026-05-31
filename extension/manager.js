@@ -972,20 +972,14 @@ function renderPaperMap() {
   const query = normalizeText(els.paperMapFilter?.value || "");
   const selectedTags = new Set(state.selectedMapTagIds);
   const selectedPaper = paperById(state.selectedMapPaperId);
-  let papers = state.papers.filter((paper) => {
+  const filteredPapers = state.papers.filter((paper) => {
     const queryMatch = !query || paperSearchText(paper).includes(query);
     return queryMatch && paperMatchesSelectedMapTags(paper);
   });
-  if (selectedPaper && !papers.some((paper) => paper.id === selectedPaper.id)) papers = [selectedPaper, ...papers];
 
-  papers = papers
-    .sort((a, b) => {
-      const selectedDiff = Number(b.id === state.selectedMapPaperId) - Number(a.id === state.selectedMapPaperId);
-      if (selectedDiff) return selectedDiff;
-      const aMatch = (a.tagIds || []).filter((id) => selectedTags.has(id)).length;
-      const bMatch = (b.tagIds || []).filter((id) => selectedTags.has(id)).length;
-      return bMatch - aMatch || paperTime(b, "updatedAt") - paperTime(a, "updatedAt");
-    })
+  const filteredPaperIds = new Set(filteredPapers.map((paper) => paper.id));
+  const papers = sortPapersForLibrary(state.papers)
+    .filter((paper) => filteredPaperIds.has(paper.id))
     .slice(0, selectedTags.size || query ? 80 : 45);
 
   const visiblePaperIds = new Set(papers.map((paper) => paper.id));
