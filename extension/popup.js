@@ -147,7 +147,6 @@ function matchingTags(query) {
       else if (names.some((name) => q.includes(name))) score = 1;
       return { tag, score };
     })
-    .filter((item) => item.score > 0)
     .sort((a, b) => b.score - a.score || tagTime(b.tag) - tagTime(a.tag) || a.tag.name.localeCompare(b.tag.name, "zh-CN"))
     .map((item) => item.tag);
 }
