@@ -124,7 +124,7 @@ const translations = {
     backToPapers: "返回论文库",
     editPaper: "编辑",
     cancelEdit: "取消",
-    editTags: "编辑标签",
+    editTags: "标签",
     saveTagChanges: "保存修改",
     paperUpdated: "论文详情已更新",
     tagSimilarPapers: "标签相似论文",
@@ -210,7 +210,7 @@ const translations = {
     backToPapers: "Back to Library",
     editPaper: "Edit",
     cancelEdit: "Cancel",
-    editTags: "Edit Tags",
+    editTags: "Tags",
     saveTagChanges: "Save Changes",
     paperUpdated: "Paper details updated",
     tagSimilarPapers: "Tag-similar Papers",
@@ -727,9 +727,11 @@ function renderSimilarResults(target, matches, emptyText = "暂无相似论文")
 
 function setPaperDetailEditMode(editing) {
   state.paperDetailEditing = Boolean(editing);
-  els.paperDetailReadView.hidden = state.paperDetailEditing;
-  els.paperDetailTagForm.hidden = !state.paperDetailEditing;
-  els.editPaperDetailButton.hidden = state.paperDetailEditing;
+  els.paperDetailReadView.classList.toggle("is-hidden", state.paperDetailEditing);
+  els.paperDetailTagForm.classList.toggle("is-hidden", !state.paperDetailEditing);
+  els.editPaperDetailButton.classList.toggle("is-hidden", state.paperDetailEditing);
+  els.paperDetailReadView.setAttribute("aria-hidden", String(state.paperDetailEditing));
+  els.paperDetailTagForm.setAttribute("aria-hidden", String(!state.paperDetailEditing));
 }
 
 function renderPaperDetail(paperId) {

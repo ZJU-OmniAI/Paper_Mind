@@ -24,6 +24,10 @@ body {
   background: var(--bg);
 }
 
+.is-hidden {
+  display: none !important;
+}
+
 button,
 input,
 textarea {
