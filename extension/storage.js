@@ -38,9 +38,15 @@ const DEFAULT_STORE = {
 
 const STORE_KEY = "paperTagStore";
 const CONFIG_KEY = "paperTagConfig";
+const MIGRATION_KEY = "paperTagIndexedDbMigrationComplete";
+const DB_NAME = "paperTagLibrary";
+const DB_VERSION = 1;
+const PAPER_STORE = "papers";
+const TAG_STORE = "tags";
+const META_STORE = "meta";
 
 function clone(value) {
-  return structuredClone ? structuredClone(value) : JSON.parse(JSON.stringify(value));
+  return typeof structuredClone === "function" ? structuredClone(value) : JSON.parse(JSON.stringify(value));
 }
 
 function storageGet(keys) {
@@ -49,6 +55,57 @@ function storageGet(keys) {
 
 function storageSet(value) {
   return chrome.storage.local.set(value);
+}
+
+function storageRemove(keys) {
+  return chrome.storage.local.remove(keys);
+}
+
+function requestToPromise(request) {
+  return new Promise((resolve, reject) => {
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error || new Error("IndexedDB request failed"));
+  });
+}
+
+function transactionDone(transaction) {
+  return new Promise((resolve, reject) => {
+    transaction.oncomplete = () => resolve();
+    transaction.onabort = () => reject(transaction.error || new Error("IndexedDB transaction aborted"));
+    transaction.onerror = () => reject(transaction.error || new Error("IndexedDB transaction failed"));
+  });
+}
+
+function openDatabase() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(DB_NAME, DB_VERSION);
+    request.onupgradeneeded = () => {
+      const db = request.result;
+      if (!db.objectStoreNames.contains(PAPER_STORE)) {
+        const store = db.createObjectStore(PAPER_STORE, { keyPath: "id" });
+        store.createIndex("createdAt", "createdAt", { unique: false });
+        store.createIndex("updatedAt", "updatedAt", { unique: false });
+      }
+      if (!db.objectStoreNames.contains(TAG_STORE)) {
+        const store = db.createObjectStore(TAG_STORE, { keyPath: "id" });
+        store.createIndex("name", "name", { unique: false });
+        store.createIndex("updatedAt", "updatedAt", { unique: false });
+      }
+      if (!db.objectStoreNames.contains(META_STORE)) {
+        db.createObjectStore(META_STORE, { keyPath: "key" });
+      }
+    };
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error || new Error("IndexedDB open failed"));
+  });
+}
+
+function sortByNewest(items) {
+  return [...items].sort((a, b) => {
+    const bTime = Date.parse(b.createdAt || b.updatedAt || "") || 0;
+    const aTime = Date.parse(a.createdAt || a.updatedAt || "") || 0;
+    return bTime - aTime;
+  });
 }
 
 function publicConfig(config) {
@@ -628,21 +685,103 @@ async function testModel(config, question) {
   );
 }
 
-async function readAll() {
-  const values = await storageGet([STORE_KEY, CONFIG_KEY]);
-  const store = { ...clone(DEFAULT_STORE), ...(values[STORE_KEY] || {}) };
-  store.papers ||= [];
-  store.tags ||= [];
+async function readStoreFromIndexedDb() {
+  const db = await openDatabase();
+  try {
+    const transaction = db.transaction([PAPER_STORE, TAG_STORE, META_STORE], "readonly");
+    const paperRequest = transaction.objectStore(PAPER_STORE).getAll();
+    const tagRequest = transaction.objectStore(TAG_STORE).getAll();
+    const metaRequest = transaction.objectStore(META_STORE).getAll();
+    const [papers, tags, metaRecords] = await Promise.all([
+      requestToPromise(paperRequest),
+      requestToPromise(tagRequest),
+      requestToPromise(metaRequest)
+    ]);
+    await transactionDone(transaction);
+    const meta = clone(DEFAULT_STORE.meta);
+    for (const record of metaRecords || []) {
+      if (record?.key) meta[record.key] = record.value;
+    }
+    const store = {
+      papers: sortByNewest(papers || []),
+      tags: tags || [],
+      meta
+    };
+    ensureStoreMeta(store);
+    rebuildPaperTagLinks(store);
+    return store;
+  } finally {
+    db.close();
+  }
+}
+
+async function writeStoreToIndexedDb(store) {
   ensureStoreMeta(store);
   rebuildPaperTagLinks(store);
+  const db = await openDatabase();
+  try {
+    const transaction = db.transaction([PAPER_STORE, TAG_STORE, META_STORE], "readwrite");
+    const papers = transaction.objectStore(PAPER_STORE);
+    const tags = transaction.objectStore(TAG_STORE);
+    const meta = transaction.objectStore(META_STORE);
+    papers.clear();
+    tags.clear();
+    meta.clear();
+    for (const paper of store.papers || []) papers.put(paper);
+    for (const tag of store.tags || []) tags.put(tag);
+    for (const [key, value] of Object.entries(store.meta || {})) meta.put({ key, value });
+    await transactionDone(transaction);
+  } finally {
+    db.close();
+  }
+}
+
+async function indexedDbHasLibraryData() {
+  const db = await openDatabase();
+  try {
+    const transaction = db.transaction([PAPER_STORE, TAG_STORE], "readonly");
+    const paperCountRequest = transaction.objectStore(PAPER_STORE).count();
+    const tagCountRequest = transaction.objectStore(TAG_STORE).count();
+    const [paperCount, tagCount] = await Promise.all([
+      requestToPromise(paperCountRequest),
+      requestToPromise(tagCountRequest)
+    ]);
+    await transactionDone(transaction);
+    return paperCount > 0 || tagCount > 0;
+  } finally {
+    db.close();
+  }
+}
+
+async function migrateLegacyChromeStorageStore() {
+  const values = await storageGet([STORE_KEY, MIGRATION_KEY]);
+  if (values[MIGRATION_KEY] || !values[STORE_KEY]) return;
+  if (await indexedDbHasLibraryData()) {
+    await storageSet({ [MIGRATION_KEY]: true });
+    return;
+  }
+  const legacyStore = {
+    ...clone(DEFAULT_STORE),
+    ...values[STORE_KEY],
+    papers: values[STORE_KEY].papers || [],
+    tags: values[STORE_KEY].tags || [],
+    meta: values[STORE_KEY].meta || clone(DEFAULT_STORE.meta)
+  };
+  await writeStoreToIndexedDb(legacyStore);
+  await storageSet({ [MIGRATION_KEY]: true });
+  await storageRemove(STORE_KEY);
+}
+
+async function readAll() {
+  await migrateLegacyChromeStorageStore();
+  const values = await storageGet([CONFIG_KEY]);
+  const store = await readStoreFromIndexedDb();
   const config = { ...DEFAULT_CONFIG, ...(values[CONFIG_KEY] || {}) };
   return { store, config };
 }
 
 async function writeStore(store) {
-  ensureStoreMeta(store);
-  rebuildPaperTagLinks(store);
-  await storageSet({ [STORE_KEY]: store });
+  await writeStoreToIndexedDb(store);
 }
 
 async function writeConfig(config) {

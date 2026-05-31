@@ -28,4 +28,4 @@ dist/paper-tag-library-extension.zip
 
 ## Distribution Model
 
-This release is a pure Chrome extension. Users install the extension and can use it immediately. Papers, tags, notes, and settings are stored in Chrome extension local storage. LLM features are optional and require the user to provide their own Qwen or Zhipu API Key.
+This release is a pure Chrome extension. Users install the extension and can use it immediately. Papers, tags, abstracts, and notes are stored in the extension's IndexedDB database. Model settings and optional API keys are stored in `chrome.storage.local`. LLM features are optional and require the user to provide their own Qwen or Zhipu API Key.

@@ -1,6 +1,6 @@
 # Privacy Policy
 
-Paper Tag Library stores paper titles, abstracts, notes, tags, model settings, and optional API keys locally in Chrome extension storage on the user's computer.
+Paper Tag Library stores paper titles, abstracts, notes, and tags locally in the extension's IndexedDB database on the user's computer. Model settings and optional API keys are stored locally in `chrome.storage.local`.
 
 The extension does not require registration, does not operate a remote account service, and does not collect analytics, advertising identifiers, financial information, health information, or personal communications.
 
