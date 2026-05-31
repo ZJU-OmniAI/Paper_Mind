@@ -139,10 +139,25 @@
             <section class="panel paper-detail-main">
               <div class="panel-head detail-title-row">
                 <h3 id="paperDetailTitle">论文详情</h3>
-                <div class="chip-row" id="paperDetailTags"></div>
+                <div class="detail-title-actions">
+                  <div class="chip-row" id="paperDetailTags"></div>
+                  <button class="secondary-button small-button" type="button" id="editPaperDetailButton">编辑</button>
+                </div>
               </div>
 
-              <form class="paper-detail-editor" id="paperDetailTagForm">
+              <div class="paper-detail-read-view" id="paperDetailReadView">
+                <div class="detail-block">
+                  <h4 id="paperDetailAbstractHeading">摘要</h4>
+                  <pre id="paperDetailAbstract">暂无摘要</pre>
+                </div>
+
+                <div class="detail-block">
+                  <h4 id="paperDetailConversationHeading">对话记录</h4>
+                  <div class="markdown-body" id="paperDetailConversation"></div>
+                </div>
+              </div>
+
+              <form class="paper-detail-editor" id="paperDetailTagForm" hidden>
                 <label>
                   <span id="paperDetailTitleLabel">论文标题</span>
                   <input id="paperDetailTitleInput" autocomplete="off" required />
@@ -163,7 +178,10 @@
                   <button class="secondary-button small-button" type="button" id="addDetailTagButton">添加标签</button>
                 </div>
                 <div class="manual-tag-list" id="paperDetailTagList"></div>
-                <button class="primary-button" type="submit">保存修改</button>
+                <div class="button-row">
+                  <button class="primary-button" type="submit">保存修改</button>
+                  <button class="secondary-button" type="button" id="cancelPaperDetailEditButton">取消</button>
+                </div>
               </form>
             </section>
 

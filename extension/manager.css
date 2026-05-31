@@ -827,6 +827,19 @@ dialog::backdrop {
   margin: 14px 0;
 }
 
+.detail-title-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.paper-detail-read-view {
+  display: grid;
+  gap: 12px;
+}
+
 .paper-detail-editor {
   display: grid;
   gap: 10px;

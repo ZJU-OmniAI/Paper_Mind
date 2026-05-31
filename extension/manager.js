@@ -12,7 +12,8 @@ const state = {
   lastSyncedAt: 0,
   pendingMerges: [],
   reviewedMergeCount: 0,
-  draggedTagId: null
+  draggedTagId: null,
+  paperDetailEditing: false
 };
 
 const els = {
@@ -36,12 +37,17 @@ const els = {
   paperDetailMeta: document.querySelector("#paperDetailMeta"),
   paperDetailTitle: document.querySelector("#paperDetailTitle"),
   paperDetailTags: document.querySelector("#paperDetailTags"),
+  editPaperDetailButton: document.querySelector("#editPaperDetailButton"),
+  paperDetailReadView: document.querySelector("#paperDetailReadView"),
+  paperDetailAbstract: document.querySelector("#paperDetailAbstract"),
+  paperDetailConversation: document.querySelector("#paperDetailConversation"),
   paperDetailTagForm: document.querySelector("#paperDetailTagForm"),
   paperDetailTitleInput: document.querySelector("#paperDetailTitleInput"),
   paperDetailAbstractInput: document.querySelector("#paperDetailAbstractInput"),
   paperDetailConversationInput: document.querySelector("#paperDetailConversationInput"),
   addDetailTagButton: document.querySelector("#addDetailTagButton"),
   paperDetailTagList: document.querySelector("#paperDetailTagList"),
+  cancelPaperDetailEditButton: document.querySelector("#cancelPaperDetailEditButton"),
   tagSimilarPaperList: document.querySelector("#tagSimilarPaperList"),
   loadLlmSimilarButton: document.querySelector("#loadLlmSimilarButton"),
   llmSimilarPaperList: document.querySelector("#llmSimilarPaperList"),
@@ -116,6 +122,8 @@ const translations = {
     searchPaperOrTag: "搜索论文或标签",
     sortedByPaperCount: "按论文数量排序",
     backToPapers: "返回论文库",
+    editPaper: "编辑",
+    cancelEdit: "取消",
     editTags: "编辑标签",
     saveTagChanges: "保存修改",
     paperUpdated: "论文详情已更新",
@@ -200,6 +208,8 @@ const translations = {
     searchPaperOrTag: "Search papers or tags",
     sortedByPaperCount: "Sorted by paper count",
     backToPapers: "Back to Library",
+    editPaper: "Edit",
+    cancelEdit: "Cancel",
     editTags: "Edit Tags",
     saveTagChanges: "Save Changes",
     paperUpdated: "Paper details updated",
@@ -490,9 +500,13 @@ function applyLanguage() {
   setText("#paperLibraryTagMeta", t("sortedByPaperCount"));
 
   setText("#backToPapersButton", t("backToPapers"));
+  setText("#editPaperDetailButton", t("editPaper"));
+  setText("#cancelPaperDetailEditButton", t("cancelEdit"));
   setText("#paperDetailTitleLabel", t("paperTitle"));
   setText("#paperDetailAbstractLabel", t("abstract"));
   setText("#paperDetailConversationLabel", t("conversation"));
+  setText("#paperDetailAbstractHeading", t("abstract"));
+  setText("#paperDetailConversationHeading", t("conversation"));
   setText("#paperDetailTagForm .field-label-row span", t("editTags"));
   setText("#addDetailTagButton", t("addTag"));
   setText("#paperDetailTagForm .primary-button", t("saveTagChanges"));
@@ -711,6 +725,13 @@ function renderSimilarResults(target, matches, emptyText = "暂无相似论文")
     .join("");
 }
 
+function setPaperDetailEditMode(editing) {
+  state.paperDetailEditing = Boolean(editing);
+  els.paperDetailReadView.hidden = state.paperDetailEditing;
+  els.paperDetailTagForm.hidden = !state.paperDetailEditing;
+  els.editPaperDetailButton.hidden = state.paperDetailEditing;
+}
+
 function renderPaperDetail(paperId) {
   const paper = paperById(paperId);
   if (!paper) {
@@ -721,6 +742,9 @@ function renderPaperDetail(paperId) {
     els.paperDetailTitleInput.value = "";
     els.paperDetailAbstractInput.value = "";
     els.paperDetailConversationInput.value = "";
+    els.paperDetailAbstract.textContent = t("noAbstract");
+    els.paperDetailConversation.innerHTML = `<p class="empty">${escapeHtml(t("noConversation"))}</p>`;
+    setPaperDetailEditMode(false);
     renderSimilarResults(els.tagSimilarPaperList, []);
     return;
   }
@@ -730,10 +754,13 @@ function renderPaperDetail(paperId) {
   els.paperDetailTitle.textContent = paper.title;
   els.paperDetailMeta.textContent = `${t("created")} ${formatDate(paper.createdAt)} · ${t("updated")} ${formatDate(paper.updatedAt)}`;
   els.paperDetailTags.innerHTML = tags.length ? tags.map((tag) => `<span class="tag-chip">${escapeHtml(tag.name)}</span>`).join("") : `<span class="empty">${escapeHtml(t("noTags"))}</span>`;
+  els.paperDetailAbstract.textContent = paper.abstract || t("noAbstract");
+  els.paperDetailConversation.innerHTML = renderMarkdown(paper.conversation);
   els.paperDetailTitleInput.value = paper.title || "";
   els.paperDetailAbstractInput.value = paper.abstract || "";
   els.paperDetailConversationInput.value = paper.conversation || "";
   els.paperDetailTagList.innerHTML = (tags.length ? tags : [{ name: "" }]).map((tag) => tagInputRow(tag.name, t("tagInputPlaceholder"))).join("");
+  setPaperDetailEditMode(state.paperDetailEditing);
   renderSimilarResults(els.tagSimilarPaperList, localSimilarPapers(paper.id), t("similarEmpty"));
   els.llmSimilarPaperList.innerHTML = `<div class="empty">${escapeHtml(t("llmSimilarEmpty"))}</div>`;
 }
@@ -989,6 +1016,7 @@ function renderSearchResults(matches, llmUsed, error) {
 function showPaper(paperId) {
   const paper = state.papers.find((item) => item.id === paperId);
   if (!paper) return;
+  state.paperDetailEditing = false;
   renderPaperDetail(paper.id);
   switchView("paperDetail");
 }
@@ -1175,6 +1203,16 @@ els.paperLibraryFilter.addEventListener("input", () => renderPaperLibrary());
 
 els.backToPapersButton.addEventListener("click", () => switchView("papers"));
 
+els.editPaperDetailButton.addEventListener("click", () => {
+  setPaperDetailEditMode(true);
+  els.paperDetailTitleInput.focus();
+});
+
+els.cancelPaperDetailEditButton.addEventListener("click", () => {
+  setPaperDetailEditMode(false);
+  if (state.activePaperId) renderPaperDetail(state.activePaperId);
+});
+
 els.addDetailTagButton.addEventListener("click", () => {
   const row = createTagInputRow("", t("tagInputPlaceholder"));
   els.paperDetailTagList.append(row);
@@ -1208,6 +1246,7 @@ els.paperDetailTagForm.addEventListener("submit", async (event) => {
     state.meta = result.meta || state.meta;
     const index = state.papers.findIndex((paper) => paper.id === paperId);
     if (index >= 0) state.papers[index] = result.paper;
+    state.paperDetailEditing = false;
     renderAll();
     toast(t("paperUpdated"));
   } catch (err) {
