@@ -111,10 +111,26 @@
         </section>
 
         <section class="view" id="view-papers">
-          <div class="two-column paper-library-layout">
+          <div class="paper-library-toolbar">
+            <div class="segmented library-view-toggle" role="group" aria-label="论文库视图">
+              <button class="active" type="button" data-paper-library-mode="list">平铺列表</button>
+              <button type="button" data-paper-library-mode="map">标签映射</button>
+            </div>
+            <label class="compact-label">
+              <span id="paperLibrarySortLabel">排序</span>
+              <select id="paperLibrarySort">
+                <option value="similar">标签相似</option>
+                <option value="created">最近添加</option>
+                <option value="updated">最近更新</option>
+                <option value="title">标题</option>
+              </select>
+            </label>
+          </div>
+
+          <div class="two-column paper-library-layout" id="paperLibraryListMode">
             <section class="panel">
               <div class="panel-head">
-                <h3>全部论文</h3>
+                <h3 id="paperLibraryTitle">全部论文</h3>
                 <input class="compact-input" id="paperLibraryFilter" placeholder="搜索论文或标签" />
               </div>
               <div class="paper-list" id="paperLibraryList"></div>
@@ -122,12 +138,31 @@
 
             <section class="panel">
               <div class="panel-head">
-                <h3>全部标签</h3>
+                <h3 id="paperLibraryTagsTitle">全部标签</h3>
                 <span class="muted" id="paperLibraryTagMeta">按论文数量排序</span>
               </div>
               <div class="tag-summary-list" id="paperLibraryTagList"></div>
             </section>
           </div>
+
+          <section class="panel paper-map-panel is-hidden" id="paperLibraryMapMode">
+            <div class="panel-head">
+              <h3 id="paperMapTitle">标签-论文映射</h3>
+              <div class="paper-map-controls">
+                <input class="compact-input" id="paperMapFilter" placeholder="搜索标签或论文" />
+                <select id="paperMapMatchMode">
+                  <option value="any">包含任一标签</option>
+                  <option value="all">包含全部标签</option>
+                </select>
+              </div>
+            </div>
+            <div class="paper-map-hint" id="paperMapHint">点击标签或论文，高亮它们之间的映射关系</div>
+            <div class="paper-map-shell" id="paperMapShell">
+              <svg class="paper-map-svg" id="paperMapSvg" aria-hidden="true"></svg>
+              <div class="paper-map-column" id="paperMapTags"></div>
+              <div class="paper-map-column paper-map-papers" id="paperMapPapers"></div>
+            </div>
+          </section>
         </section>
 
         <section class="view" id="view-paper-detail">

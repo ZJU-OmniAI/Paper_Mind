@@ -17,7 +17,10 @@ const state = {
   paperDetailEditing: false,
   paperFormSubmitting: false,
   activeTopicPackId: null,
-  editingTopicPackId: null
+  editingTopicPackId: null,
+  paperLibraryMode: localStorage.getItem("paperLibraryMode") || "list",
+  selectedMapTagIds: [],
+  selectedMapPaperId: null
 };
 
 const els = {
@@ -34,6 +37,16 @@ const els = {
   paperList: document.querySelector("#paperList"),
   paperFilter: document.querySelector("#paperFilter"),
   paperLibraryFilter: document.querySelector("#paperLibraryFilter"),
+  paperLibrarySort: document.querySelector("#paperLibrarySort"),
+  paperLibraryListMode: document.querySelector("#paperLibraryListMode"),
+  paperLibraryMapMode: document.querySelector("#paperLibraryMapMode"),
+  paperMapFilter: document.querySelector("#paperMapFilter"),
+  paperMapMatchMode: document.querySelector("#paperMapMatchMode"),
+  paperMapHint: document.querySelector("#paperMapHint"),
+  paperMapShell: document.querySelector("#paperMapShell"),
+  paperMapSvg: document.querySelector("#paperMapSvg"),
+  paperMapTags: document.querySelector("#paperMapTags"),
+  paperMapPapers: document.querySelector("#paperMapPapers"),
   paperLibraryList: document.querySelector("#paperLibraryList"),
   paperLibraryTagMeta: document.querySelector("#paperLibraryTagMeta"),
   paperLibraryTagList: document.querySelector("#paperLibraryTagList"),
@@ -140,6 +153,22 @@ const translations = {
     allPapers: "全部论文",
     allTags: "全部标签",
     searchPaperOrTag: "搜索论文或标签",
+    paperLibraryListView: "平铺列表",
+    paperLibraryMapView: "标签映射",
+    paperLibrarySort: "排序",
+    sortBySimilarity: "标签相似",
+    sortByCreated: "最近添加",
+    sortByUpdated: "最近更新",
+    sortByTitle: "标题",
+    paperClusters: (count) => `${count} 个标签簇`,
+    untaggedCluster: "待归类",
+    clusterPaperCount: (count) => `${count} 篇论文`,
+    mapTitle: "标签-论文映射",
+    mapHint: "点击标签或论文，高亮它们之间的映射关系",
+    mapFilterPlaceholder: "搜索标签或论文",
+    mapMatchAny: "包含任一标签",
+    mapMatchAll: "包含全部标签",
+    mapVisibleMeta: (tagCount, paperCount) => `${tagCount} 个标签 · ${paperCount} 篇论文`,
     sortedByPaperCount: "按论文数量排序",
     backToPapers: "返回论文库",
     editPaper: "编辑",
@@ -257,6 +286,22 @@ const translations = {
     allPapers: "All Papers",
     allTags: "All Tags",
     searchPaperOrTag: "Search papers or tags",
+    paperLibraryListView: "Paper List",
+    paperLibraryMapView: "Tag Map",
+    paperLibrarySort: "Sort",
+    sortBySimilarity: "Tag similarity",
+    sortByCreated: "Recently added",
+    sortByUpdated: "Recently updated",
+    sortByTitle: "Title",
+    paperClusters: (count) => `${count} tag clusters`,
+    untaggedCluster: "Unsorted",
+    clusterPaperCount: (count) => `${count} papers`,
+    mapTitle: "Tag-Paper Map",
+    mapHint: "Click a tag or paper to highlight their mapping",
+    mapFilterPlaceholder: "Search tags or papers",
+    mapMatchAny: "Any selected tag",
+    mapMatchAll: "All selected tags",
+    mapVisibleMeta: (tagCount, paperCount) => `${tagCount} tags · ${paperCount} papers`,
     sortedByPaperCount: "Sorted by paper count",
     backToPapers: "Back to Library",
     editPaper: "Edit",
@@ -595,10 +640,22 @@ function applyLanguage() {
   setText("#view-library .panel:not(.form-panel) .panel-head h3", t("paperList"));
   setPlaceholder("#paperFilter", t("filterPapers"));
 
-  setText("#view-papers .panel:first-child .panel-head h3", t("allPapers"));
-  setText("#view-papers .panel:nth-child(2) .panel-head h3", t("allTags"));
+  setText("#paperLibraryTitle", t("allPapers"));
+  setText("#paperLibraryTagsTitle", t("allTags"));
   setPlaceholder("#paperLibraryFilter", t("searchPaperOrTag"));
   setText("#paperLibraryTagMeta", t("sortedByPaperCount"));
+  setText('[data-paper-library-mode="list"]', t("paperLibraryListView"));
+  setText('[data-paper-library-mode="map"]', t("paperLibraryMapView"));
+  setText("#paperLibrarySortLabel", t("paperLibrarySort"));
+  els.paperLibrarySort.options[0].textContent = t("sortBySimilarity");
+  els.paperLibrarySort.options[1].textContent = t("sortByCreated");
+  els.paperLibrarySort.options[2].textContent = t("sortByUpdated");
+  els.paperLibrarySort.options[3].textContent = t("sortByTitle");
+  setText("#paperMapTitle", t("mapTitle"));
+  setText("#paperMapHint", t("mapHint"));
+  setPlaceholder("#paperMapFilter", t("mapFilterPlaceholder"));
+  els.paperMapMatchMode.options[0].textContent = t("mapMatchAny");
+  els.paperMapMatchMode.options[1].textContent = t("mapMatchAll");
 
   setText("#backToPapersButton", t("backToPapers"));
   setText("#editPaperDetailButton", t("editPaper"));
@@ -769,10 +826,101 @@ function paperSearchText(paper) {
   return normalizeText(`${paper.title} ${paper.abstract} ${paper.conversation} ${tags}`);
 }
 
+function paperSemanticTagIds(paper) {
+  return (paper?.tagIds || []).filter((id) => {
+    const tag = tagById(id);
+    return tag && !isSystemTag(tag);
+  });
+}
+
+function paperTime(paper, field) {
+  return Date.parse(paper?.[field] || "") || 0;
+}
+
+function paperTagSimilarity(a, b) {
+  const aIds = new Set(paperSemanticTagIds(a));
+  const bIds = new Set(paperSemanticTagIds(b));
+  if (!aIds.size || !bIds.size) return 0;
+  const shared = [...aIds].filter((id) => bIds.has(id)).length;
+  const union = new Set([...aIds, ...bIds]).size || 1;
+  return shared / union;
+}
+
+function sortPapersForLibrary(papers) {
+  const mode = els.paperLibrarySort?.value || "similar";
+  const items = [...papers];
+  if (mode === "created") return items.sort((a, b) => paperTime(b, "createdAt") - paperTime(a, "createdAt"));
+  if (mode === "updated") return items.sort((a, b) => paperTime(b, "updatedAt") - paperTime(a, "updatedAt"));
+  if (mode === "title") return items.sort((a, b) => String(a.title || "").localeCompare(String(b.title || ""), "zh-CN"));
+  return clusterPapersByTags(items).flatMap((cluster) => cluster.papers);
+}
+
+function clusterLabelForPapers(papers) {
+  const counts = new Map();
+  for (const paper of papers) {
+    for (const id of paperSemanticTagIds(paper)) counts.set(id, (counts.get(id) || 0) + 1);
+  }
+  const names = [...counts.entries()]
+    .sort((a, b) => b[1] - a[1] || tagById(a[0])?.name.localeCompare(tagById(b[0])?.name || "", "zh-CN"))
+    .slice(0, 4)
+    .map(([id]) => tagById(id)?.name)
+    .filter(Boolean);
+  return names.length ? names.join(" / ") : t("untaggedCluster");
+}
+
+function clusterPapersByTags(papers) {
+  const tagged = [...papers]
+    .filter((paper) => paperSemanticTagIds(paper).length)
+    .sort((a, b) => paperSemanticTagIds(b).length - paperSemanticTagIds(a).length || paperTime(b, "updatedAt") - paperTime(a, "updatedAt"));
+  const clusters = [];
+  const threshold = 0.34;
+
+  for (const paper of tagged) {
+    let bestCluster = null;
+    let bestScore = 0;
+    for (const cluster of clusters) {
+      const score = Math.max(...cluster.papers.map((candidate) => paperTagSimilarity(paper, candidate)));
+      if (score > bestScore) {
+        bestScore = score;
+        bestCluster = cluster;
+      }
+    }
+    if (bestCluster && bestScore >= threshold) bestCluster.papers.push(paper);
+    else clusters.push({ papers: [paper] });
+  }
+
+  const unsorted = papers.filter((paper) => !paperSemanticTagIds(paper).length);
+  const normalized = clusters
+    .map((cluster) => ({
+      label: clusterLabelForPapers(cluster.papers),
+      papers: cluster.papers.sort((a, b) => paperTime(b, "updatedAt") - paperTime(a, "updatedAt"))
+    }))
+    .sort((a, b) => b.papers.length - a.papers.length || a.label.localeCompare(b.label, "zh-CN"));
+
+  if (unsorted.length) {
+    normalized.push({
+      label: t("untaggedCluster"),
+      papers: unsorted.sort((a, b) => paperTime(b, "updatedAt") - paperTime(a, "updatedAt"))
+    });
+  }
+  return normalized;
+}
+
 function renderPaperLibrary() {
   const query = normalizeText(els.paperLibraryFilter?.value || "");
   const visiblePapers = state.papers.filter((paper) => !query || paperSearchText(paper).includes(query));
-  els.paperLibraryList.innerHTML = renderPaperCardsHtml(visiblePapers, { includeTags: true });
+  const sortedPapers = sortPapersForLibrary(visiblePapers);
+  const sortMode = els.paperLibrarySort?.value || "similar";
+  els.paperLibraryList.innerHTML =
+    sortMode === "similar"
+      ? renderPaperClustersHtml(clusterPapersByTags(visiblePapers))
+      : renderPaperCardsHtml(sortedPapers, { includeTags: true });
+
+  document.querySelectorAll("[data-paper-library-mode]").forEach((button) => {
+    button.classList.toggle("active", button.dataset.paperLibraryMode === state.paperLibraryMode);
+  });
+  els.paperLibraryListMode.classList.toggle("is-hidden", state.paperLibraryMode !== "list");
+  els.paperLibraryMapMode.classList.toggle("is-hidden", state.paperLibraryMode !== "map");
 
   const orderedTags = [...state.tags].sort(compareTags);
   els.paperLibraryTagMeta.textContent = t("tagsMeta", orderedTags.length);
@@ -789,6 +937,150 @@ function renderPaperLibrary() {
         )
         .join("")
     : `<div class="empty">${escapeHtml(t("noTags"))}</div>`;
+  renderPaperMap();
+}
+
+function renderPaperClustersHtml(clusters) {
+  if (!clusters.length) return `<div class="empty">${escapeHtml(t("noPapers"))}</div>`;
+  return clusters
+    .map(
+      (cluster) => `
+        <section class="paper-cluster">
+          <div class="paper-cluster-head">
+            <strong>${escapeHtml(cluster.label)}</strong>
+            <span>${escapeHtml(t("clusterPaperCount", cluster.papers.length))}</span>
+          </div>
+          <div class="paper-cluster-list">
+            ${renderPaperCardsHtml(cluster.papers, { includeTags: true })}
+          </div>
+        </section>
+      `
+    )
+    .join("");
+}
+
+function paperMatchesSelectedMapTags(paper) {
+  const selected = state.selectedMapTagIds;
+  if (!selected.length) return true;
+  const ids = new Set(paper.tagIds || []);
+  if (els.paperMapMatchMode.value === "all") return selected.every((id) => ids.has(id));
+  return selected.some((id) => ids.has(id));
+}
+
+function renderPaperMap() {
+  if (!els.paperMapTags || state.paperLibraryMode !== "map") return;
+  const query = normalizeText(els.paperMapFilter?.value || "");
+  const selectedTags = new Set(state.selectedMapTagIds);
+  const selectedPaper = paperById(state.selectedMapPaperId);
+  let papers = state.papers.filter((paper) => {
+    const queryMatch = !query || paperSearchText(paper).includes(query);
+    return queryMatch && paperMatchesSelectedMapTags(paper);
+  });
+  if (selectedPaper && !papers.some((paper) => paper.id === selectedPaper.id)) papers = [selectedPaper, ...papers];
+
+  papers = papers
+    .sort((a, b) => {
+      const selectedDiff = Number(b.id === state.selectedMapPaperId) - Number(a.id === state.selectedMapPaperId);
+      if (selectedDiff) return selectedDiff;
+      const aMatch = (a.tagIds || []).filter((id) => selectedTags.has(id)).length;
+      const bMatch = (b.tagIds || []).filter((id) => selectedTags.has(id)).length;
+      return bMatch - aMatch || paperTime(b, "updatedAt") - paperTime(a, "updatedAt");
+    })
+    .slice(0, selectedTags.size || query ? 80 : 45);
+
+  const visiblePaperIds = new Set(papers.map((paper) => paper.id));
+  const tagQueryMatches = (tag) => !query || normalizeText(`${tag.name} ${(tag.aliases || []).join(" ")}`).includes(query);
+  const tags = [...state.tags]
+    .filter((tag) => {
+      if (selectedPaper && (selectedPaper.tagIds || []).includes(tag.id)) return true;
+      if (selectedTags.has(tag.id)) return true;
+      const hasVisiblePaper = (tag.paperIds || []).some((id) => visiblePaperIds.has(id));
+      return hasVisiblePaper || tagQueryMatches(tag);
+    })
+    .sort(compareTags);
+  const visibleTagIds = new Set(tags.map((tag) => tag.id));
+
+  els.paperMapHint.textContent = selectedTags.size
+    ? t("mapVisibleMeta", tags.length, papers.length)
+    : t("mapHint");
+  els.paperMapTags.innerHTML = tags.length
+    ? tags
+        .map((tag) => {
+          const selected = selectedTags.has(tag.id);
+          const relatedToPaper = selectedPaper && (selectedPaper.tagIds || []).includes(tag.id);
+          const active = selected || relatedToPaper;
+          const dimmed = (selectedTags.size || selectedPaper) && !active;
+          return `
+            <button class="map-node map-tag-node${active ? " active" : ""}${dimmed ? " dimmed" : ""}${isSystemTag(tag) ? " system" : ""}" type="button" data-map-tag-id="${tag.id}">
+              <strong>${escapeHtml(tag.name)}</strong>
+              <span>${escapeHtml(t("tagPaperCount", tag.paperIds?.length || 0))}</span>
+            </button>
+          `;
+        })
+        .join("")
+    : `<div class="empty">${escapeHtml(t("noTags"))}</div>`;
+
+  els.paperMapPapers.innerHTML = papers.length
+    ? papers
+        .map((paper) => {
+          const tagIds = new Set(paper.tagIds || []);
+          const selected = paper.id === state.selectedMapPaperId;
+          const relatedToTags = state.selectedMapTagIds.length && state.selectedMapTagIds.some((id) => tagIds.has(id));
+          const active = selected || relatedToTags;
+          const dimmed = (selectedTags.size || selectedPaper) && !active;
+          const tagsForPaper = paperTags(paper).filter((tag) => visibleTagIds.has(tag.id)).slice(0, 5);
+          return `
+            <button class="map-node map-paper-node${active ? " active" : ""}${dimmed ? " dimmed" : ""}" type="button" data-map-paper-id="${paper.id}">
+              <strong>${escapeHtml(paper.title)}</strong>
+              <span>${tagsForPaper.map((tag) => escapeHtml(tag.name)).join(" · ") || escapeHtml(t("noTags"))}</span>
+            </button>
+          `;
+        })
+        .join("")
+    : `<div class="empty">${escapeHtml(t("noPapers"))}</div>`;
+
+  requestAnimationFrame(drawPaperMapLines);
+}
+
+function drawPaperMapLines() {
+  if (!els.paperMapSvg || state.paperLibraryMode !== "map") return;
+  const shellRect = els.paperMapShell.getBoundingClientRect();
+  const width = Math.max(els.paperMapShell.scrollWidth, shellRect.width);
+  const height = Math.max(els.paperMapShell.scrollHeight, shellRect.height);
+  els.paperMapSvg.setAttribute("viewBox", `0 0 ${width} ${height}`);
+  els.paperMapSvg.setAttribute("width", String(width));
+  els.paperMapSvg.setAttribute("height", String(height));
+  const tagNodes = [...els.paperMapTags.querySelectorAll("[data-map-tag-id]")];
+  const paperNodes = [...els.paperMapPapers.querySelectorAll("[data-map-paper-id]")];
+  const paperNodeById = new Map(paperNodes.map((node) => [node.dataset.mapPaperId, node]));
+  const selectedTags = new Set(state.selectedMapTagIds);
+  const selectedPaperId = state.selectedMapPaperId;
+  const lines = [];
+  let count = 0;
+
+  for (const tagNode of tagNodes) {
+    const tag = tagById(tagNode.dataset.mapTagId);
+    if (!tag) continue;
+    for (const paperId of tag.paperIds || []) {
+      const paperNode = paperNodeById.get(paperId);
+      if (!paperNode) continue;
+      const tagRect = tagNode.getBoundingClientRect();
+      const paperRect = paperNode.getBoundingClientRect();
+      const x1 = tagRect.right - shellRect.left + els.paperMapShell.scrollLeft;
+      const y1 = tagRect.top + tagRect.height / 2 - shellRect.top + els.paperMapShell.scrollTop;
+      const x2 = paperRect.left - shellRect.left + els.paperMapShell.scrollLeft;
+      const y2 = paperRect.top + paperRect.height / 2 - shellRect.top + els.paperMapShell.scrollTop;
+      const c1 = x1 + Math.max(56, (x2 - x1) * 0.45);
+      const c2 = x2 - Math.max(56, (x2 - x1) * 0.45);
+      const active = selectedTags.has(tag.id) || selectedPaperId === paperId;
+      const dimmed = (selectedTags.size || selectedPaperId) && !active;
+      lines.push(`<path class="${active ? "active" : ""}${dimmed ? " dimmed" : ""}" d="M ${x1} ${y1} C ${c1} ${y1}, ${c2} ${y2}, ${x2} ${y2}" />`);
+      count += 1;
+      if (count >= 320) break;
+    }
+    if (count >= 320) break;
+  }
+  els.paperMapSvg.innerHTML = lines.join("");
 }
 
 function topicPackById(id) {
@@ -1464,6 +1756,41 @@ els.paperDetailTagList.addEventListener("keydown", (event) => {
 els.paperFilter.addEventListener("input", () => renderPapers());
 
 els.paperLibraryFilter.addEventListener("input", () => renderPaperLibrary());
+
+els.paperLibrarySort.addEventListener("change", () => renderPaperLibrary());
+
+document.querySelectorAll("[data-paper-library-mode]").forEach((button) => {
+  button.addEventListener("click", () => {
+    state.paperLibraryMode = button.dataset.paperLibraryMode === "map" ? "map" : "list";
+    localStorage.setItem("paperLibraryMode", state.paperLibraryMode);
+    renderPaperLibrary();
+  });
+});
+
+els.paperMapFilter.addEventListener("input", () => renderPaperMap());
+els.paperMapMatchMode.addEventListener("change", () => renderPaperMap());
+els.paperMapShell.addEventListener("scroll", () => requestAnimationFrame(drawPaperMapLines), true);
+window.addEventListener("resize", () => requestAnimationFrame(drawPaperMapLines));
+
+els.paperLibraryMapMode.addEventListener("click", (event) => {
+  const tagButton = event.target.closest("[data-map-tag-id]");
+  if (tagButton) {
+    const tagId = tagButton.dataset.mapTagId;
+    state.selectedMapPaperId = null;
+    state.selectedMapTagIds = state.selectedMapTagIds.includes(tagId)
+      ? state.selectedMapTagIds.filter((id) => id !== tagId)
+      : [...state.selectedMapTagIds, tagId];
+    renderPaperMap();
+    return;
+  }
+
+  const paperButton = event.target.closest("[data-map-paper-id]");
+  if (paperButton) {
+    state.selectedMapTagIds = [];
+    state.selectedMapPaperId = state.selectedMapPaperId === paperButton.dataset.mapPaperId ? null : paperButton.dataset.mapPaperId;
+    renderPaperMap();
+  }
+});
 
 els.backToPapersButton.addEventListener("click", () => switchView("papers"));
 
