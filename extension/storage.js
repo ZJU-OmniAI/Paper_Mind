@@ -913,6 +913,28 @@ export async function handleApi(path, options = {}) {
   }
 
   const paperMatch = url.pathname.match(/^\/api\/papers\/([^/]+)$/);
+  if (method === "DELETE" && paperMatch) {
+    const paperId = decodeURIComponent(paperMatch[1]);
+    const paper = store.papers.find((item) => item.id === paperId);
+    if (!paper) return response(404, { error: "论文不存在" });
+
+    store.papers = store.papers.filter((item) => item.id !== paperId);
+    for (const tag of store.tags) {
+      tag.paperIds = (tag.paperIds || []).filter((id) => id !== paperId);
+      tag.updatedAt = nowIso();
+    }
+    store.tags = store.tags.filter((tag) => (tag.paperIds || []).length > 0);
+    for (const tag of store.tags) {
+      tag.parentIds = (tag.parentIds || []).filter((id) => store.tags.some((item) => item.id === id));
+      tag.childIds = (tag.childIds || []).filter((id) => store.tags.some((item) => item.id === id));
+      tag.relatedIds = (tag.relatedIds || []).filter((id) => store.tags.some((item) => item.id === id));
+    }
+    rebuildPaperTagLinks(store);
+    markTagsStale(store);
+    await writeStore(store);
+    return response(200, { deletedPaperId: paperId, papers: store.papers, tags: store.tags, meta: store.meta });
+  }
+
   if (method === "PUT" && paperMatch) {
     const body = await parseBody(options);
     const paper = store.papers.find((item) => item.id === decodeURIComponent(paperMatch[1]));

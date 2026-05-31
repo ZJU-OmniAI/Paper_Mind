@@ -4,7 +4,8 @@ const state = {
   tags: [],
   currentTab: null,
   lastSyncedAt: 0,
-  language: localStorage.getItem("paperTagLanguage") || "zh"
+  language: localStorage.getItem("paperTagLanguage") || "zh",
+  paperFormSubmitting: false
 };
 
 const els = {
@@ -338,6 +339,8 @@ document.addEventListener("keydown", (event) => {
 
 els.form.addEventListener("submit", async (event) => {
   event.preventDefault();
+  if (state.paperFormSubmitting) return;
+  state.paperFormSubmitting = true;
   const button = els.form.querySelector(".primary");
   button.disabled = true;
   setMessage(t("saving"));
@@ -360,6 +363,7 @@ els.form.addEventListener("submit", async (event) => {
   } catch (err) {
     setMessage(err.message, "error");
   } finally {
+    state.paperFormSubmitting = false;
     button.disabled = false;
   }
 });

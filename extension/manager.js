@@ -13,7 +13,8 @@ const state = {
   pendingMerges: [],
   reviewedMergeCount: 0,
   draggedTagId: null,
-  paperDetailEditing: false
+  paperDetailEditing: false,
+  paperFormSubmitting: false
 };
 
 const els = {
@@ -157,6 +158,8 @@ const translations = {
     noAbstract: "暂无摘要",
     noConversation: "暂无对话记录",
     viewDetail: "查看详情",
+    deletePaper: "删除论文",
+    paperDeleted: "论文已删除，未被其他论文使用的标签也已清理",
     created: "创建",
     updated: "更新",
     similarity: "相似度",
@@ -243,6 +246,8 @@ const translations = {
     noAbstract: "No abstract",
     noConversation: "No conversation",
     viewDetail: "View Detail",
+    deletePaper: "Delete Paper",
+    paperDeleted: "Paper deleted; unused tags were cleaned up",
     created: "Created",
     updated: "Updated",
     similarity: "Similarity",
@@ -631,7 +636,7 @@ function renderPapers(target = els.paperList, papers = state.papers) {
           <div class="chip-row">
             ${tags.map((tag) => `<span class="tag-chip">${escapeHtml(tag.name)}</span>`).join("")}
           </div>
-          <button class="secondary-button" data-paper-id="${paper.id}">${escapeHtml(t("viewDetail"))}</button>
+          ${paperCardActions(paper)}
         </article>
       `;
     })
@@ -723,6 +728,15 @@ function renderSimilarResults(target, matches, emptyText = "暂无相似论文")
       `;
     })
     .join("");
+}
+
+function paperCardActions(paper) {
+  return `
+    <div class="paper-card-actions">
+      <button class="secondary-button" data-paper-id="${paper.id}" type="button">${escapeHtml(t("viewDetail"))}</button>
+      <button class="secondary-button danger-button" data-delete-paper-id="${paper.id}" type="button">${escapeHtml(t("deletePaper"))}</button>
+    </div>
+  `;
 }
 
 function setPaperDetailEditMode(editing) {
@@ -987,7 +1001,7 @@ function renderPaperCardsHtml(papers, { includeTags = false } = {}) {
             <h4>${escapeHtml(paper.title)}</h4>
             <p>${escapeHtml(truncate(paper.abstract || t("noAbstract")))}</p>
             ${includeTags ? `<div class="chip-row">${tags.map((tag) => `<span class="tag-chip">${escapeHtml(tag.name)}</span>`).join("")}</div>` : ""}
-            <button class="secondary-button" data-paper-id="${paper.id}">${escapeHtml(t("viewDetail"))}</button>
+            ${paperCardActions(paper)}
           </article>
         `;
       }
@@ -1138,6 +1152,8 @@ document.body.addEventListener("keydown", (event) => {
 
 els.paperForm.addEventListener("submit", async (event) => {
   event.preventDefault();
+  if (state.paperFormSubmitting) return;
+  state.paperFormSubmitting = true;
   const button = els.paperForm.querySelector(".primary-button");
   const done = setBusy(button, "保存中...");
   try {
@@ -1157,6 +1173,7 @@ els.paperForm.addEventListener("submit", async (event) => {
   } catch (err) {
     toast(err.message);
   } finally {
+    state.paperFormSubmitting = false;
     done();
   }
 });
@@ -1305,9 +1322,46 @@ els.searchResults.addEventListener("click", (event) => {
   renderPapers(els.searchPaperList, papersForTag(tag.id));
 });
 
-document.body.addEventListener("click", (event) => {
+document.body.addEventListener("click", async (event) => {
+  const deletePaperButton = event.target.closest("[data-delete-paper-id]");
+  if (deletePaperButton) {
+    const paper = paperById(deletePaperButton.dataset.deletePaperId);
+    if (!paper) return;
+    const confirmed = window.confirm(
+      state.language === "en"
+        ? `Delete paper "${paper.title}"? Tags that are still linked to other papers will be kept.`
+        : `删除论文「${paper.title}」？仍关联其他论文的标签会保留。`
+    );
+    if (!confirmed) return;
+
+    const done = setBusy(deletePaperButton, state.language === "en" ? "Deleting..." : "删除中...");
+    try {
+      const result = await api(`/api/papers/${encodeURIComponent(paper.id)}`, {
+        method: "DELETE"
+      });
+      state.papers = result.papers || state.papers;
+      state.tags = result.tags || state.tags;
+      state.meta = result.meta || state.meta;
+      if (state.activePaperId === paper.id) {
+        state.activePaperId = null;
+        state.paperDetailEditing = false;
+        switchView("papers");
+      }
+      renderAll();
+      toast(t("paperDeleted"));
+    } catch (err) {
+      toast(err.message);
+    } finally {
+      done();
+    }
+    return;
+  }
+
   const paperButton = event.target.closest("[data-paper-id]");
-  if (paperButton) showPaper(paperButton.dataset.paperId);
+  if (paperButton) {
+    showPaper(paperButton.dataset.paperId);
+    return;
+  }
 
   const addPaperTagButton = event.target.closest("[data-add-paper-tag]");
   if (addPaperTagButton) {
@@ -1315,6 +1369,7 @@ document.body.addEventListener("click", (event) => {
     const row = createTagInputRow("", t("tagInputPlaceholder"));
     list.append(row);
     row.querySelector(".manual-tag-input").focus();
+    return;
   }
 
   const tagButton = event.target.closest("[data-tag-id]");
