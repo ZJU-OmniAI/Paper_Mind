@@ -445,6 +445,12 @@ textarea:focus {
   font-weight: 700;
 }
 
+.muted-chip {
+  color: #4c5761;
+  border-color: #d4dce3;
+  background: #f1f4f6;
+}
+
 .paper-list {
   display: grid;
   gap: 10px;
@@ -643,6 +649,12 @@ textarea:focus {
   background: #eef8f6;
 }
 
+.tag-library-card.system-tag {
+  cursor: default;
+  border-style: dashed;
+  background: #fbfcfb;
+}
+
 .tag-library-card.dragging {
   opacity: 0.5;
 }
@@ -671,6 +683,63 @@ textarea:focus {
 .tag-detail {
   display: grid;
   gap: 14px;
+}
+
+.topics-layout {
+  grid-template-columns: minmax(360px, 0.85fr) minmax(420px, 1.15fr);
+}
+
+.topic-form {
+  display: grid;
+  gap: 14px;
+}
+
+.topic-pack-list {
+  display: grid;
+  gap: 10px;
+  max-height: 520px;
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.topic-pack-card {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.topic-pack-card.selected {
+  border-color: rgba(13, 118, 110, 0.44);
+  background: #eef8f6;
+}
+
+.topic-pack-card h4,
+.topic-pack-card p {
+  margin: 0;
+}
+
+.topic-pack-card h4 {
+  font-size: 16px;
+}
+
+.topic-pack-card p {
+  margin-top: 5px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.topic-pack-meta {
+  display: flex;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.topic-result-panel {
+  margin-top: 18px;
 }
 
 .relation-row {
@@ -1029,7 +1098,7 @@ dialog::backdrop {
   }
 
   .nav {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
   }
 
   .nav-item {

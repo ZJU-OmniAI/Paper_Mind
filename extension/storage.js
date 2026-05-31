@@ -24,6 +24,7 @@ const ZHIPU_THINKING_MODELS = new Set([
 const DEFAULT_STORE = {
   papers: [],
   tags: [],
+  topicPacks: [],
   meta: {
     tagCuration: {
       status: "stale",
@@ -40,10 +41,13 @@ const STORE_KEY = "paperTagStore";
 const CONFIG_KEY = "paperTagConfig";
 const MIGRATION_KEY = "paperTagIndexedDbMigrationComplete";
 const DB_NAME = "paperTagLibrary";
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 const PAPER_STORE = "papers";
 const TAG_STORE = "tags";
 const META_STORE = "meta";
+const TOPIC_PACK_STORE = "topicPacks";
+const UNSORTED_TAG_ID = "system-unsorted";
+const UNSORTED_TAG_NAME = "待归类";
 
 function clone(value) {
   return typeof structuredClone === "function" ? structuredClone(value) : JSON.parse(JSON.stringify(value));
@@ -94,6 +98,10 @@ function openDatabase() {
       if (!db.objectStoreNames.contains(META_STORE)) {
         db.createObjectStore(META_STORE, { keyPath: "key" });
       }
+      if (!db.objectStoreNames.contains(TOPIC_PACK_STORE)) {
+        const store = db.createObjectStore(TOPIC_PACK_STORE, { keyPath: "id" });
+        store.createIndex("updatedAt", "updatedAt", { unique: false });
+      }
     };
     request.onsuccess = () => resolve(request.result);
     request.onerror = () => reject(request.error || new Error("IndexedDB open failed"));
@@ -122,6 +130,11 @@ function publicConfig(config) {
 
 function nowIso() {
   return new Date().toISOString();
+}
+
+function ensureTopicPacks(store) {
+  store.topicPacks ||= [];
+  return store.topicPacks;
 }
 
 function ensureStoreMeta(store) {
@@ -219,6 +232,79 @@ function findTagByExactName(store, name) {
   return store.tags.find((tag) => tagKey(tag.name) === key);
 }
 
+function isSystemTag(tag) {
+  return Boolean(tag?.system) || tag?.id === UNSORTED_TAG_ID;
+}
+
+function ensureSystemTags(store) {
+  store.tags ||= [];
+  const timestamp = nowIso();
+  let unsorted =
+    store.tags.find((tag) => tag.id === UNSORTED_TAG_ID) ||
+    findTagByExactName(store, UNSORTED_TAG_NAME) ||
+    findTagByExactName(store, "Unsorted");
+
+  if (unsorted && unsorted.id !== UNSORTED_TAG_ID) {
+    const oldId = unsorted.id;
+    unsorted.id = UNSORTED_TAG_ID;
+    for (const paper of store.papers || []) {
+      paper.tagIds = uniq((paper.tagIds || []).map((id) => (id === oldId ? UNSORTED_TAG_ID : id)));
+    }
+  }
+
+  if (!unsorted) {
+    unsorted = {
+      id: UNSORTED_TAG_ID,
+      name: UNSORTED_TAG_NAME,
+      description: "添加论文时暂时不选标签，会先进入这里，之后可再整理。",
+      aliases: ["Unsorted"],
+      parentIds: [],
+      childIds: [],
+      relatedIds: [],
+      paperIds: [],
+      sources: ["system"],
+      system: true,
+      sortOrder: 999999,
+      createdAt: timestamp,
+      updatedAt: timestamp
+    };
+    store.tags.push(unsorted);
+  }
+
+  unsorted.name = UNSORTED_TAG_NAME;
+  unsorted.description ||= "添加论文时暂时不选标签，会先进入这里，之后可再整理。";
+  unsorted.aliases = uniq(["Unsorted", ...(unsorted.aliases || [])]);
+  unsorted.parentIds ||= [];
+  unsorted.childIds ||= [];
+  unsorted.relatedIds ||= [];
+  unsorted.paperIds ||= [];
+  unsorted.sources = uniq(["system", ...(unsorted.sources || [])]);
+  unsorted.system = true;
+  unsorted.sortOrder = 999999;
+  unsorted.createdAt ||= timestamp;
+  unsorted.updatedAt ||= timestamp;
+}
+
+function normalizeStore(store) {
+  store.papers ||= [];
+  store.tags ||= [];
+  ensureTopicPacks(store);
+  ensureStoreMeta(store);
+  ensureSystemTags(store);
+  rebuildPaperTagLinks(store);
+  store.topicPacks = store.topicPacks.map(normalizeTopicPack).filter(Boolean);
+  const validTagIds = new Set(store.tags.map((tag) => tag.id));
+  for (const pack of store.topicPacks) {
+    pack.includeTagIds = pack.includeTagIds.filter((id) => validTagIds.has(id));
+    pack.excludeTagIds = pack.excludeTagIds.filter((id) => validTagIds.has(id) && !pack.includeTagIds.includes(id));
+  }
+  return store;
+}
+
+function cleanupUnusedTags(store) {
+  store.tags = (store.tags || []).filter((tag) => isSystemTag(tag) || (tag.paperIds || []).length > 0);
+}
+
 function ensureTag(store, name, source, meta = {}) {
   const cleanName = normalizeTagName(name);
   if (!cleanName) return null;
@@ -274,9 +360,14 @@ function rebuildPaperTagLinks(store) {
 }
 
 function setPaperTags(store, paper, tagNames) {
+  ensureSystemTags(store);
   detachPaperFromAllTags(store, paper.id);
   paper.tagIds = [];
-  for (const name of splitManualTags(tagNames)) {
+  let names = splitManualTags(tagNames);
+  if (!names.length) names = [UNSORTED_TAG_NAME];
+  const hasNonSystemTag = names.some((name) => tagKey(name) !== tagKey(UNSORTED_TAG_NAME) && tagKey(name) !== tagKey("Unsorted"));
+  if (hasNonSystemTag) names = names.filter((name) => tagKey(name) !== tagKey(UNSORTED_TAG_NAME) && tagKey(name) !== tagKey("Unsorted"));
+  for (const name of names) {
     const tag = ensureTag(store, name, "manual");
     if (!tag) continue;
     attachPaperToTag(tag, paper.id);
@@ -387,9 +478,11 @@ function validateMergeGroup(store, group) {
 
   const target = findTagByName(store, canonicalName);
   if (!target) throw new Error(`保留标签不存在：${canonicalName}`);
+  if (isSystemTag(target)) throw new Error("系统标签不能参与合并");
 
   const missing = sourceNames.filter((name) => !findTagByName(store, name));
   if (missing.length) throw new Error(`待合并标签不存在：${missing.join("、")}`);
+  if (sourceNames.map((name) => findTagByName(store, name)).some(isSystemTag)) throw new Error("系统标签不能参与合并");
 
   const normalizedTarget = tagKey(target.name);
   const normalizedSources = sourceNames.map(tagKey).filter((name) => name !== normalizedTarget);
@@ -471,7 +564,7 @@ function similarPapersByTags(store, paperId) {
 }
 
 function tagCatalogForLLM(store) {
-  return store.tags.map((tag) => ({
+  return store.tags.filter((tag) => !isSystemTag(tag)).map((tag) => ({
     id: tag.id,
     name: tag.name,
     aliases: tag.aliases || [],
@@ -482,6 +575,43 @@ function tagCatalogForLLM(store) {
       .filter(Boolean)
       .slice(0, 8)
   }));
+}
+
+function normalizeTopicPack(input) {
+  if (!input) return null;
+  const name = String(input.name || "").trim();
+  if (!name) return null;
+  const timestamp = nowIso();
+  return {
+    id: input.id || makeId("topic"),
+    name,
+    description: String(input.description || "").trim(),
+    includeTagIds: uniq(Array.isArray(input.includeTagIds) ? input.includeTagIds.map(String) : []),
+    excludeTagIds: uniq(Array.isArray(input.excludeTagIds) ? input.excludeTagIds.map(String) : []),
+    matchMode: input.matchMode === "all" ? "all" : "any",
+    createdAt: input.createdAt || timestamp,
+    updatedAt: input.updatedAt || timestamp
+  };
+}
+
+function topicPackPapers(store, pack) {
+  const includeIds = new Set(pack.includeTagIds || []);
+  const excludeIds = new Set(pack.excludeTagIds || []);
+  return store.papers.filter((paper) => {
+    const paperTagIds = new Set(paper.tagIds || []);
+    if ([...excludeIds].some((id) => paperTagIds.has(id))) return false;
+    if (!includeIds.size) return false;
+    if (pack.matchMode === "all") return [...includeIds].every((id) => paperTagIds.has(id));
+    return [...includeIds].some((id) => paperTagIds.has(id));
+  });
+}
+
+function serializeTopicPack(store, pack) {
+  const normalized = normalizeTopicPack(pack);
+  return {
+    ...normalized,
+    paperCount: topicPackPapers(store, normalized).length
+  };
 }
 
 function parseJsonContent(content) {
@@ -716,14 +846,16 @@ async function testModel(config, question) {
 async function readStoreFromIndexedDb() {
   const db = await openDatabase();
   try {
-    const transaction = db.transaction([PAPER_STORE, TAG_STORE, META_STORE], "readonly");
+    const transaction = db.transaction([PAPER_STORE, TAG_STORE, META_STORE, TOPIC_PACK_STORE], "readonly");
     const paperRequest = transaction.objectStore(PAPER_STORE).getAll();
     const tagRequest = transaction.objectStore(TAG_STORE).getAll();
     const metaRequest = transaction.objectStore(META_STORE).getAll();
-    const [papers, tags, metaRecords] = await Promise.all([
+    const topicPackRequest = transaction.objectStore(TOPIC_PACK_STORE).getAll();
+    const [papers, tags, metaRecords, topicPacks] = await Promise.all([
       requestToPromise(paperRequest),
       requestToPromise(tagRequest),
-      requestToPromise(metaRequest)
+      requestToPromise(metaRequest),
+      requestToPromise(topicPackRequest)
     ]);
     await transactionDone(transaction);
     const meta = clone(DEFAULT_STORE.meta);
@@ -733,30 +865,31 @@ async function readStoreFromIndexedDb() {
     const store = {
       papers: sortByNewest(papers || []),
       tags: tags || [],
+      topicPacks: sortByNewest(topicPacks || []),
       meta
     };
-    ensureStoreMeta(store);
-    rebuildPaperTagLinks(store);
-    return store;
+    return normalizeStore(store);
   } finally {
     db.close();
   }
 }
 
 async function writeStoreToIndexedDb(store) {
-  ensureStoreMeta(store);
-  rebuildPaperTagLinks(store);
+  normalizeStore(store);
   const db = await openDatabase();
   try {
-    const transaction = db.transaction([PAPER_STORE, TAG_STORE, META_STORE], "readwrite");
+    const transaction = db.transaction([PAPER_STORE, TAG_STORE, META_STORE, TOPIC_PACK_STORE], "readwrite");
     const papers = transaction.objectStore(PAPER_STORE);
     const tags = transaction.objectStore(TAG_STORE);
     const meta = transaction.objectStore(META_STORE);
+    const topicPacks = transaction.objectStore(TOPIC_PACK_STORE);
     papers.clear();
     tags.clear();
     meta.clear();
+    topicPacks.clear();
     for (const paper of store.papers || []) papers.put(paper);
     for (const tag of store.tags || []) tags.put(tag);
+    for (const topicPack of store.topicPacks || []) topicPacks.put(topicPack);
     for (const [key, value] of Object.entries(store.meta || {})) meta.put({ key, value });
     await transactionDone(transaction);
   } finally {
@@ -793,6 +926,7 @@ async function migrateLegacyChromeStorageStore() {
     ...values[STORE_KEY],
     papers: values[STORE_KEY].papers || [],
     tags: values[STORE_KEY].tags || [],
+    topicPacks: values[STORE_KEY].topicPacks || [],
     meta: values[STORE_KEY].meta || clone(DEFAULT_STORE.meta)
   };
   await writeStoreToIndexedDb(legacyStore);
@@ -844,7 +978,7 @@ export async function handleApi(path, options = {}) {
     return response(200, {
       exportedAt: nowIso(),
       format: "paper-tag-library-store",
-      version: 2,
+      version: 3,
       storage: "indexeddb",
       store
     });
@@ -859,9 +993,10 @@ export async function handleApi(path, options = {}) {
     const nextStore = {
       papers: importedStore.papers,
       tags: importedStore.tags,
+      topicPacks: importedStore.topicPacks || [],
       meta: importedStore.meta || clone(DEFAULT_STORE.meta)
     };
-    ensureStoreMeta(nextStore);
+    normalizeStore(nextStore);
     await writeStore(nextStore);
     return response(200, { ...nextStore, config: publicConfig(config) });
   }
@@ -964,7 +1099,7 @@ export async function handleApi(path, options = {}) {
       tag.paperIds = (tag.paperIds || []).filter((id) => id !== paperId);
       tag.updatedAt = nowIso();
     }
-    store.tags = store.tags.filter((tag) => (tag.paperIds || []).length > 0);
+    cleanupUnusedTags(store);
     for (const tag of store.tags) {
       tag.parentIds = (tag.parentIds || []).filter((id) => store.tags.some((item) => item.id === id));
       tag.childIds = (tag.childIds || []).filter((id) => store.tags.some((item) => item.id === id));
@@ -1007,14 +1142,56 @@ export async function handleApi(path, options = {}) {
     return response(200, { matches, llmUsed, error });
   }
 
+  if (method === "POST" && url.pathname === "/api/topic-packs") {
+    const body = await parseBody(options);
+    const pack = normalizeTopicPack(body);
+    if (!pack) return response(400, { error: "主题包名称不能为空" });
+    if (!pack.includeTagIds.length) return response(400, { error: "主题包至少需要包含一个标签" });
+    const validTagIds = new Set(store.tags.map((tag) => tag.id));
+    pack.includeTagIds = pack.includeTagIds.filter((id) => validTagIds.has(id));
+    pack.excludeTagIds = pack.excludeTagIds.filter((id) => validTagIds.has(id) && !pack.includeTagIds.includes(id));
+    if (!pack.includeTagIds.length) return response(400, { error: "主题包至少需要包含一个有效标签" });
+    store.topicPacks.unshift(pack);
+    await writeStore(store);
+    return response(201, { topicPack: serializeTopicPack(store, pack), topicPacks: store.topicPacks, papers: store.papers, tags: store.tags, meta: store.meta });
+  }
+
+  const topicPackMatch = url.pathname.match(/^\/api\/topic-packs\/([^/]+)$/);
+  if (method === "PUT" && topicPackMatch) {
+    const body = await parseBody(options);
+    const id = decodeURIComponent(topicPackMatch[1]);
+    const index = store.topicPacks.findIndex((pack) => pack.id === id);
+    if (index < 0) return response(404, { error: "主题包不存在" });
+    const pack = normalizeTopicPack({ ...store.topicPacks[index], ...body, id, createdAt: store.topicPacks[index].createdAt, updatedAt: nowIso() });
+    if (!pack) return response(400, { error: "主题包名称不能为空" });
+    const validTagIds = new Set(store.tags.map((tag) => tag.id));
+    pack.includeTagIds = pack.includeTagIds.filter((tagId) => validTagIds.has(tagId));
+    pack.excludeTagIds = pack.excludeTagIds.filter((tagId) => validTagIds.has(tagId) && !pack.includeTagIds.includes(tagId));
+    if (!pack.includeTagIds.length) return response(400, { error: "主题包至少需要包含一个有效标签" });
+    store.topicPacks[index] = pack;
+    await writeStore(store);
+    return response(200, { topicPack: serializeTopicPack(store, pack), topicPacks: store.topicPacks, papers: store.papers, tags: store.tags, meta: store.meta });
+  }
+
+  if (method === "DELETE" && topicPackMatch) {
+    const id = decodeURIComponent(topicPackMatch[1]);
+    const before = store.topicPacks.length;
+    store.topicPacks = store.topicPacks.filter((pack) => pack.id !== id);
+    if (store.topicPacks.length === before) return response(404, { error: "主题包不存在" });
+    await writeStore(store);
+    return response(200, { deletedTopicPackId: id, topicPacks: store.topicPacks, papers: store.papers, tags: store.tags, meta: store.meta });
+  }
+
   const tagMatch = url.pathname.match(/^\/api\/tags\/([^/]+)$/);
   if (method === "DELETE" && tagMatch) {
     const tagId = decodeURIComponent(tagMatch[1]);
     const tag = store.tags.find((item) => item.id === tagId);
     if (!tag) return response(404, { error: "标签不存在" });
+    if (isSystemTag(tag)) return response(400, { error: "系统标签不能删除" });
 
     for (const paper of store.papers) {
       paper.tagIds = (paper.tagIds || []).filter((id) => id !== tagId);
+      if (!paper.tagIds.length) paper.tagIds = [UNSORTED_TAG_ID];
       paper.updatedAt = nowIso();
     }
     for (const item of store.tags) {

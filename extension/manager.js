@@ -3,6 +3,7 @@ import { handleApi } from "./storage.js";
 const state = {
   papers: [],
   tags: [],
+  topicPacks: [],
   meta: {},
   config: {},
   language: localStorage.getItem("paperTagLanguage") || "zh",
@@ -14,7 +15,9 @@ const state = {
   reviewedMergeCount: 0,
   draggedTagId: null,
   paperDetailEditing: false,
-  paperFormSubmitting: false
+  paperFormSubmitting: false,
+  activeTopicPackId: null,
+  editingTopicPackId: null
 };
 
 const els = {
@@ -57,6 +60,21 @@ const els = {
   searchResults: document.querySelector("#searchResults"),
   activeSearchLabel: document.querySelector("#activeSearchLabel"),
   searchPaperList: document.querySelector("#searchPaperList"),
+  topicPackForm: document.querySelector("#topicPackForm"),
+  topicFormTitle: document.querySelector("#topicFormTitle"),
+  cancelTopicEditButton: document.querySelector("#cancelTopicEditButton"),
+  topicPackName: document.querySelector("#topicPackName"),
+  topicPackDescription: document.querySelector("#topicPackDescription"),
+  addTopicIncludeTagButton: document.querySelector("#addTopicIncludeTagButton"),
+  topicIncludeTagList: document.querySelector("#topicIncludeTagList"),
+  addTopicExcludeTagButton: document.querySelector("#addTopicExcludeTagButton"),
+  topicExcludeTagList: document.querySelector("#topicExcludeTagList"),
+  saveTopicPackButton: document.querySelector("#saveTopicPackButton"),
+  topicPackList: document.querySelector("#topicPackList"),
+  topicListMeta: document.querySelector("#topicListMeta"),
+  topicResultTitle: document.querySelector("#topicResultTitle"),
+  topicResultMeta: document.querySelector("#topicResultMeta"),
+  topicPaperList: document.querySelector("#topicPaperList"),
   tagTree: document.querySelector("#tagTree"),
   tagDetail: document.querySelector("#tagDetail"),
   tagCurationStatus: document.querySelector("#tagCurationStatus"),
@@ -102,6 +120,7 @@ const translations = {
     papers: "论文库",
     paperDetail: "论文详情",
     search: "智能检索",
+    topics: "研究主题包",
     tags: "标签库",
     settings: "模型设置",
     paperCount: "论文",
@@ -137,6 +156,33 @@ const translations = {
     searchTags: "检索标签",
     matchedPapers: "匹配论文",
     chooseTagForPapers: "选择一个标签查看论文",
+    newTopicPack: "新建主题包",
+    editTopicPack: "编辑主题包",
+    topicName: "主题名称",
+    topicNamePlaceholder: "例如 RAG Evaluation",
+    topicDescription: "说明",
+    topicDescriptionPlaceholder: "这个主题包用来聚合哪类论文",
+    topicMatchMode: "匹配方式",
+    topicMatchAny: "包含任一标签",
+    topicMatchAll: "包含全部标签",
+    topicIncludeTags: "包含标签",
+    topicExcludeTags: "排除标签",
+    topicPacks: "主题包",
+    topicPacksMeta: (count) => `${count} 个主题包`,
+    topicPackPapers: "主题包论文",
+    chooseTopicPack: "选择一个主题包查看聚合论文",
+    noTopicPacks: "暂无主题包",
+    saveTopicPack: "保存主题包",
+    updateTopicPack: "保存修改",
+    cancelTopicEdit: "取消编辑",
+    topicSaved: "主题包已保存",
+    topicUpdated: "主题包已更新",
+    topicDeleted: "主题包已删除",
+    topicNeedsTags: "主题包至少需要包含一个标签",
+    includeTagModeAny: "任一",
+    includeTagModeAll: "全部",
+    edit: "编辑",
+    delete: "删除",
     tagLibrary: "标签库",
     uncurated: "未整理",
     generateMergeSuggestions: "LLM 生成合并建议",
@@ -191,6 +237,7 @@ const translations = {
     papers: "Paper Library",
     paperDetail: "Paper Detail",
     search: "Smart Search",
+    topics: "Topic Packs",
     tags: "Tags",
     settings: "Model Settings",
     paperCount: "Papers",
@@ -226,6 +273,33 @@ const translations = {
     searchTags: "Search Tags",
     matchedPapers: "Matched Papers",
     chooseTagForPapers: "Select a tag to view papers",
+    newTopicPack: "New Topic Pack",
+    editTopicPack: "Edit Topic Pack",
+    topicName: "Topic name",
+    topicNamePlaceholder: "e.g. RAG Evaluation",
+    topicDescription: "Description",
+    topicDescriptionPlaceholder: "What kind of papers this topic pack gathers",
+    topicMatchMode: "Match Mode",
+    topicMatchAny: "Any included tag",
+    topicMatchAll: "All included tags",
+    topicIncludeTags: "Include Tags",
+    topicExcludeTags: "Exclude Tags",
+    topicPacks: "Topic Packs",
+    topicPacksMeta: (count) => `${count} topic packs`,
+    topicPackPapers: "Topic Papers",
+    chooseTopicPack: "Select a topic pack to view aggregated papers",
+    noTopicPacks: "No topic packs yet",
+    saveTopicPack: "Save Topic Pack",
+    updateTopicPack: "Save Changes",
+    cancelTopicEdit: "Cancel Edit",
+    topicSaved: "Topic pack saved",
+    topicUpdated: "Topic pack updated",
+    topicDeleted: "Topic pack deleted",
+    topicNeedsTags: "A topic pack needs at least one included tag",
+    includeTagModeAny: "Any",
+    includeTagModeAll: "All",
+    edit: "Edit",
+    delete: "Delete",
     tagLibrary: "Tag Library",
     uncurated: "Not Reviewed",
     generateMergeSuggestions: "Generate Merge Suggestions",
@@ -423,6 +497,25 @@ function normalizeText(value) {
   return String(value || "").trim().toLocaleLowerCase("zh-CN");
 }
 
+function uniq(values) {
+  return [...new Set(values.filter(Boolean))];
+}
+
+function isSystemTag(tag) {
+  return Boolean(tag?.system) || tag?.id === "system-unsorted";
+}
+
+function tagSortValue(tag) {
+  return isSystemTag(tag) ? 1 : 0;
+}
+
+function compareTags(a, b) {
+  const systemDiff = tagSortValue(a) - tagSortValue(b);
+  if (systemDiff) return systemDiff;
+  const countDiff = (b.paperIds?.length || 0) - (a.paperIds?.length || 0);
+  return countDiff || a.name.localeCompare(b.name, "zh-CN");
+}
+
 function papersForTag(tagId, includeChildren = false) {
   const ids = new Set([tagId]);
   if (includeChildren) collectChildTagIds(tagId, ids);
@@ -481,6 +574,7 @@ function applyLanguage() {
   document.querySelector('[data-view="library"]').textContent = t("library");
   document.querySelector('[data-view="papers"]').textContent = t("papers");
   document.querySelector('[data-view="search"]').textContent = t("search");
+  document.querySelector('[data-view="topics"]').textContent = t("topics");
   document.querySelector('[data-view="tags"]').textContent = t("tags");
   document.querySelector('[data-view="settings"]').textContent = t("settings");
   document.querySelectorAll(".stats small")[0].textContent = t("paperCount");
@@ -527,6 +621,24 @@ function applyLanguage() {
   setText("#view-search .panel:nth-child(2) .panel-head h3", t("matchedPapers"));
   if (!state.searchTagId) setText("#activeSearchLabel", t("chooseTagForPapers"));
 
+  setText("#topicFormTitle", state.editingTopicPackId ? t("editTopicPack") : t("newTopicPack"));
+  setText("#topicNameLabel", t("topicName"));
+  setPlaceholder("#topicPackName", t("topicNamePlaceholder"));
+  setText("#topicDescriptionLabel", t("topicDescription"));
+  setPlaceholder("#topicPackDescription", t("topicDescriptionPlaceholder"));
+  setText("#topicMatchModeLegend", t("topicMatchMode"));
+  setText("#topicMatchAnyLabel", t("topicMatchAny"));
+  setText("#topicMatchAllLabel", t("topicMatchAll"));
+  setText("#topicIncludeTagsLabel", t("topicIncludeTags"));
+  setText("#topicExcludeTagsLabel", t("topicExcludeTags"));
+  setText("#addTopicIncludeTagButton", t("addTag"));
+  setText("#addTopicExcludeTagButton", t("addTag"));
+  setText("#saveTopicPackButton", state.editingTopicPackId ? t("updateTopicPack") : t("saveTopicPack"));
+  setText("#cancelTopicEditButton", t("cancelTopicEdit"));
+  setText("#topicListTitle", t("topicPacks"));
+  setText("#topicResultTitle", t("topicPackPapers"));
+  if (!state.activeTopicPackId) setText("#topicResultMeta", t("chooseTopicPack"));
+
   setText("#view-tags .panel:first-child .panel-head h3", t("tagLibrary"));
   setText("#refreshGraphButton", t("generateMergeSuggestions"));
   if (!state.activeTagId) {
@@ -551,6 +663,7 @@ async function loadState() {
   const payload = await api("/api/state");
   state.papers = payload.papers || [];
   state.tags = payload.tags || [];
+  state.topicPacks = payload.topicPacks || [];
   state.meta = payload.meta || {};
   state.config = payload.config || {};
   state.lastSyncedAt = Date.now();
@@ -563,6 +676,7 @@ async function syncState({ render = false, force = false } = {}) {
   const payload = await api("/api/state");
   state.papers = payload.papers || [];
   state.tags = payload.tags || [];
+  state.topicPacks = payload.topicPacks || [];
   state.meta = payload.meta || {};
   state.config = payload.config || {};
   state.lastSyncedAt = Date.now();
@@ -576,6 +690,7 @@ function renderAll() {
   renderSettings();
   renderPapers();
   renderPaperLibrary();
+  renderTopicPacks();
   renderTagCurationStatus();
   renderTagTree();
   renderTagDetail();
@@ -659,7 +774,7 @@ function renderPaperLibrary() {
   const visiblePapers = state.papers.filter((paper) => !query || paperSearchText(paper).includes(query));
   els.paperLibraryList.innerHTML = renderPaperCardsHtml(visiblePapers, { includeTags: true });
 
-  const orderedTags = [...state.tags].sort((a, b) => (b.paperIds?.length || 0) - (a.paperIds?.length || 0) || a.name.localeCompare(b.name, "zh-CN"));
+  const orderedTags = [...state.tags].sort(compareTags);
   els.paperLibraryTagMeta.textContent = t("tagsMeta", orderedTags.length);
   els.paperLibraryTagList.innerHTML = orderedTags.length
     ? orderedTags
@@ -674,6 +789,116 @@ function renderPaperLibrary() {
         )
         .join("")
     : `<div class="empty">${escapeHtml(t("noTags"))}</div>`;
+}
+
+function topicPackById(id) {
+  return state.topicPacks.find((pack) => pack.id === id);
+}
+
+function tagNamesForIds(ids) {
+  return (ids || []).map(tagById).filter(Boolean).map((tag) => tag.name);
+}
+
+function topicPackPapers(pack) {
+  if (!pack) return [];
+  const includeIds = new Set(pack.includeTagIds || []);
+  const excludeIds = new Set(pack.excludeTagIds || []);
+  return state.papers.filter((paper) => {
+    const paperTags = new Set(paper.tagIds || []);
+    if ([...excludeIds].some((id) => paperTags.has(id))) return false;
+    if (!includeIds.size) return false;
+    if (pack.matchMode === "all") return [...includeIds].every((id) => paperTags.has(id));
+    return [...includeIds].some((id) => paperTags.has(id));
+  });
+}
+
+function renderTopicPacks() {
+  const ordered = [...state.topicPacks].sort((a, b) => (Date.parse(b.updatedAt || b.createdAt || "") || 0) - (Date.parse(a.updatedAt || a.createdAt || "") || 0));
+  els.topicListMeta.textContent = t("topicPacksMeta", ordered.length);
+  els.topicPackList.innerHTML = ordered.length
+    ? ordered
+        .map((pack) => {
+          const selected = pack.id === state.activeTopicPackId ? " selected" : "";
+          const includeTags = tagNamesForIds(pack.includeTagIds).slice(0, 6);
+          const excludeTags = tagNamesForIds(pack.excludeTagIds).slice(0, 4);
+          const papers = topicPackPapers(pack);
+          return `
+            <article class="topic-pack-card${selected}" data-topic-pack-id="${pack.id}">
+              <div>
+                <h4>${escapeHtml(pack.name)}</h4>
+                ${pack.description ? `<p>${escapeHtml(pack.description)}</p>` : ""}
+              </div>
+              <div class="topic-pack-meta">
+                <span>${escapeHtml(t("tagPaperCountLong", papers.length))}</span>
+                <span>${escapeHtml(pack.matchMode === "all" ? t("includeTagModeAll") : t("includeTagModeAny"))}</span>
+              </div>
+              <div class="chip-row">
+                ${includeTags.map((name) => `<span class="tag-chip">${escapeHtml(name)}</span>`).join("")}
+                ${excludeTags.map((name) => `<span class="tag-chip muted-chip">-${escapeHtml(name)}</span>`).join("")}
+              </div>
+              <div class="button-row">
+                <button class="secondary-button small-button" type="button" data-open-topic-pack-id="${pack.id}">${escapeHtml(t("viewDetail"))}</button>
+                <button class="secondary-button small-button" type="button" data-edit-topic-pack-id="${pack.id}">${escapeHtml(t("edit"))}</button>
+                <button class="secondary-button small-button danger-button" type="button" data-delete-topic-pack-id="${pack.id}">${escapeHtml(t("delete"))}</button>
+              </div>
+            </article>
+          `;
+        })
+        .join("")
+    : `<div class="empty">${escapeHtml(t("noTopicPacks"))}</div>`;
+  renderTopicPackResult();
+}
+
+function renderTopicPackResult() {
+  const pack = topicPackById(state.activeTopicPackId);
+  if (!pack) {
+    els.topicResultMeta.textContent = t("chooseTopicPack");
+    els.topicPaperList.innerHTML = `<div class="empty">${escapeHtml(t("chooseTopicPack"))}</div>`;
+    return;
+  }
+  const papers = topicPackPapers(pack);
+  const includeNames = tagNamesForIds(pack.includeTagIds).join("、");
+  const excludeNames = tagNamesForIds(pack.excludeTagIds).join("、");
+  els.topicResultMeta.textContent = `${pack.name} · ${t("tagPaperCountLong", papers.length)}${includeNames ? ` · ${includeNames}` : ""}${excludeNames ? ` · 排除 ${excludeNames}` : ""}`;
+  els.topicPaperList.innerHTML = renderPaperCardsHtml(papers, { includeTags: true });
+}
+
+function collectTopicTagNames(list) {
+  return [...list.querySelectorAll(".manual-tag-input")].map((input) => input.value.trim()).filter(Boolean);
+}
+
+function tagIdsFromNames(names) {
+  return uniq(names.map((name) => tagByName(name)?.id).filter(Boolean));
+}
+
+function fillTopicTagList(list, names = []) {
+  list.innerHTML = (names.length ? names : [""]).map((name) => tagInputRow(name, t("tagInputPlaceholder"))).join("");
+}
+
+function resetTopicForm() {
+  state.editingTopicPackId = null;
+  els.topicPackForm.reset();
+  fillTopicTagList(els.topicIncludeTagList);
+  fillTopicTagList(els.topicExcludeTagList);
+  els.cancelTopicEditButton.classList.add("is-hidden");
+  applyLanguage();
+}
+
+function editTopicPack(packId) {
+  const pack = topicPackById(packId);
+  if (!pack) return;
+  state.editingTopicPackId = pack.id;
+  els.topicPackName.value = pack.name || "";
+  els.topicPackDescription.value = pack.description || "";
+  document.querySelectorAll('input[name="topicMatchMode"]').forEach((input) => {
+    input.checked = input.value === (pack.matchMode || "any");
+  });
+  fillTopicTagList(els.topicIncludeTagList, tagNamesForIds(pack.includeTagIds));
+  fillTopicTagList(els.topicExcludeTagList, tagNamesForIds(pack.excludeTagIds));
+  els.cancelTopicEditButton.classList.remove("is-hidden");
+  switchView("topics");
+  applyLanguage();
+  els.topicPackName.focus();
 }
 
 function localSimilarPapers(paperId) {
@@ -817,6 +1042,9 @@ function paperContextTextForTagInput(input) {
   if (input.closest("#paperDetailTagForm")) {
     return `${els.paperDetailTitleInput.value} ${els.paperDetailAbstractInput.value} ${els.paperDetailConversationInput.value}`;
   }
+  if (input.closest("#topicPackForm")) {
+    return `${els.topicPackName.value} ${els.topicPackDescription.value}`;
+  }
   return `${document.querySelector("#paperTitle").value} ${document.querySelector("#paperAbstract").value} ${document.querySelector("#paperConversation").value}`;
 }
 
@@ -824,10 +1052,10 @@ function matchingTags(query, context = "") {
   const q = normalizeText(query);
   const ctx = normalizeText(context);
   const tagTime = (tag) => Date.parse(tag.updatedAt || tag.createdAt || "") || 0;
-  if (!q && !ctx) return [...state.tags].sort((a, b) => tagTime(b) - tagTime(a) || a.name.localeCompare(b.name, "zh-CN"));
+  if (!q && !ctx) return [...state.tags].sort((a, b) => tagSortValue(a) - tagSortValue(b) || tagTime(b) - tagTime(a) || a.name.localeCompare(b.name, "zh-CN"));
   return [...state.tags]
     .map((tag) => ({ tag, score: tagMatchScore(tag, query, context) }))
-    .sort((a, b) => b.score - a.score || tagTime(b.tag) - tagTime(a.tag) || a.tag.name.localeCompare(b.tag.name, "zh-CN"))
+    .sort((a, b) => b.score - a.score || tagSortValue(a.tag) - tagSortValue(b.tag) || tagTime(b.tag) - tagTime(a.tag) || a.tag.name.localeCompare(b.tag.name, "zh-CN"))
     .map((item) => item.tag);
 }
 
@@ -875,17 +1103,15 @@ function renderTagTree() {
     els.tagTree.innerHTML = `<div class="empty">${escapeHtml(t("noTags"))}</div>`;
     return;
   }
-  const orderedTags = [...state.tags].sort((a, b) => {
-    const countDiff = (b.paperIds?.length || 0) - (a.paperIds?.length || 0);
-    return countDiff || a.name.localeCompare(b.name, "zh-CN");
-  });
+  const orderedTags = [...state.tags].sort(compareTags);
   els.tagTree.innerHTML = `
     <div class="tag-library-grid">
       ${orderedTags
         .map((tag) => {
           const selected = tag.id === state.activeTagId ? " selected" : "";
+          const system = isSystemTag(tag) ? " system-tag" : "";
           return `
-            <div class="tag-library-card${selected}" data-tag-id="${tag.id}" draggable="true" role="button" tabindex="0">
+            <div class="tag-library-card${selected}${system}" data-tag-id="${tag.id}" draggable="${isSystemTag(tag) ? "false" : "true"}" role="button" tabindex="0">
               <strong>${escapeHtml(tag.name)}</strong>
               <span>${escapeHtml(t("tagPaperCountLong", tag.paperIds?.length || 0))}</span>
               ${(tag.aliases || []).length ? `<small>${escapeHtml(tag.aliases.slice(0, 3).join(" / "))}</small>` : ""}
@@ -913,7 +1139,7 @@ function renderTagDetail() {
   els.tagDetail.innerHTML = `
     ${tag.description ? `<p>${escapeHtml(tag.description)}</p>` : ""}
     <div class="button-row">
-      <button class="secondary-button danger-button" data-delete-tag-id="${tag.id}" type="button">${state.language === "en" ? "Delete Tag" : "删除标签"}</button>
+      ${isSystemTag(tag) ? `<span class="muted">${state.language === "en" ? "System tag · cannot be deleted" : "系统标签 · 不可删除"}</span>` : `<button class="secondary-button danger-button" data-delete-tag-id="${tag.id}" type="button">${state.language === "en" ? "Delete Tag" : "删除标签"}</button>`}
     </div>
     <div class="relation-row">
       <strong>${state.language === "en" ? "Aliases" : "别名"}</strong>
@@ -1341,6 +1567,125 @@ els.searchResults.addEventListener("click", (event) => {
   renderPapers(els.searchPaperList, papersForTag(tag.id));
 });
 
+els.addTopicIncludeTagButton.addEventListener("click", () => {
+  const row = createTagInputRow("", t("tagInputPlaceholder"));
+  els.topicIncludeTagList.append(row);
+  row.querySelector(".manual-tag-input").focus();
+});
+
+els.addTopicExcludeTagButton.addEventListener("click", () => {
+  const row = createTagInputRow("", t("tagInputPlaceholder"));
+  els.topicExcludeTagList.append(row);
+  row.querySelector(".manual-tag-input").focus();
+});
+
+function handleTopicTagListRemove(event, list) {
+  const removeButton = event.target.closest(".remove-manual-tag");
+  if (!removeButton) return false;
+  const rows = [...list.querySelectorAll(".manual-tag-row")];
+  if (rows.length <= 1) {
+    rows[0].querySelector(".manual-tag-input").value = "";
+    return true;
+  }
+  removeButton.closest(".manual-tag-row").remove();
+  return true;
+}
+
+els.topicIncludeTagList.addEventListener("click", (event) => {
+  handleTopicTagListRemove(event, els.topicIncludeTagList);
+});
+
+els.topicExcludeTagList.addEventListener("click", (event) => {
+  handleTopicTagListRemove(event, els.topicExcludeTagList);
+});
+
+for (const list of [els.topicIncludeTagList, els.topicExcludeTagList]) {
+  list.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter") return;
+    event.preventDefault();
+    const row = createTagInputRow("", t("tagInputPlaceholder"));
+    list.append(row);
+    row.querySelector(".manual-tag-input").focus();
+  });
+}
+
+els.cancelTopicEditButton.addEventListener("click", () => resetTopicForm());
+
+els.topicPackForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const includeTagIds = tagIdsFromNames(collectTopicTagNames(els.topicIncludeTagList));
+  const excludeTagIds = tagIdsFromNames(collectTopicTagNames(els.topicExcludeTagList)).filter((id) => !includeTagIds.includes(id));
+  if (!includeTagIds.length) {
+    toast(t("topicNeedsTags"));
+    return;
+  }
+  const body = {
+    name: els.topicPackName.value.trim(),
+    description: els.topicPackDescription.value.trim(),
+    matchMode: document.querySelector('input[name="topicMatchMode"]:checked')?.value || "any",
+    includeTagIds,
+    excludeTagIds
+  };
+  const editingId = state.editingTopicPackId;
+  const button = els.saveTopicPackButton;
+  const done = setBusy(button, t("saving"));
+  try {
+    const result = await api(editingId ? `/api/topic-packs/${encodeURIComponent(editingId)}` : "/api/topic-packs", {
+      method: editingId ? "PUT" : "POST",
+      body: JSON.stringify(body)
+    });
+    state.topicPacks = result.topicPacks || state.topicPacks;
+    state.papers = result.papers || state.papers;
+    state.tags = result.tags || state.tags;
+    state.meta = result.meta || state.meta;
+    state.activeTopicPackId = result.topicPack?.id || editingId || state.activeTopicPackId;
+    resetTopicForm();
+    renderAll();
+    toast(editingId ? t("topicUpdated") : t("topicSaved"));
+  } catch (err) {
+    toast(err.message);
+  } finally {
+    done();
+  }
+});
+
+els.topicPackList.addEventListener("click", async (event) => {
+  const openButton = event.target.closest("[data-open-topic-pack-id], [data-topic-pack-id]");
+  const editButton = event.target.closest("[data-edit-topic-pack-id]");
+  const deleteButton = event.target.closest("[data-delete-topic-pack-id]");
+
+  if (editButton) {
+    editTopicPack(editButton.dataset.editTopicPackId);
+    return;
+  }
+
+  if (deleteButton) {
+    const pack = topicPackById(deleteButton.dataset.deleteTopicPackId);
+    if (!pack) return;
+    const confirmed = window.confirm(state.language === "en" ? `Delete topic pack "${pack.name}"? Papers and tags will be preserved.` : `删除主题包「${pack.name}」？论文和标签都会保留。`);
+    if (!confirmed) return;
+    const done = setBusy(deleteButton, state.language === "en" ? "Deleting..." : "删除中...");
+    try {
+      const result = await api(`/api/topic-packs/${encodeURIComponent(pack.id)}`, { method: "DELETE" });
+      state.topicPacks = result.topicPacks || state.topicPacks;
+      if (state.activeTopicPackId === pack.id) state.activeTopicPackId = null;
+      if (state.editingTopicPackId === pack.id) resetTopicForm();
+      renderAll();
+      toast(t("topicDeleted"));
+    } catch (err) {
+      toast(err.message);
+    } finally {
+      done();
+    }
+    return;
+  }
+
+  if (openButton) {
+    state.activeTopicPackId = openButton.dataset.openTopicPackId || openButton.dataset.topicPackId;
+    renderTopicPacks();
+  }
+});
+
 document.body.addEventListener("click", async (event) => {
   const deletePaperButton = event.target.closest("[data-delete-paper-id]");
   if (deletePaperButton) {
@@ -1453,6 +1798,10 @@ els.refreshGraphButton.addEventListener("click", async () => {
 els.tagTree.addEventListener("dragstart", (event) => {
   const card = event.target.closest("[data-tag-id]");
   if (!card) return;
+  if (isSystemTag(tagById(card.dataset.tagId))) {
+    event.preventDefault();
+    return;
+  }
   state.draggedTagId = card.dataset.tagId;
   event.dataTransfer.effectAllowed = "move";
   event.dataTransfer.setData("text/plain", card.dataset.tagId);
@@ -1466,7 +1815,7 @@ els.tagTree.addEventListener("dragend", () => {
 
 els.tagTree.addEventListener("dragover", (event) => {
   const card = event.target.closest("[data-tag-id]");
-  if (!card || !state.draggedTagId || card.dataset.tagId === state.draggedTagId) return;
+  if (!card || !state.draggedTagId || card.dataset.tagId === state.draggedTagId || isSystemTag(tagById(card.dataset.tagId))) return;
   event.preventDefault();
   event.dataTransfer.dropEffect = "move";
   card.classList.add("drop-target");
@@ -1484,7 +1833,7 @@ els.tagTree.addEventListener("drop", async (event) => {
   const targetTag = tagById(targetCard?.dataset.tagId);
   els.tagTree.querySelectorAll(".dragging, .drop-target").forEach((card) => card.classList.remove("dragging", "drop-target"));
   state.draggedTagId = null;
-  if (!sourceTag || !targetTag || sourceTag.id === targetTag.id) return;
+  if (!sourceTag || !targetTag || sourceTag.id === targetTag.id || isSystemTag(sourceTag) || isSystemTag(targetTag)) return;
   event.preventDefault();
 
   const confirmed = window.confirm(state.language === "en" ? `Merge tag "${sourceTag.name}" into "${targetTag.name}"? Papers will be preserved; only tag links will be merged.` : `将标签「${sourceTag.name}」合并进「${targetTag.name}」？论文会保留，只会合并标签关联。`);
@@ -1664,6 +2013,7 @@ els.importDataInput.addEventListener("change", async () => {
     });
     state.papers = result.papers || [];
     state.tags = result.tags || [];
+    state.topicPacks = result.topicPacks || [];
     state.meta = result.meta || {};
     state.config = result.config || state.config;
     state.activePaperId = null;
@@ -1727,4 +2077,5 @@ els.modelTestForm.addEventListener("submit", async (event) => {
   }
 });
 
+resetTopicForm();
 loadState().catch((err) => toast(err.message));

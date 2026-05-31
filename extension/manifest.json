@@ -21,7 +21,11 @@
       "128": "icons/icon128.png"
     }
   },
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
   "options_page": "manager.html",
-  "permissions": ["activeTab", "scripting", "storage", "tabs", "unlimitedStorage"],
+  "permissions": ["activeTab", "scripting", "storage", "tabs", "unlimitedStorage", "alarms", "downloads"],
   "host_permissions": ["https://dashscope.aliyuncs.com/*", "https://open.bigmodel.cn/*"]
 }

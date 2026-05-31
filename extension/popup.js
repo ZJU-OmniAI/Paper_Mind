@@ -124,6 +124,10 @@ function normalize(value) {
   return String(value || "").trim().toLocaleLowerCase("zh-CN");
 }
 
+function isSystemTag(tag) {
+  return Boolean(tag?.system) || tag?.id === "system-unsorted";
+}
+
 async function api(path, options = {}) {
   return handleApi(path, options);
 }
@@ -160,10 +164,11 @@ function matchingTags(query) {
   const context = paperContextText();
   const ctx = normalize(context);
   const tagTime = (tag) => Date.parse(tag.updatedAt || tag.createdAt || "") || 0;
-  if (!q && !ctx) return [...state.tags].sort((a, b) => tagTime(b) - tagTime(a) || a.name.localeCompare(b.name, "zh-CN"));
+  const tagSortValue = (tag) => (isSystemTag(tag) ? 1 : 0);
+  if (!q && !ctx) return [...state.tags].sort((a, b) => tagSortValue(a) - tagSortValue(b) || tagTime(b) - tagTime(a) || a.name.localeCompare(b.name, "zh-CN"));
   return [...state.tags]
     .map((tag) => ({ tag, score: tagMatchScore(tag, query, context) }))
-    .sort((a, b) => b.score - a.score || tagTime(b.tag) - tagTime(a.tag) || a.tag.name.localeCompare(b.tag.name, "zh-CN"))
+    .sort((a, b) => b.score - a.score || tagSortValue(a.tag) - tagSortValue(b.tag) || tagTime(b.tag) - tagTime(a.tag) || a.tag.name.localeCompare(b.tag.name, "zh-CN"))
     .map((item) => item.tag);
 }
 

@@ -21,6 +21,7 @@
           <button class="nav-item active" data-view="library">论文录入</button>
           <button class="nav-item" data-view="papers">论文库</button>
           <button class="nav-item" data-view="search">智能检索</button>
+          <button class="nav-item" data-view="topics">研究主题包</button>
           <button class="nav-item" data-view="tags">标签库</button>
           <button class="nav-item" data-view="settings">模型设置</button>
         </nav>
@@ -243,6 +244,68 @@
               <div id="tagDetail" class="tag-detail empty">暂无选中标签</div>
             </section>
           </div>
+        </section>
+
+        <section class="view" id="view-topics">
+          <div class="two-column topics-layout">
+            <section class="panel topic-editor-panel">
+              <div class="panel-head">
+                <h3 id="topicFormTitle">新建主题包</h3>
+                <button class="secondary-button small-button is-hidden" type="button" id="cancelTopicEditButton">取消编辑</button>
+              </div>
+              <form class="topic-form" id="topicPackForm">
+                <label>
+                  <span id="topicNameLabel">主题名称</span>
+                  <input id="topicPackName" autocomplete="off" placeholder="例如 RAG Evaluation" required />
+                </label>
+                <label>
+                  <span id="topicDescriptionLabel">说明</span>
+                  <textarea id="topicPackDescription" rows="3" placeholder="这个主题包用来聚合哪类论文"></textarea>
+                </label>
+                <fieldset>
+                  <legend id="topicMatchModeLegend">匹配方式</legend>
+                  <div class="segmented">
+                    <label><input type="radio" name="topicMatchMode" value="any" checked /> <span id="topicMatchAnyLabel">包含任一标签</span></label>
+                    <label><input type="radio" name="topicMatchMode" value="all" /> <span id="topicMatchAllLabel">包含全部标签</span></label>
+                  </div>
+                </fieldset>
+
+                <div class="manual-tags-field">
+                  <div class="field-label-row">
+                    <span id="topicIncludeTagsLabel">包含标签</span>
+                    <button class="secondary-button small-button" type="button" id="addTopicIncludeTagButton">添加标签</button>
+                  </div>
+                  <div class="manual-tag-list" id="topicIncludeTagList"></div>
+                </div>
+
+                <div class="manual-tags-field">
+                  <div class="field-label-row">
+                    <span id="topicExcludeTagsLabel">排除标签</span>
+                    <button class="secondary-button small-button" type="button" id="addTopicExcludeTagButton">添加标签</button>
+                  </div>
+                  <div class="manual-tag-list" id="topicExcludeTagList"></div>
+                </div>
+
+                <button class="primary-button" type="submit" id="saveTopicPackButton">保存主题包</button>
+              </form>
+            </section>
+
+            <section class="panel">
+              <div class="panel-head">
+                <h3 id="topicListTitle">主题包</h3>
+                <span class="muted" id="topicListMeta">按更新时间排序</span>
+              </div>
+              <div class="topic-pack-list" id="topicPackList"></div>
+            </section>
+          </div>
+
+          <section class="panel topic-result-panel">
+            <div class="panel-head">
+              <h3 id="topicResultTitle">主题包论文</h3>
+              <span class="muted" id="topicResultMeta">选择一个主题包查看聚合论文</span>
+            </div>
+            <div class="paper-list" id="topicPaperList"></div>
+          </section>
         </section>
 
         <section class="view" id="view-settings">
