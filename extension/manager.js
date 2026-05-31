@@ -745,7 +745,7 @@ function tagInputRow(value = "", placeholder = "") {
 function matchingTags(query) {
   const q = normalizeText(query);
   const tagTime = (tag) => Date.parse(tag.updatedAt || tag.createdAt || "") || 0;
-  if (!q) return [...state.tags].sort((a, b) => tagTime(b) - tagTime(a) || a.name.localeCompare(b.name, "zh-CN")).slice(0, 8);
+  if (!q) return [...state.tags].sort((a, b) => tagTime(b) - tagTime(a) || a.name.localeCompare(b.name, "zh-CN"));
   return [...state.tags]
     .map((tag) => {
       const names = [tag.name, ...(tag.aliases || [])].map(normalizeText);
@@ -758,7 +758,6 @@ function matchingTags(query) {
     })
     .filter((item) => item.score > 0)
     .sort((a, b) => b.score - a.score || tagTime(b.tag) - tagTime(a.tag) || a.tag.name.localeCompare(b.tag.name, "zh-CN"))
-    .slice(0, 8)
     .map((item) => item.tag);
 }
 

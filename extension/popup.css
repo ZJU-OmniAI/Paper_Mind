@@ -170,7 +170,7 @@ textarea:focus {
   top: calc(100% + 4px);
   left: 0;
   right: 0;
-  max-height: 190px;
+  max-height: 260px;
   overflow: auto;
   padding: 5px;
   border: 1px solid var(--line);
