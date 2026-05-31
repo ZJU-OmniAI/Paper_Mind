@@ -48,6 +48,7 @@ const translations = {
     selectedText: "选中文本：",
     saving: "保存中...",
     saved: "已保存到本地论文标签库。",
+    duplicateSaved: "这篇论文已存在，未重复添加；新标签已合并到已有论文。",
     requestFailed: (status) => `请求失败：${status}`
   },
   en: {
@@ -75,6 +76,7 @@ const translations = {
     selectedText: "Selected text:",
     saving: "Saving...",
     saved: "Saved to the local paper library.",
+    duplicateSaved: "This paper already exists. It was not duplicated; new tags were merged into the existing paper.",
     requestFailed: (status) => `Request failed: ${status}`
   }
 };
@@ -351,11 +353,12 @@ els.form.addEventListener("submit", async (event) => {
         title: els.title.value.trim(),
         abstract: els.abstract.value.trim(),
         conversation: els.conversation.value.trim(),
+        sourceUrl: state.currentTab?.url || "",
         manualTags: collectTags()
       })
     });
     state.tags = result.tags || state.tags;
-    setMessage(t("saved"));
+    setMessage(result.duplicate ? t("duplicateSaved") : t("saved"));
     els.form.reset();
     els.tagRows.innerHTML = "";
     addTagRow();

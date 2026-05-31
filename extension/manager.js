@@ -167,6 +167,7 @@ const translations = {
     generating: "生成中...",
     searching: "检索中...",
     paperSaved: "论文已保存，人工标签已加入标签库",
+    duplicatePaperSaved: "这篇论文已存在，未重复添加；新标签已合并到已有论文",
     tagSaved: "论文标签已更新",
     settingsSaved: "模型设置已保存",
     connected: (count) => `已连接 · ${count} 个标签`,
@@ -255,6 +256,7 @@ const translations = {
     generating: "Generating...",
     searching: "Searching...",
     paperSaved: "Paper saved and manual tags were added",
+    duplicatePaperSaved: "This paper already exists. It was not duplicated; new tags were merged into the existing paper",
     tagSaved: "Paper tags updated",
     settingsSaved: "Model settings saved",
     connected: (count) => `Connected · ${count} tags`,
@@ -1161,7 +1163,7 @@ els.paperForm.addEventListener("submit", async (event) => {
       method: "POST",
       body: JSON.stringify(collectPaperForm())
     });
-    state.papers.unshift(result.paper);
+    state.papers = result.papers || [result.paper, ...state.papers.filter((paper) => paper.id !== result.paper.id)];
     state.tags = result.tags || state.tags;
     state.meta = result.meta || state.meta;
     els.paperForm.reset();
@@ -1169,7 +1171,7 @@ els.paperForm.addEventListener("submit", async (event) => {
     els.previewTags.textContent = t("mergePrompt");
     els.previewTags.classList.add("empty");
     renderAll();
-    toast(t("paperSaved"));
+    toast(result.duplicate ? t("duplicatePaperSaved") : t("paperSaved"));
   } catch (err) {
     toast(err.message);
   } finally {

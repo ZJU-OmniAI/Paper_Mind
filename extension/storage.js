@@ -285,6 +285,38 @@ function setPaperTags(store, paper, tagNames) {
   paper.updatedAt = nowIso();
 }
 
+function tagNamesForPaper(store, paper) {
+  return (paper.tagIds || []).map((id) => store.tags.find((tag) => tag.id === id)?.name).filter(Boolean);
+}
+
+function mergePaperTags(store, paper, tagNames) {
+  setPaperTags(store, paper, uniq([...tagNamesForPaper(store, paper), ...splitManualTags(tagNames)]));
+}
+
+function extractSourceUrl(input) {
+  const explicit = String(input.sourceUrl || "").trim();
+  if (explicit) return explicit;
+  const conversation = String(input.conversation || "");
+  const labelled = conversation.match(/(?:来源页面|Source page)：?\s*(https?:\/\/\S+)/i);
+  if (labelled) return labelled[1].trim();
+  const anyUrl = conversation.match(/https?:\/\/\S+/i);
+  return anyUrl ? anyUrl[0].trim() : "";
+}
+
+function normalizePaperTitle(value) {
+  return String(value || "").trim().replace(/\s+/g, " ").toLocaleLowerCase("zh-CN");
+}
+
+function findDuplicatePaper(store, input) {
+  const sourceUrl = extractSourceUrl(input);
+  const titleKey = normalizePaperTitle(input.title);
+  return store.papers.find((paper) => {
+    const paperSourceUrl = paper.sourceUrl || extractSourceUrl(paper);
+    if (sourceUrl && paperSourceUrl && sourceUrl === paperSourceUrl) return true;
+    return titleKey && normalizePaperTitle(paper.title) === titleKey;
+  });
+}
+
 function replaceRelationIds(ids, sourceIds, targetId) {
   const next = [];
   for (const id of ids || []) {
@@ -411,10 +443,6 @@ function fallbackSearch(query, store) {
       reason: "本地标签/论文文本匹配",
       confidence: Math.min(0.95, Number((item.score / 4).toFixed(2)))
     }));
-}
-
-function tagNamesForPaper(store, paper) {
-  return (paper.tagIds || []).map((id) => store.tags.find((tag) => tag.id === id)?.name).filter(Boolean);
 }
 
 function similarPapersByTags(store, paperId) {
@@ -879,11 +907,24 @@ export async function handleApi(path, options = {}) {
     const title = String(body.title || "").trim();
     if (!title) return response(400, { error: "论文标题不能为空" });
     const timestamp = nowIso();
+    const sourceUrl = extractSourceUrl(body);
+    const existingPaper = findDuplicatePaper(store, { ...body, title, sourceUrl });
+    if (existingPaper) {
+      if (!existingPaper.sourceUrl && sourceUrl) existingPaper.sourceUrl = sourceUrl;
+      if (!existingPaper.abstract && typeof body.abstract === "string") existingPaper.abstract = body.abstract.trim();
+      if (!existingPaper.conversation && typeof body.conversation === "string") existingPaper.conversation = body.conversation.trim();
+      mergePaperTags(store, existingPaper, body.manualTags);
+      existingPaper.updatedAt = nowIso();
+      markTagsStale(store);
+      await writeStore(store);
+      return response(200, { paper: existingPaper, papers: store.papers, tags: store.tags, meta: store.meta, duplicate: true });
+    }
     const paper = {
       id: makeId("paper"),
       title,
       abstract: String(body.abstract || "").trim(),
       conversation: String(body.conversation || "").trim(),
+      sourceUrl,
       tagIds: [],
       createdAt: timestamp,
       updatedAt: timestamp
