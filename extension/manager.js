@@ -1037,7 +1037,8 @@ function drawPaperMapLines() {
   els.paperMapSvg.setAttribute("viewBox", `0 0 ${width} ${height}`);
   els.paperMapSvg.setAttribute("width", String(width));
   els.paperMapSvg.setAttribute("height", String(height));
-  const svgRect = els.paperMapSvg.getBoundingClientRect();
+  els.paperMapSvg.style.width = `${width}px`;
+  els.paperMapSvg.style.height = `${height}px`;
   const tagNodes = [...els.paperMapTags.querySelectorAll("[data-map-tag-id]")];
   const paperNodes = [...els.paperMapPapers.querySelectorAll("[data-map-paper-id]")];
   const paperNodeById = new Map(paperNodes.map((node) => [node.dataset.mapPaperId, node]));
@@ -1054,10 +1055,10 @@ function drawPaperMapLines() {
       if (!paperNode) continue;
       const tagRect = tagNode.getBoundingClientRect();
       const paperRect = paperNode.getBoundingClientRect();
-      const x1 = tagRect.right - svgRect.left;
-      const y1 = tagRect.top + tagRect.height / 2 - svgRect.top;
-      const x2 = paperRect.left - svgRect.left;
-      const y2 = paperRect.top + paperRect.height / 2 - svgRect.top;
+      const x1 = tagRect.right - shellRect.left + els.paperMapShell.scrollLeft;
+      const y1 = tagRect.top + tagRect.height / 2 - shellRect.top + els.paperMapShell.scrollTop;
+      const x2 = paperRect.left - shellRect.left + els.paperMapShell.scrollLeft;
+      const y2 = paperRect.top + paperRect.height / 2 - shellRect.top + els.paperMapShell.scrollTop;
       const c1 = x1 + Math.max(56, (x2 - x1) * 0.45);
       const c2 = x2 - Math.max(56, (x2 - x1) * 0.45);
       const paper = paperById(paperId);
