@@ -959,35 +959,24 @@ function renderPaperClustersHtml(clusters) {
     .join("");
 }
 
-function paperMatchesSelectedMapTags(paper) {
-  const selected = state.selectedMapTagIds;
-  if (!selected.length) return true;
-  const ids = new Set(paper.tagIds || []);
-  if (els.paperMapMatchMode.value === "all") return selected.every((id) => ids.has(id));
-  return selected.some((id) => ids.has(id));
-}
-
 function renderPaperMap() {
   if (!els.paperMapTags || state.paperLibraryMode !== "map") return;
   const query = normalizeText(els.paperMapFilter?.value || "");
   const selectedTags = new Set(state.selectedMapTagIds);
   const selectedPaper = paperById(state.selectedMapPaperId);
   const filteredPapers = state.papers.filter((paper) => {
-    const queryMatch = !query || paperSearchText(paper).includes(query);
-    return queryMatch && paperMatchesSelectedMapTags(paper);
+    return !query || paperSearchText(paper).includes(query);
   });
 
   const filteredPaperIds = new Set(filteredPapers.map((paper) => paper.id));
   const papers = sortPapersForLibrary(state.papers)
     .filter((paper) => filteredPaperIds.has(paper.id))
-    .slice(0, selectedTags.size || query ? 80 : 45);
+    .slice(0, query ? 80 : 60);
 
   const visiblePaperIds = new Set(papers.map((paper) => paper.id));
   const tagQueryMatches = (tag) => !query || normalizeText(`${tag.name} ${(tag.aliases || []).join(" ")}`).includes(query);
   const tags = [...state.tags]
     .filter((tag) => {
-      if (selectedPaper && (selectedPaper.tagIds || []).includes(tag.id)) return true;
-      if (selectedTags.has(tag.id)) return true;
       const hasVisiblePaper = (tag.paperIds || []).some((id) => visiblePaperIds.has(id));
       return hasVisiblePaper || tagQueryMatches(tag);
     })
@@ -1019,7 +1008,11 @@ function renderPaperMap() {
         .map((paper) => {
           const tagIds = new Set(paper.tagIds || []);
           const selected = paper.id === state.selectedMapPaperId;
-          const relatedToTags = state.selectedMapTagIds.length && state.selectedMapTagIds.some((id) => tagIds.has(id));
+          const relatedToTags =
+            state.selectedMapTagIds.length &&
+            (els.paperMapMatchMode.value === "all"
+              ? state.selectedMapTagIds.every((id) => tagIds.has(id))
+              : state.selectedMapTagIds.some((id) => tagIds.has(id)));
           const active = selected || relatedToTags;
           const dimmed = (selectedTags.size || selectedPaper) && !active;
           const tagsForPaper = paperTags(paper).filter((tag) => visibleTagIds.has(tag.id)).slice(0, 5);
@@ -1044,6 +1037,7 @@ function drawPaperMapLines() {
   els.paperMapSvg.setAttribute("viewBox", `0 0 ${width} ${height}`);
   els.paperMapSvg.setAttribute("width", String(width));
   els.paperMapSvg.setAttribute("height", String(height));
+  const svgRect = els.paperMapSvg.getBoundingClientRect();
   const tagNodes = [...els.paperMapTags.querySelectorAll("[data-map-tag-id]")];
   const paperNodes = [...els.paperMapPapers.querySelectorAll("[data-map-paper-id]")];
   const paperNodeById = new Map(paperNodes.map((node) => [node.dataset.mapPaperId, node]));
@@ -1060,13 +1054,20 @@ function drawPaperMapLines() {
       if (!paperNode) continue;
       const tagRect = tagNode.getBoundingClientRect();
       const paperRect = paperNode.getBoundingClientRect();
-      const x1 = tagRect.right - shellRect.left + els.paperMapShell.scrollLeft;
-      const y1 = tagRect.top + tagRect.height / 2 - shellRect.top + els.paperMapShell.scrollTop;
-      const x2 = paperRect.left - shellRect.left + els.paperMapShell.scrollLeft;
-      const y2 = paperRect.top + paperRect.height / 2 - shellRect.top + els.paperMapShell.scrollTop;
+      const x1 = tagRect.right - svgRect.left;
+      const y1 = tagRect.top + tagRect.height / 2 - svgRect.top;
+      const x2 = paperRect.left - svgRect.left;
+      const y2 = paperRect.top + paperRect.height / 2 - svgRect.top;
       const c1 = x1 + Math.max(56, (x2 - x1) * 0.45);
       const c2 = x2 - Math.max(56, (x2 - x1) * 0.45);
-      const active = selectedTags.has(tag.id) || selectedPaperId === paperId;
+      const paper = paperById(paperId);
+      const paperTagIds = new Set(paper?.tagIds || []);
+      const paperMatchesSelectedTags =
+        selectedTags.size &&
+        (els.paperMapMatchMode.value === "all"
+          ? [...selectedTags].every((id) => paperTagIds.has(id))
+          : [...selectedTags].some((id) => paperTagIds.has(id)));
+      const active = selectedPaperId === paperId || (selectedTags.has(tag.id) && paperMatchesSelectedTags);
       const dimmed = (selectedTags.size || selectedPaperId) && !active;
       lines.push(`<path class="${active ? "active" : ""}${dimmed ? " dimmed" : ""}" d="M ${x1} ${y1} C ${c1} ${y1}, ${c2} ${y2}, ${x2} ${y2}" />`);
       count += 1;
