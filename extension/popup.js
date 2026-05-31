@@ -165,10 +165,10 @@ function tagRow(value = "") {
   return row;
 }
 
-function addTagRow(value = "") {
+function addTagRow(value = "", { focus = true } = {}) {
   const row = tagRow(value);
   els.tagRows.append(row);
-  row.querySelector(".tag-input").focus();
+  if (focus) row.querySelector(".tag-input").focus();
 }
 
 function renderSuggestions(input) {
@@ -361,7 +361,9 @@ els.form.addEventListener("submit", async (event) => {
     setMessage(result.duplicate ? t("duplicateSaved") : t("saved"));
     els.form.reset();
     els.tagRows.innerHTML = "";
-    addTagRow();
+    addTagRow("", { focus: false });
+    hideSuggestions();
+    button.focus();
     await readCurrentPage();
   } catch (err) {
     setMessage(err.message, "error");
