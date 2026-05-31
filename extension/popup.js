@@ -133,20 +133,36 @@ function setMessage(text, type = "") {
   els.message.className = `message ${type}`.trim();
 }
 
+function tagMatchScore(tag, query, context) {
+  const q = normalize(query);
+  const ctx = normalize(context);
+  const names = [tag.name, ...(tag.aliases || [])].map(normalize);
+  let score = 0;
+  if (q) {
+    if (names.some((name) => name === q)) score += 40;
+    else if (names.some((name) => name.startsWith(q))) score += 30;
+    else if (names.some((name) => name.includes(q))) score += 20;
+    else if (names.some((name) => q.includes(name))) score += 10;
+  }
+  if (ctx) {
+    if (names.some((name) => name && ctx.includes(name))) score += 8;
+    if (tag.description && ctx.includes(normalize(tag.description))) score += 3;
+  }
+  return score;
+}
+
+function paperContextText() {
+  return `${els.title.value} ${els.abstract.value} ${els.conversation.value}`;
+}
+
 function matchingTags(query) {
   const q = normalize(query);
+  const context = paperContextText();
+  const ctx = normalize(context);
   const tagTime = (tag) => Date.parse(tag.updatedAt || tag.createdAt || "") || 0;
-  if (!q) return [...state.tags].sort((a, b) => tagTime(b) - tagTime(a) || a.name.localeCompare(b.name, "zh-CN"));
+  if (!q && !ctx) return [...state.tags].sort((a, b) => tagTime(b) - tagTime(a) || a.name.localeCompare(b.name, "zh-CN"));
   return [...state.tags]
-    .map((tag) => {
-      const names = [tag.name, ...(tag.aliases || [])].map(normalize);
-      let score = 0;
-      if (names.some((name) => name === q)) score = 4;
-      else if (names.some((name) => name.startsWith(q))) score = 3;
-      else if (names.some((name) => name.includes(q))) score = 2;
-      else if (names.some((name) => q.includes(name))) score = 1;
-      return { tag, score };
-    })
+    .map((tag) => ({ tag, score: tagMatchScore(tag, query, context) }))
     .sort((a, b) => b.score - a.score || tagTime(b.tag) - tagTime(a.tag) || a.tag.name.localeCompare(b.tag.name, "zh-CN"))
     .map((item) => item.tag);
 }

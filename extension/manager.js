@@ -795,20 +795,38 @@ function tagInputRow(value = "", placeholder = "") {
   `;
 }
 
-function matchingTags(query) {
+function tagMatchScore(tag, query, context) {
   const q = normalizeText(query);
+  const ctx = normalizeText(context);
+  const names = [tag.name, ...(tag.aliases || [])].map(normalizeText);
+  let score = 0;
+  if (q) {
+    if (names.some((name) => name === q)) score += 40;
+    else if (names.some((name) => name.startsWith(q))) score += 30;
+    else if (names.some((name) => name.includes(q))) score += 20;
+    else if (names.some((name) => q.includes(name))) score += 10;
+  }
+  if (ctx) {
+    if (names.some((name) => name && ctx.includes(name))) score += 8;
+    if (tag.description && ctx.includes(normalizeText(tag.description))) score += 3;
+  }
+  return score;
+}
+
+function paperContextTextForTagInput(input) {
+  if (input.closest("#paperDetailTagForm")) {
+    return `${els.paperDetailTitleInput.value} ${els.paperDetailAbstractInput.value} ${els.paperDetailConversationInput.value}`;
+  }
+  return `${document.querySelector("#paperTitle").value} ${document.querySelector("#paperAbstract").value} ${document.querySelector("#paperConversation").value}`;
+}
+
+function matchingTags(query, context = "") {
+  const q = normalizeText(query);
+  const ctx = normalizeText(context);
   const tagTime = (tag) => Date.parse(tag.updatedAt || tag.createdAt || "") || 0;
-  if (!q) return [...state.tags].sort((a, b) => tagTime(b) - tagTime(a) || a.name.localeCompare(b.name, "zh-CN"));
+  if (!q && !ctx) return [...state.tags].sort((a, b) => tagTime(b) - tagTime(a) || a.name.localeCompare(b.name, "zh-CN"));
   return [...state.tags]
-    .map((tag) => {
-      const names = [tag.name, ...(tag.aliases || [])].map(normalizeText);
-      let score = 0;
-      if (names.some((name) => name === q)) score = 4;
-      else if (names.some((name) => name.startsWith(q))) score = 3;
-      else if (names.some((name) => name.includes(q))) score = 2;
-      else if (names.some((name) => q.includes(name))) score = 1;
-      return { tag, score };
-    })
+    .map((tag) => ({ tag, score: tagMatchScore(tag, query, context) }))
     .sort((a, b) => b.score - a.score || tagTime(b.tag) - tagTime(a.tag) || a.tag.name.localeCompare(b.tag.name, "zh-CN"))
     .map((item) => item.tag);
 }
@@ -817,7 +835,7 @@ function renderTagSuggestions(input) {
   const box = input.closest(".tag-combobox");
   const suggestions = box?.querySelector(".tag-suggestions");
   if (!suggestions) return;
-  const matches = matchingTags(input.value);
+  const matches = matchingTags(input.value, paperContextTextForTagInput(input));
   const current = input.value.trim();
   const exact = current && state.tags.some((tag) => normalizeText(tag.name) === normalizeText(current));
   const createOption = current && !exact ? `<button type="button" class="tag-suggestion create" data-tag-value="${escapeHtml(current)}">${escapeHtml(t("createTag", current))}</button>` : "";
