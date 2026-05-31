@@ -1,0 +1,343 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>论文标签管理系统</title>
+    <link rel="stylesheet" href="manager.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div class="brand">
+          <div class="brand-mark">P</div>
+          <div>
+            <h1>论文标签库</h1>
+            <p>本地 LLM 辅助管理</p>
+          </div>
+        </div>
+
+        <nav class="nav" aria-label="主导航">
+          <button class="nav-item active" data-view="library">论文录入</button>
+          <button class="nav-item" data-view="papers">论文库</button>
+          <button class="nav-item" data-view="search">智能检索</button>
+          <button class="nav-item" data-view="tags">标签库</button>
+          <button class="nav-item" data-view="settings">模型设置</button>
+        </nav>
+
+        <div class="stats">
+          <div>
+            <span id="paperCount">0</span>
+            <small>论文</small>
+          </div>
+          <div>
+            <span id="tagCount">0</span>
+            <small>标签</small>
+          </div>
+        </div>
+      </aside>
+
+      <main class="workspace">
+        <section class="topbar">
+          <div>
+            <p class="eyebrow">Local Research System</p>
+            <h2 id="viewTitle">论文录入</h2>
+          </div>
+          <div class="topbar-actions">
+            <label class="language-control">
+              <span id="languageLabel">语言</span>
+              <select id="languageSelect">
+                <option value="zh">中文</option>
+                <option value="en">English</option>
+              </select>
+            </label>
+            <div class="model-pill" id="modelStatus">模型未配置</div>
+          </div>
+        </section>
+
+        <section class="view active" id="view-library">
+          <div class="two-column">
+            <form class="panel form-panel" id="paperForm">
+              <div class="panel-head">
+                <h3>添加论文</h3>
+                <span class="muted">仅使用人工标签</span>
+              </div>
+
+              <label>
+                <span>论文标题</span>
+                <input id="paperTitle" name="title" autocomplete="off" placeholder="输入论文标题" required />
+              </label>
+
+              <label>
+                <span>简介摘要</span>
+                <textarea id="paperAbstract" name="abstract" rows="6" placeholder="粘贴 abstract 或自己的简介"></textarea>
+              </label>
+
+              <label>
+                <span>对话记录</span>
+                <textarea id="paperConversation" name="conversation" rows="6" placeholder="可粘贴你和大模型关于这篇论文的讨论"></textarea>
+              </label>
+
+              <div class="manual-tags-field">
+                <div class="field-label-row">
+                  <span>标签</span>
+                  <button class="secondary-button small-button" type="button" id="addManualTagButton">添加标签</button>
+                </div>
+                <div class="manual-tag-list" id="manualTagList">
+                  <div class="manual-tag-row">
+                    <div class="tag-combobox">
+                      <input class="manual-tag-input" autocomplete="off" placeholder="搜索已有标签或输入新标签" />
+                      <div class="tag-suggestions" hidden></div>
+                    </div>
+                    <button class="icon-button remove-manual-tag" type="button" title="删除标签">×</button>
+                  </div>
+                </div>
+              </div>
+
+              <div id="previewTags" class="tag-preview empty">保存后可在“标签库”中用 LLM 合并十分相似的标签</div>
+
+              <button class="primary-button" type="submit">保存论文</button>
+            </form>
+
+            <section class="panel">
+              <div class="panel-head">
+                <h3>论文列表</h3>
+                <input class="compact-input" id="paperFilter" placeholder="过滤论文" />
+              </div>
+              <div class="paper-list" id="paperList"></div>
+            </section>
+          </div>
+        </section>
+
+        <section class="view" id="view-papers">
+          <div class="two-column paper-library-layout">
+            <section class="panel">
+              <div class="panel-head">
+                <h3>全部论文</h3>
+                <input class="compact-input" id="paperLibraryFilter" placeholder="搜索论文或标签" />
+              </div>
+              <div class="paper-list" id="paperLibraryList"></div>
+            </section>
+
+            <section class="panel">
+              <div class="panel-head">
+                <h3>全部标签</h3>
+                <span class="muted" id="paperLibraryTagMeta">按论文数量排序</span>
+              </div>
+              <div class="tag-summary-list" id="paperLibraryTagList"></div>
+            </section>
+          </div>
+        </section>
+
+        <section class="view" id="view-paper-detail">
+          <div class="paper-detail-page">
+            <div class="detail-toolbar">
+              <button class="secondary-button" type="button" id="backToPapersButton">返回论文库</button>
+              <span class="muted" id="paperDetailMeta"></span>
+            </div>
+
+            <section class="panel paper-detail-main">
+              <div class="panel-head detail-title-row">
+                <h3 id="paperDetailTitle">论文详情</h3>
+                <div class="chip-row" id="paperDetailTags"></div>
+              </div>
+
+              <form class="paper-tag-editor" id="paperDetailTagForm">
+                <div class="field-label-row">
+                  <span>编辑标签</span>
+                  <button class="secondary-button small-button" type="button" id="addDetailTagButton">添加标签</button>
+                </div>
+                <div class="manual-tag-list" id="paperDetailTagList"></div>
+                <button class="primary-button" type="submit">保存标签修改</button>
+              </form>
+
+              <div class="detail-block">
+                <h4>摘要</h4>
+                <pre id="paperDetailAbstract">暂无摘要</pre>
+              </div>
+
+              <div class="detail-block">
+                <h4>对话记录</h4>
+                <div class="markdown-body" id="paperDetailConversation"></div>
+              </div>
+            </section>
+
+            <section class="two-column recommendations-layout">
+              <div class="panel">
+                <div class="panel-head">
+                  <h3>标签相似论文</h3>
+                  <span class="muted">按共享标签和标签重合度</span>
+                </div>
+                <div class="paper-list compact-list" id="tagSimilarPaperList"></div>
+              </div>
+
+              <div class="panel">
+                <div class="panel-head">
+                  <h3>LLM 相似论文</h3>
+                  <button class="secondary-button small-button" type="button" id="loadLlmSimilarButton">生成推荐</button>
+                </div>
+                <div class="paper-list compact-list" id="llmSimilarPaperList">
+                  <div class="empty">点击生成推荐后，模型会结合标签系统和论文信息推荐相似论文</div>
+                </div>
+              </div>
+            </section>
+          </div>
+        </section>
+
+        <section class="view" id="view-search">
+          <div class="panel search-panel">
+            <form class="search-row" id="searchForm">
+              <input id="searchInput" placeholder="输入研究关键词，例如 多智能体协作与工具调用" />
+              <button class="primary-button" type="submit">检索标签</button>
+            </form>
+            <div class="search-results" id="searchResults"></div>
+          </div>
+          <div class="panel">
+            <div class="panel-head">
+              <h3>匹配论文</h3>
+              <span class="muted" id="activeSearchLabel">选择一个标签查看论文</span>
+            </div>
+            <div class="paper-list" id="searchPaperList"></div>
+          </div>
+        </section>
+
+        <section class="view" id="view-tags">
+          <div class="two-column tag-layout">
+            <section class="panel">
+              <div class="panel-head">
+                <h3>标签库</h3>
+                <span class="curation-status stale" id="tagCurationStatus">未整理</span>
+                <button class="secondary-button" id="refreshGraphButton">LLM 生成合并建议</button>
+              </div>
+              <div class="tag-library" id="tagTree"></div>
+            </section>
+
+            <section class="panel">
+              <div class="panel-head">
+                <h3 id="selectedTagName">标签详情</h3>
+                <span class="muted" id="selectedTagMeta">点击左侧标签</span>
+              </div>
+              <div id="tagDetail" class="tag-detail empty">暂无选中标签</div>
+            </section>
+          </div>
+        </section>
+
+        <section class="view" id="view-settings">
+          <form class="panel settings-panel" id="settingsForm">
+            <div class="panel-head">
+              <h3>模型设置</h3>
+              <span class="muted">API Key 仅保存在 Chrome 插件本地存储</span>
+            </div>
+
+            <fieldset>
+              <legend>默认模型</legend>
+              <div class="segmented">
+                <label><input type="radio" name="provider" value="qwen" checked /> Qwen/百炼</label>
+                <label><input type="radio" name="provider" value="zhipu" /> 智谱 GLM</label>
+              </div>
+            </fieldset>
+
+            <div class="settings-grid">
+              <label>
+                <span>Qwen API Key</span>
+                <input id="qwenKey" type="password" autocomplete="off" placeholder="留空表示不修改" />
+              </label>
+              <label>
+                <span>Qwen 模型</span>
+                <input id="qwenModel" list="qwenModelOptions" placeholder="qwen3.7-max" />
+                <datalist id="qwenModelOptions">
+                  <option value="qwen3.7-max"></option>
+                  <option value="qwen3.6-plus"></option>
+                  <option value="qwen3.6-flash"></option>
+                  <option value="qwen-plus-latest"></option>
+                  <option value="glm-5.1"></option>
+                  <option value="kimi-k2.6"></option>
+                  <option value="deepseek-v4-pro"></option>
+                </datalist>
+              </label>
+              <label class="wide">
+                <span>Qwen Base URL</span>
+                <input id="qwenBaseUrl" placeholder="https://dashscope.aliyuncs.com/compatible-mode/v1" />
+              </label>
+
+              <label>
+                <span>智谱 API Key</span>
+                <input id="zhipuKey" type="password" autocomplete="off" placeholder="留空表示不修改" />
+              </label>
+              <label>
+                <span>智谱模型</span>
+                <input id="zhipuModel" list="zhipuModelOptions" placeholder="glm-5.1" />
+                <datalist id="zhipuModelOptions">
+                  <option value="glm-5.1"></option>
+                  <option value="glm-5"></option>
+                  <option value="glm-5-turbo"></option>
+                  <option value="glm-4.7"></option>
+                  <option value="glm-4.7-flash"></option>
+                  <option value="glm-4.6"></option>
+                </datalist>
+              </label>
+              <label class="wide">
+                <span>智谱 Base URL</span>
+                <input id="zhipuBaseUrl" placeholder="https://open.bigmodel.cn/api/paas/v4" />
+              </label>
+            </div>
+
+            <div class="key-actions">
+              <label><input type="checkbox" id="clearQwenKey" /> 清除 Qwen Key</label>
+              <label><input type="checkbox" id="clearZhipuKey" /> 清除 智谱 Key</label>
+            </div>
+
+            <div class="button-row">
+              <button class="primary-button" type="submit">保存设置</button>
+              <button class="secondary-button" type="button" id="openModelTest">测试模型</button>
+            </div>
+
+            <div class="data-actions">
+              <button class="secondary-button" type="button" id="exportDataButton">导出数据</button>
+              <button class="secondary-button" type="button" id="importDataButton">导入数据</button>
+              <input id="importDataInput" type="file" accept="application/json,.json" hidden />
+            </div>
+          </form>
+        </section>
+      </main>
+    </div>
+
+    <dialog id="paperDialog">
+      <div class="dialog-head">
+        <h3 id="dialogTitle">论文详情</h3>
+        <button class="icon-button" id="closeDialog" title="关闭">×</button>
+      </div>
+      <div id="dialogBody"></div>
+    </dialog>
+
+    <dialog id="modelTestDialog">
+      <div class="dialog-head">
+        <h3>模型测试</h3>
+        <button class="icon-button" id="closeModelTestDialog" title="关闭">×</button>
+      </div>
+      <form class="model-test-form" id="modelTestForm">
+        <label>
+          <span>测试问题</span>
+          <textarea id="modelTestQuestion" rows="4" placeholder="输入一个问题，测试当前保存的 Qwen 或智谱模型"></textarea>
+        </label>
+        <button class="primary-button" type="submit">发送问题</button>
+      </form>
+      <div class="model-test-meta" id="modelTestMeta">调用信息会显示在这里</div>
+      <div class="model-answer" id="modelTestAnswer">模型回答会显示在这里</div>
+    </dialog>
+
+    <dialog id="mergeReviewDialog">
+      <div class="dialog-head">
+        <div>
+          <h3>标签合并审核</h3>
+          <p class="muted" id="mergeReviewMeta">逐条确认后才会修改标签库</p>
+        </div>
+        <button class="icon-button" id="closeMergeReviewDialog" title="关闭">×</button>
+      </div>
+      <div class="merge-review-list" id="mergeReviewList"></div>
+    </dialog>
+
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+    <script src="manager.js" type="module"></script>
+  </body>
+</html>

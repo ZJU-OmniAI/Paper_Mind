@@ -1,6 +1,6 @@
 # Publishing Checklist
 
-This folder is prepared as a Manifest V3 Chrome extension.
+This folder is prepared as a standalone Manifest V3 Chrome extension.
 
 ## Build ZIP
 
@@ -26,9 +26,6 @@ dist/paper-tag-library-extension.zip
 6. Complete the privacy practices questionnaire.
 7. Submit for review.
 
-## Current Distribution Model
+## Distribution Model
 
-This release is a Chrome extension plus a local companion service. Users install the extension from Chrome and run the local Paper Tag Library service on their computer. Data is stored locally by the companion service in `data/store.json`.
-
-For a fully standalone Chrome-only release, the storage layer should be migrated from the local service to `chrome.storage.local` or IndexedDB inside the extension.
-
+This release is a pure Chrome extension. Users install the extension and can use it immediately. Papers, tags, notes, and settings are stored in Chrome extension local storage. LLM features are optional and require the user to provide their own Qwen or Zhipu API Key.

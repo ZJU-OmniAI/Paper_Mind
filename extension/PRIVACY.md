@@ -1,15 +1,14 @@
 # Privacy Policy
 
-Paper Tag Library Quick Add stores paper titles, abstracts, notes, tags, and settings locally on the user's computer.
+Paper Tag Library stores paper titles, abstracts, notes, tags, model settings, and optional API keys locally in Chrome extension storage on the user's computer.
 
-The extension communicates only with the user's local Paper Tag Library service at:
+The extension does not require registration, does not operate a remote account service, and does not collect analytics, advertising identifiers, financial information, health information, or personal communications.
 
-- `http://127.0.0.1:5173`
-- `http://localhost:5173`
+When the user enables LLM features by entering an API key, the extension may send the text needed for that model request to the provider selected by the user:
 
-The extension does not sell, share, or transfer user data to third parties. It does not collect analytics, advertising identifiers, financial information, health information, authentication credentials, or personal communications.
+- Qwen / DashScope
+- Zhipu GLM
 
-When the user chooses to use LLM features in the local manager, the local service may send the text needed for that model request to the API provider configured by the user. API keys are stored locally by the companion local service, not inside this extension package.
+The extension does not sell, share, or transfer user data to third parties. Data is transmitted only when the user explicitly uses an LLM feature such as smart search, similar-paper recommendation, model testing, or tag-merge suggestions.
 
 Use of information received from Google APIs will adhere to the Chrome Web Store User Data Policy, including the Limited Use requirements.
-

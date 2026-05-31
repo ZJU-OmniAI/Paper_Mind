@@ -1,4 +1,4 @@
-const API_BASE = "http://127.0.0.1:5173";
+import { handleApi } from "./storage.js";
 
 const state = {
   tags: [],
@@ -24,7 +24,7 @@ const els = {
 const translations = {
   zh: {
     title: "添加论文",
-    connecting: "连接本地系统中...",
+    connecting: "读取本地标签库中...",
     manager: "管理",
     openManagerTitle: "打开管理系统",
     reloadTitle: "重新读取当前页面",
@@ -40,9 +40,9 @@ const translations = {
     removeTag: "删除标签",
     createTag: (name) => `新建标签：${name}`,
     paperCount: (count) => `${count} 篇`,
-    connected: (count) => `已连接 · ${count} 个标签`,
-    disconnected: "本地服务未连接",
-    startServer: (message) => `请先启动本地系统：npm run dev。${message}`,
+    connected: (count) => `本地标签库 · ${count} 个标签`,
+    disconnected: "本地标签库不可用",
+    startServer: (message) => `插件本地存储暂时不可用：${message}`,
     sourcePage: (url) => `来源页面：${url}`,
     selectedText: "选中文本：",
     saving: "保存中...",
@@ -51,7 +51,7 @@ const translations = {
   },
   en: {
     title: "Add Paper",
-    connecting: "Connecting to local system...",
+    connecting: "Reading local tag library...",
     manager: "Open",
     openManagerTitle: "Open manager",
     reloadTitle: "Reload current page",
@@ -67,9 +67,9 @@ const translations = {
     removeTag: "Remove tag",
     createTag: (name) => `Create tag: ${name}`,
     paperCount: (count) => `${count} papers`,
-    connected: (count) => `Connected · ${count} tags`,
-    disconnected: "Local service disconnected",
-    startServer: (message) => `Start the local system first: npm run dev. ${message}`,
+    connected: (count) => `Local library · ${count} tags`,
+    disconnected: "Local library unavailable",
+    startServer: (message) => `Extension storage is unavailable: ${message}`,
     sourcePage: (url) => `Source page: ${url}`,
     selectedText: "Selected text:",
     saving: "Saving...",
@@ -122,16 +122,7 @@ function normalize(value) {
 }
 
 async function api(path, options = {}) {
-  const response = await fetch(`${API_BASE}${path}`, {
-    ...options,
-    headers: {
-      "content-type": "application/json",
-      ...(options.headers || {})
-    }
-  });
-  const payload = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(payload.error || t("requestFailed", response.status));
-  return payload;
+  return handleApi(path, options);
 }
 
 function setMessage(text, type = "") {
@@ -294,7 +285,7 @@ els.languageSelect.addEventListener("change", () => {
 });
 
 els.openManagerButton.addEventListener("click", async () => {
-  await chrome.tabs.create({ url: API_BASE });
+  await chrome.tabs.create({ url: chrome.runtime.getURL("manager.html") });
 });
 
 els.addTagButton.addEventListener("click", () => addTagRow());
