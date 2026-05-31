@@ -827,7 +827,7 @@ dialog::backdrop {
   margin: 14px 0;
 }
 
-.paper-tag-editor {
+.paper-detail-editor {
   display: grid;
   gap: 10px;
   margin: 14px 0;
@@ -835,6 +835,11 @@ dialog::backdrop {
   border: 1px solid var(--line);
   border-radius: 8px;
   background: #fbfcfb;
+}
+
+.paper-detail-editor textarea {
+  min-height: 120px;
+  resize: vertical;
 }
 
 .detail-block h4 {

@@ -37,10 +37,11 @@ const els = {
   paperDetailTitle: document.querySelector("#paperDetailTitle"),
   paperDetailTags: document.querySelector("#paperDetailTags"),
   paperDetailTagForm: document.querySelector("#paperDetailTagForm"),
+  paperDetailTitleInput: document.querySelector("#paperDetailTitleInput"),
+  paperDetailAbstractInput: document.querySelector("#paperDetailAbstractInput"),
+  paperDetailConversationInput: document.querySelector("#paperDetailConversationInput"),
   addDetailTagButton: document.querySelector("#addDetailTagButton"),
   paperDetailTagList: document.querySelector("#paperDetailTagList"),
-  paperDetailAbstract: document.querySelector("#paperDetailAbstract"),
-  paperDetailConversation: document.querySelector("#paperDetailConversation"),
   tagSimilarPaperList: document.querySelector("#tagSimilarPaperList"),
   loadLlmSimilarButton: document.querySelector("#loadLlmSimilarButton"),
   llmSimilarPaperList: document.querySelector("#llmSimilarPaperList"),
@@ -116,7 +117,8 @@ const translations = {
     sortedByPaperCount: "按论文数量排序",
     backToPapers: "返回论文库",
     editTags: "编辑标签",
-    saveTagChanges: "保存标签修改",
+    saveTagChanges: "保存修改",
+    paperUpdated: "论文详情已更新",
     tagSimilarPapers: "标签相似论文",
     tagSimilarityHint: "按共享标签和标签重合度",
     llmSimilarPapers: "LLM 相似论文",
@@ -199,7 +201,8 @@ const translations = {
     sortedByPaperCount: "Sorted by paper count",
     backToPapers: "Back to Library",
     editTags: "Edit Tags",
-    saveTagChanges: "Save Tag Changes",
+    saveTagChanges: "Save Changes",
+    paperUpdated: "Paper details updated",
     tagSimilarPapers: "Tag-similar Papers",
     tagSimilarityHint: "By shared tags and tag overlap",
     llmSimilarPapers: "LLM Similar Papers",
@@ -487,6 +490,9 @@ function applyLanguage() {
   setText("#paperLibraryTagMeta", t("sortedByPaperCount"));
 
   setText("#backToPapersButton", t("backToPapers"));
+  setText("#paperDetailTitleLabel", t("paperTitle"));
+  setText("#paperDetailAbstractLabel", t("abstract"));
+  setText("#paperDetailConversationLabel", t("conversation"));
   setText("#paperDetailTagForm .field-label-row span", t("editTags"));
   setText("#addDetailTagButton", t("addTag"));
   setText("#paperDetailTagForm .primary-button", t("saveTagChanges"));
@@ -712,8 +718,9 @@ function renderPaperDetail(paperId) {
     els.paperDetailMeta.textContent = "";
     els.paperDetailTags.innerHTML = "";
     els.paperDetailTagList.innerHTML = "";
-    els.paperDetailAbstract.textContent = t("noAbstract");
-    els.paperDetailConversation.innerHTML = `<p class="empty">${escapeHtml(t("noConversation"))}</p>`;
+    els.paperDetailTitleInput.value = "";
+    els.paperDetailAbstractInput.value = "";
+    els.paperDetailConversationInput.value = "";
     renderSimilarResults(els.tagSimilarPaperList, []);
     return;
   }
@@ -723,9 +730,10 @@ function renderPaperDetail(paperId) {
   els.paperDetailTitle.textContent = paper.title;
   els.paperDetailMeta.textContent = `${t("created")} ${formatDate(paper.createdAt)} · ${t("updated")} ${formatDate(paper.updatedAt)}`;
   els.paperDetailTags.innerHTML = tags.length ? tags.map((tag) => `<span class="tag-chip">${escapeHtml(tag.name)}</span>`).join("") : `<span class="empty">${escapeHtml(t("noTags"))}</span>`;
+  els.paperDetailTitleInput.value = paper.title || "";
+  els.paperDetailAbstractInput.value = paper.abstract || "";
+  els.paperDetailConversationInput.value = paper.conversation || "";
   els.paperDetailTagList.innerHTML = (tags.length ? tags : [{ name: "" }]).map((tag) => tagInputRow(tag.name, t("tagInputPlaceholder"))).join("");
-  els.paperDetailAbstract.textContent = paper.abstract || t("noAbstract");
-  els.paperDetailConversation.innerHTML = renderMarkdown(paper.conversation);
   renderSimilarResults(els.tagSimilarPaperList, localSimilarPapers(paper.id), t("similarEmpty"));
   els.llmSimilarPaperList.innerHTML = `<div class="empty">${escapeHtml(t("llmSimilarEmpty"))}</div>`;
 }
@@ -1177,20 +1185,31 @@ els.paperDetailTagForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   const paperId = state.activePaperId;
   if (!paperId) return;
+  const title = els.paperDetailTitleInput.value.trim();
   const manualTags = [...els.paperDetailTagList.querySelectorAll(".manual-tag-input")].map((input) => input.value.trim()).filter(Boolean);
+  if (!title) {
+    toast(state.language === "en" ? "Paper title is required" : "论文标题不能为空");
+    els.paperDetailTitleInput.focus();
+    return;
+  }
   const button = els.paperDetailTagForm.querySelector(".primary-button");
   const done = setBusy(button, t("saving"));
   try {
     const result = await api(`/api/papers/${encodeURIComponent(paperId)}`, {
       method: "PUT",
-      body: JSON.stringify({ manualTags })
+      body: JSON.stringify({
+        title,
+        abstract: els.paperDetailAbstractInput.value.trim(),
+        conversation: els.paperDetailConversationInput.value.trim(),
+        manualTags
+      })
     });
     state.tags = result.tags || state.tags;
     state.meta = result.meta || state.meta;
     const index = state.papers.findIndex((paper) => paper.id === paperId);
     if (index >= 0) state.papers[index] = result.paper;
     renderAll();
-    toast(t("tagSaved"));
+    toast(t("paperUpdated"));
   } catch (err) {
     toast(err.message);
   } finally {
