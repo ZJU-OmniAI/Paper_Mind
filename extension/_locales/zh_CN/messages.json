@@ -1,0 +1,14 @@
+{
+  "extName": {
+    "message": "论文标签库快速添加"
+  },
+  "extShortName": {
+    "message": "论文标签库"
+  },
+  "extDescription": {
+    "message": "从 Chrome 当前页面快速添加论文和标签到本地论文标签管理系统，数据保存在本机。"
+  },
+  "actionTitle": {
+    "message": "添加到论文标签库"
+  }
+}

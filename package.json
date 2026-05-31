@@ -1,0 +1,15 @@
+{
+  "name": "paper-tag-llm-manager",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Local web app for managing research papers with LLM-assisted tag organization.",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "package:extension": "node scripts/package-extension.mjs"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

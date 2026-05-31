@@ -1,0 +1,232 @@
+:root {
+  --bg: #f7f8f6;
+  --surface: #ffffff;
+  --ink: #182420;
+  --muted: #65716d;
+  --line: #dce4df;
+  --accent: #0d766e;
+  --danger: #9f2f2f;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  width: 390px;
+  margin: 0;
+  color: var(--ink);
+  background: var(--bg);
+  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+button,
+input,
+textarea {
+  font: inherit;
+}
+
+.popup {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+}
+
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+h1,
+p {
+  margin: 0;
+}
+
+h1 {
+  font-size: 18px;
+}
+
+p,
+label span,
+.label-row,
+.message {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+#reloadButton,
+.remove-tag {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--ink);
+  background: var(--surface);
+  cursor: pointer;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+#openManagerButton {
+  height: 32px;
+  border: 1px solid rgba(13, 118, 110, 0.22);
+  border-radius: 8px;
+  padding: 0 10px;
+  color: var(--accent);
+  background: #ecf8f6;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+#languageSelect {
+  height: 32px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0 6px;
+  color: var(--ink);
+  background: var(--surface);
+  font-size: 12px;
+  font-weight: 800;
+  outline: none;
+}
+
+form {
+  display: grid;
+  gap: 11px;
+}
+
+label,
+.tag-section {
+  display: grid;
+  gap: 6px;
+}
+
+input,
+textarea {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 9px 10px;
+  color: var(--ink);
+  background: var(--surface);
+  outline: none;
+}
+
+textarea {
+  resize: vertical;
+  line-height: 1.45;
+}
+
+input:focus,
+textarea:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(13, 118, 110, 0.12);
+}
+
+.label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-weight: 700;
+}
+
+#addTagButton {
+  border: 1px solid rgba(13, 118, 110, 0.22);
+  border-radius: 8px;
+  padding: 6px 9px;
+  color: var(--accent);
+  background: #ecf8f6;
+  cursor: pointer;
+}
+
+.tag-rows {
+  display: grid;
+  gap: 7px;
+}
+
+.tag-row {
+  display: grid;
+  grid-template-columns: 1fr 32px;
+  gap: 7px;
+  position: relative;
+}
+
+.tag-combobox {
+  position: relative;
+}
+
+.tag-suggestions {
+  position: absolute;
+  z-index: 50;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  max-height: 190px;
+  overflow: auto;
+  padding: 5px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: 0 12px 28px rgba(25, 37, 34, 0.13);
+}
+
+.tag-suggestion {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px;
+  border: 0;
+  border-radius: 6px;
+  color: var(--ink);
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.tag-suggestion:hover {
+  background: #eef5f2;
+}
+
+.tag-suggestion small {
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.tag-suggestion.create {
+  color: var(--accent);
+  font-weight: 800;
+}
+
+.primary {
+  border: 0;
+  border-radius: 8px;
+  padding: 11px 12px;
+  color: white;
+  background: var(--accent);
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.primary:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.message {
+  min-height: 18px;
+}
+
+.message.error {
+  color: var(--danger);
+}

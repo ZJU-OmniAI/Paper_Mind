@@ -1,0 +1,14 @@
+{
+  "extName": {
+    "message": "Paper Tag Library Quick Add"
+  },
+  "extShortName": {
+    "message": "Paper Tags"
+  },
+  "extDescription": {
+    "message": "Quickly add papers and tags from the current Chrome page to a local paper tag library. Data stays on your computer."
+  },
+  "actionTitle": {
+    "message": "Add to Paper Tag Library"
+  }
+}

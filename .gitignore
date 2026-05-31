@@ -1,0 +1,7 @@
+.DS_Store
+dist/
+logs/
+data/config.json
+data/store.json
+backups/
+node_modules/

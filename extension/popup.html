@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>添加论文</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <main class="popup">
+      <header>
+        <div>
+          <h1>添加论文</h1>
+          <p id="serverStatus">连接本地系统中...</p>
+        </div>
+        <div class="header-actions">
+          <select id="languageSelect" title="语言">
+            <option value="zh">中文</option>
+            <option value="en">EN</option>
+          </select>
+          <button id="openManagerButton" title="打开管理系统">管理</button>
+          <button id="reloadButton" title="重新读取当前页面">↻</button>
+        </div>
+      </header>
+
+      <form id="paperForm">
+        <label>
+          <span>论文标题</span>
+          <input id="titleInput" autocomplete="off" required />
+        </label>
+
+        <label>
+          <span>简介摘要</span>
+          <textarea id="abstractInput" rows="4" placeholder="可自动读取页面描述，也可手动粘贴 abstract"></textarea>
+        </label>
+
+        <label>
+          <span>对话记录 / 备注</span>
+          <textarea id="conversationInput" rows="4" placeholder="可保存当前 URL、选中文本或你的阅读备注"></textarea>
+        </label>
+
+        <section class="tag-section">
+          <div class="label-row">
+            <span>标签</span>
+            <button type="button" id="addTagButton">添加标签</button>
+          </div>
+          <div id="tagRows" class="tag-rows"></div>
+        </section>
+
+        <button class="primary" type="submit">保存到本地标签库</button>
+      </form>
+
+      <div id="message" class="message" role="status"></div>
+    </main>
+    <script src="popup.js"></script>
+  </body>
+</html>
