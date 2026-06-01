@@ -1012,10 +1012,13 @@ function renderPaperMap() {
           const active = selected || relatedToPaper;
           const dimmed = (selectedTags.size || selectedPaper) && !active;
           return `
-            <button class="map-node map-tag-node${active ? " active" : ""}${dimmed ? " dimmed" : ""}${isSystemTag(tag) ? " system" : ""}" type="button" data-map-tag-id="${tag.id}">
-              <strong>${escapeHtml(tag.name)}</strong>
-              <span>${escapeHtml(t("tagPaperCount", tag.paperIds?.length || 0))}</span>
-            </button>
+            <div class="map-node map-tag-node${active ? " active" : ""}${dimmed ? " dimmed" : ""}${isSystemTag(tag) ? " system" : ""}">
+              <button class="map-node-main" type="button" data-map-tag-id="${tag.id}">
+                <strong>${escapeHtml(tag.name)}</strong>
+                <span>${escapeHtml(t("tagPaperCount", tag.paperIds?.length || 0))}</span>
+              </button>
+              <button class="map-node-open" type="button" data-open-map-tag-id="${tag.id}">${escapeHtml(t("viewDetail"))}</button>
+            </div>
           `;
         })
         .join("")
@@ -1035,10 +1038,13 @@ function renderPaperMap() {
           const dimmed = (selectedTags.size || selectedPaper) && !active;
           const tagsForPaper = paperTags(paper).filter((tag) => visibleTagIds.has(tag.id)).slice(0, 5);
           return `
-            <button class="map-node map-paper-node${active ? " active" : ""}${dimmed ? " dimmed" : ""}" type="button" data-map-paper-id="${paper.id}">
-              <strong>${escapeHtml(paper.title)}</strong>
-              <span>${tagsForPaper.map((tag) => escapeHtml(tag.name)).join(" · ") || escapeHtml(t("noTags"))}</span>
-            </button>
+            <div class="map-node map-paper-node${active ? " active" : ""}${dimmed ? " dimmed" : ""}">
+              <button class="map-node-main" type="button" data-map-paper-id="${paper.id}">
+                <strong>${escapeHtml(paper.title)}</strong>
+                <span>${tagsForPaper.map((tag) => escapeHtml(tag.name)).join(" · ") || escapeHtml(t("noTags"))}</span>
+              </button>
+              <button class="map-node-open" type="button" data-open-map-paper-id="${paper.id}">${escapeHtml(t("viewDetail"))}</button>
+            </div>
           `;
         })
         .join("")
@@ -1788,6 +1794,20 @@ els.paperMapShell.addEventListener("scroll", () => requestAnimationFrame(drawPap
 window.addEventListener("resize", () => requestAnimationFrame(drawPaperMapLines));
 
 els.paperLibraryMapMode.addEventListener("click", (event) => {
+  const openTagButton = event.target.closest("[data-open-map-tag-id]");
+  if (openTagButton) {
+    state.activeTagId = openTagButton.dataset.openMapTagId;
+    switchView("tags");
+    renderTagDetail();
+    return;
+  }
+
+  const openPaperButton = event.target.closest("[data-open-map-paper-id]");
+  if (openPaperButton) {
+    showPaper(openPaperButton.dataset.openMapPaperId);
+    return;
+  }
+
   const tagButton = event.target.closest("[data-map-tag-id]");
   if (tagButton) {
     const tagId = tagButton.dataset.mapTagId;

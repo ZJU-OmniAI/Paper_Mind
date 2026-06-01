@@ -689,24 +689,36 @@ textarea:focus {
 
 .map-node {
   display: grid;
-  gap: 4px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
   width: 100%;
   padding: 10px 12px;
   border: 1px solid var(--line);
   border-radius: 8px;
   color: var(--ink);
   background: rgba(255, 255, 255, 0.96);
-  text-align: left;
   box-shadow: 0 8px 20px rgba(26, 39, 36, 0.04);
 }
 
-.map-node strong {
+.map-node-main {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+  padding: 0;
+  border: 0;
+  color: inherit;
+  background: transparent;
+  text-align: left;
+}
+
+.map-node-main strong {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.map-node span {
+.map-node-main span {
   overflow: hidden;
   color: var(--muted);
   font-size: 12px;
@@ -714,6 +726,18 @@ textarea:focus {
   white-space: nowrap;
 }
 
+.map-node-open {
+  padding: 6px 8px;
+  border: 1px solid rgba(13, 118, 110, 0.22);
+  border-radius: 7px;
+  color: var(--accent);
+  background: #ecf8f6;
+  font-size: 12px;
+  font-weight: 750;
+  white-space: nowrap;
+}
+
+.map-node:focus-within,
 .map-node:hover,
 .map-node.active {
   border-color: rgba(13, 118, 110, 0.45);
