@@ -398,14 +398,89 @@ function normalizePaperTitle(value) {
   return String(value || "").trim().replace(/\s+/g, " ").toLocaleLowerCase("zh-CN");
 }
 
-function findDuplicatePaper(store, input) {
+function editDistance(a, b) {
+  const left = String(a || "");
+  const right = String(b || "");
+  if (!left) return right.length;
+  if (!right) return left.length;
+  const previous = Array.from({ length: right.length + 1 }, (_, index) => index);
+  const current = Array(right.length + 1).fill(0);
+  for (let i = 1; i <= left.length; i += 1) {
+    current[0] = i;
+    for (let j = 1; j <= right.length; j += 1) {
+      const cost = left[i - 1] === right[j - 1] ? 0 : 1;
+      current[j] = Math.min(current[j - 1] + 1, previous[j] + 1, previous[j - 1] + cost);
+    }
+    previous.splice(0, previous.length, ...current);
+  }
+  return previous[right.length];
+}
+
+function titleSimilarity(a, b) {
+  const left = normalizePaperTitle(a);
+  const right = normalizePaperTitle(b);
+  if (!left || !right) return 0;
+  if (left === right) return 1;
+  if (left.includes(right) || right.includes(left)) return Math.min(left.length, right.length) / Math.max(left.length, right.length);
+  const distance = editDistance(left, right);
+  return 1 - distance / Math.max(left.length, right.length, 1);
+}
+
+function findDuplicatePaper(store, input, { threshold = 0.94 } = {}) {
   const sourceUrl = extractSourceUrl(input);
   const titleKey = normalizePaperTitle(input.title);
-  return store.papers.find((paper) => {
+  let best = null;
+  for (const paper of store.papers) {
     const paperSourceUrl = paper.sourceUrl || extractSourceUrl(paper);
-    if (sourceUrl && paperSourceUrl && sourceUrl === paperSourceUrl) return true;
-    return titleKey && normalizePaperTitle(paper.title) === titleKey;
-  });
+    if (sourceUrl && paperSourceUrl && sourceUrl === paperSourceUrl) {
+      return { paper, score: 1, reason: "sourceUrl" };
+    }
+    const score = titleKey ? titleSimilarity(input.title, paper.title) : 0;
+    if (!best || score > best.score) best = { paper, score, reason: "title" };
+  }
+  return best?.score >= threshold ? best : null;
+}
+
+function appendUniqueText(existing, incoming) {
+  const left = String(existing || "").trim();
+  const right = String(incoming || "").trim();
+  if (!right) return left;
+  if (!left) return right;
+  if (left.includes(right)) return left;
+  if (right.includes(left)) return right;
+  return `${left}\n\n---\n\n${right}`;
+}
+
+function mergePaperContent(paper, body, sourceUrl) {
+  if (!paper.sourceUrl && sourceUrl) paper.sourceUrl = sourceUrl;
+  if (typeof body.abstract === "string") paper.abstract = appendUniqueText(paper.abstract, body.abstract);
+  if (typeof body.conversation === "string") paper.conversation = appendUniqueText(paper.conversation, body.conversation);
+}
+
+function redundantTagSuggestions(store) {
+  const groups = new Map();
+  for (const tag of store.tags || []) {
+    if (isSystemTag(tag)) continue;
+    const paperIds = [...new Set(tag.paperIds || [])].sort();
+    if (!paperIds.length) continue;
+    const key = paperIds.join("|");
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(tag);
+  }
+  return [...groups.values()]
+    .filter((tags) => tags.length > 1)
+    .map((tags) => {
+      const ordered = [...tags].sort((a, b) => (b.paperIds?.length || 0) - (a.paperIds?.length || 0) || a.name.localeCompare(b.name, "zh-CN"));
+      const [canonical, ...sources] = ordered;
+      return {
+        canonical: canonical.name,
+        tags: sources.map((tag) => tag.name),
+        aliases: sources.map((tag) => tag.name),
+        confidence: 1,
+        reason: `这些标签关联的论文集合完全一致（${canonical.paperIds?.length || 0} 篇），区分度可能冗余。`,
+        kind: "redundant-identical-paper-set"
+      };
+    });
 }
 
 function replaceRelationIds(ids, sourceIds, targetId) {
@@ -1037,22 +1112,42 @@ export async function handleApi(path, options = {}) {
     return response(200, { answer: result.content, meta: result.meta });
   }
 
+  if (method === "POST" && url.pathname === "/api/papers/check-duplicate") {
+    const body = await parseBody(options);
+    const title = String(body.title || "").trim();
+    if (!title) return response(200, { duplicate: false });
+    const match = findDuplicatePaper(store, body);
+    if (!match) return response(200, { duplicate: false });
+    return response(200, {
+      duplicate: true,
+      score: Number(match.score.toFixed(3)),
+      reason: match.reason,
+      paper: match.paper,
+      tagNames: tagNamesForPaper(store, match.paper)
+    });
+  }
+
   if (method === "POST" && url.pathname === "/api/papers") {
     const body = await parseBody(options);
     const title = String(body.title || "").trim();
     if (!title) return response(400, { error: "论文标题不能为空" });
     const timestamp = nowIso();
     const sourceUrl = extractSourceUrl(body);
-    const existingPaper = findDuplicatePaper(store, { ...body, title, sourceUrl });
-    if (existingPaper) {
-      if (!existingPaper.sourceUrl && sourceUrl) existingPaper.sourceUrl = sourceUrl;
-      if (!existingPaper.abstract && typeof body.abstract === "string") existingPaper.abstract = body.abstract.trim();
-      if (!existingPaper.conversation && typeof body.conversation === "string") existingPaper.conversation = body.conversation.trim();
+    const duplicateAction = body.duplicateAction === "create" ? "create" : body.duplicateAction === "merge" ? "merge" : "";
+    const duplicateMatch = duplicateAction === "create" ? null : findDuplicatePaper(store, { ...body, title, sourceUrl });
+    if (duplicateMatch) {
+      const existingPaper = duplicateMatch.paper;
+      if (duplicateAction === "merge") mergePaperContent(existingPaper, body, sourceUrl);
+      else {
+        if (!existingPaper.sourceUrl && sourceUrl) existingPaper.sourceUrl = sourceUrl;
+        if (!existingPaper.abstract && typeof body.abstract === "string") existingPaper.abstract = body.abstract.trim();
+        if (!existingPaper.conversation && typeof body.conversation === "string") existingPaper.conversation = body.conversation.trim();
+      }
       mergePaperTags(store, existingPaper, body.manualTags);
       existingPaper.updatedAt = nowIso();
       markTagsStale(store);
       await writeStore(store);
-      return response(200, { paper: existingPaper, papers: store.papers, tags: store.tags, meta: store.meta, duplicate: true });
+      return response(200, { paper: existingPaper, papers: store.papers, tags: store.tags, meta: store.meta, duplicate: true, duplicateMerged: duplicateAction === "merge" });
     }
     const paper = {
       id: makeId("paper"),
@@ -1230,6 +1325,11 @@ export async function handleApi(path, options = {}) {
       await writeStore(store);
     }
     return response(200, { papers: store.papers, tags: store.tags, meta: store.meta, llmUsed, error, merges });
+  }
+
+  if (method === "POST" && url.pathname === "/api/tags/analyze-redundancy") {
+    const merges = redundantTagSuggestions(store).map((merge) => validateMergeGroup(store, merge));
+    return response(200, { papers: store.papers, tags: store.tags, meta: store.meta, merges });
   }
 
   if (method === "POST" && url.pathname === "/api/tags/merge") {

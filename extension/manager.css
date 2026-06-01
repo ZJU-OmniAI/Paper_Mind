@@ -246,6 +246,7 @@ button {
   justify-content: space-between;
   gap: 14px;
   align-items: center;
+  flex-wrap: wrap;
   margin-bottom: 16px;
 }
 
@@ -1117,6 +1118,19 @@ dialog::backdrop {
   display: flex;
   flex-wrap: wrap;
   gap: 7px;
+}
+
+.merge-canonical-control {
+  display: grid;
+  gap: 7px;
+}
+
+.merge-canonical-control select {
+  width: 100%;
+  padding: 9px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
 }
 
 .merge-review-card p {

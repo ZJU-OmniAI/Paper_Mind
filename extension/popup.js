@@ -49,6 +49,9 @@ const translations = {
     saving: "保存中...",
     saved: "已保存到本地论文标签库。",
     duplicateSaved: "这篇论文已存在，未重复添加；新标签已合并到已有论文。",
+    duplicateMerged: "已合并到已有论文，标签、简介和对话记录已做并集。",
+    duplicatePrompt: (title, score) => `库里已有高度相似的论文：\n${title}\n相似度：${Math.round(score * 100)}%\n\n选择“确定”合并到已有论文；选择“取消”后可继续选择是否新建。`,
+    duplicateCreatePrompt: "是否仍然新建一篇独立论文？",
     requestFailed: (status) => `请求失败：${status}`
   },
   en: {
@@ -77,6 +80,9 @@ const translations = {
     saving: "Saving...",
     saved: "Saved to the local paper library.",
     duplicateSaved: "This paper already exists. It was not duplicated; new tags were merged into the existing paper.",
+    duplicateMerged: "Merged into the existing paper; tags, abstract, and conversation were unioned.",
+    duplicatePrompt: (title, score) => `A highly similar paper already exists:\n${title}\nSimilarity: ${Math.round(score * 100)}%\n\nChoose OK to merge into the existing paper. Choose Cancel to decide whether to create a separate paper.`,
+    duplicateCreatePrompt: "Create a separate new paper anyway?",
     requestFailed: (status) => `Request failed: ${status}`
   }
 };
@@ -264,6 +270,19 @@ async function readCurrentPage() {
   }
 }
 
+async function fillConversationFromClipboard() {
+  if (!navigator.clipboard?.readText) return;
+  try {
+    const text = (await navigator.clipboard.readText()).trim();
+    if (!text) return;
+    if (els.conversation.value.includes(text)) return;
+    const label = state.language === "en" ? "Clipboard:" : "剪贴板内容：";
+    els.conversation.value = `${els.conversation.value.trim()}${els.conversation.value.trim() ? "\n\n" : ""}${label}\n${text}`;
+  } catch {
+    // Clipboard access can be denied by the browser; adding a paper should still work.
+  }
+}
+
 async function loadState() {
   const data = await api("/api/state");
   state.tags = data.tags || [];
@@ -283,10 +302,23 @@ function collectTags() {
   return [...document.querySelectorAll(".tag-input")].map((input) => input.value.trim()).filter(Boolean);
 }
 
+async function chooseDuplicateAction(payload) {
+  const duplicate = await api("/api/papers/check-duplicate", {
+    method: "POST",
+    body: JSON.stringify(payload)
+  });
+  if (!duplicate.duplicate) return "";
+  const merge = window.confirm(t("duplicatePrompt", duplicate.paper?.title || "", duplicate.score || 1));
+  if (merge) return "merge";
+  const create = window.confirm(t("duplicateCreatePrompt"));
+  return create ? "create" : "cancel";
+}
+
 async function initialize() {
   applyLanguage();
   try {
     await Promise.all([loadState(), readCurrentPage()]);
+    await fillConversationFromClipboard();
     if (!els.tagRows.children.length) addTagRow();
   } catch (err) {
     els.serverStatus.textContent = t("disconnected");
@@ -367,18 +399,21 @@ els.form.addEventListener("submit", async (event) => {
   button.disabled = true;
   setMessage(t("saving"));
   try {
+    const payload = {
+      title: els.title.value.trim(),
+      abstract: els.abstract.value.trim(),
+      conversation: els.conversation.value.trim(),
+      sourceUrl: state.currentTab?.url || "",
+      manualTags: collectTags()
+    };
+    const duplicateAction = await chooseDuplicateAction(payload);
+    if (duplicateAction === "cancel") return;
     const result = await api("/api/papers", {
       method: "POST",
-      body: JSON.stringify({
-        title: els.title.value.trim(),
-        abstract: els.abstract.value.trim(),
-        conversation: els.conversation.value.trim(),
-        sourceUrl: state.currentTab?.url || "",
-        manualTags: collectTags()
-      })
+      body: JSON.stringify({ ...payload, duplicateAction })
     });
     state.tags = result.tags || state.tags;
-    setMessage(result.duplicate ? t("duplicateSaved") : t("saved"));
+    setMessage(result.duplicateMerged ? t("duplicateMerged") : result.duplicate ? t("duplicateSaved") : t("saved"));
     els.form.reset();
     els.tagRows.innerHTML = "";
     addTagRow("", { focus: false });

@@ -91,6 +91,8 @@ const els = {
   tagTree: document.querySelector("#tagTree"),
   tagDetail: document.querySelector("#tagDetail"),
   tagCurationStatus: document.querySelector("#tagCurationStatus"),
+  tagLibraryFilter: document.querySelector("#tagLibraryFilter"),
+  analyzeRedundantTagsButton: document.querySelector("#analyzeRedundantTagsButton"),
   selectedTagName: document.querySelector("#selectedTagName"),
   selectedTagMeta: document.querySelector("#selectedTagMeta"),
   refreshGraphButton: document.querySelector("#refreshGraphButton"),
@@ -153,6 +155,8 @@ const translations = {
     allPapers: "全部论文",
     allTags: "全部标签",
     searchPaperOrTag: "搜索论文或标签",
+    quickPaperSearch: "快速检索论文或标签（本地）",
+    quickTagSearch: "快速检索标签（本地）",
     paperLibraryListView: "平铺列表",
     paperLibraryMapView: "标签映射",
     paperLibrarySort: "排序",
@@ -215,6 +219,10 @@ const translations = {
     tagLibrary: "标签库",
     uncurated: "未整理",
     generateMergeSuggestions: "LLM 生成合并建议",
+    analyzeRedundantTags: "分析冗余标签",
+    redundancyNoSuggestions: "没有发现论文集合完全一致的冗余标签",
+    redundancySuggestions: (count) => `发现 ${count} 条冗余标签建议，请逐条审核`,
+    keepTag: "保留标签",
     tagDetail: "标签详情",
     clickTag: "点击左侧标签",
     modelSettings: "模型设置",
@@ -244,6 +252,9 @@ const translations = {
     searching: "检索中...",
     paperSaved: "论文已保存，人工标签已加入标签库",
     duplicatePaperSaved: "这篇论文已存在，未重复添加；新标签已合并到已有论文",
+    duplicatePaperMerged: "已合并到已有论文，标签、简介和对话记录已做并集",
+    duplicatePrompt: (title, score) => `库里已有高度相似的论文：\n${title}\n相似度：${Math.round(score * 100)}%\n\n选择“确定”合并到已有论文；选择“取消”后可继续选择是否新建。`,
+    duplicateCreatePrompt: "是否仍然新建一篇独立论文？",
     tagSaved: "论文标签已更新",
     settingsSaved: "模型设置已保存",
     connected: (count) => `已连接 · ${count} 个标签`,
@@ -287,6 +298,8 @@ const translations = {
     allPapers: "All Papers",
     allTags: "All Tags",
     searchPaperOrTag: "Search papers or tags",
+    quickPaperSearch: "Quick local search for papers or tags",
+    quickTagSearch: "Quick local tag search",
     paperLibraryListView: "Paper List",
     paperLibraryMapView: "Tag Map",
     paperLibrarySort: "Sort",
@@ -349,6 +362,10 @@ const translations = {
     tagLibrary: "Tag Library",
     uncurated: "Not Reviewed",
     generateMergeSuggestions: "Generate Merge Suggestions",
+    analyzeRedundantTags: "Analyze Redundant Tags",
+    redundancyNoSuggestions: "No redundant tags with identical paper sets were found",
+    redundancySuggestions: (count) => `Found ${count} redundant-tag suggestions to review`,
+    keepTag: "Keep Tag",
     tagDetail: "Tag Detail",
     clickTag: "Click a tag on the left",
     modelSettings: "Model Settings",
@@ -378,6 +395,9 @@ const translations = {
     searching: "Searching...",
     paperSaved: "Paper saved and manual tags were added",
     duplicatePaperSaved: "This paper already exists. It was not duplicated; new tags were merged into the existing paper",
+    duplicatePaperMerged: "Merged into the existing paper; tags, abstract, and conversation were unioned",
+    duplicatePrompt: (title, score) => `A highly similar paper already exists:\n${title}\nSimilarity: ${Math.round(score * 100)}%\n\nChoose OK to merge into the existing paper. Choose Cancel to decide whether to create a separate paper.`,
+    duplicateCreatePrompt: "Create a separate new paper anyway?",
     tagSaved: "Paper tags updated",
     settingsSaved: "Model settings saved",
     connected: (count) => `Connected · ${count} tags`,
@@ -644,7 +664,7 @@ function applyLanguage() {
 
   setText("#paperLibraryTitle", t("allPapers"));
   setText("#paperLibraryTagsTitle", t("allTags"));
-  setPlaceholder("#paperLibraryFilter", t("searchPaperOrTag"));
+  setPlaceholder("#paperLibraryFilter", t("quickPaperSearch"));
   setText("#paperLibraryTagMeta", t("sortedByPaperCount"));
   setText('[data-paper-library-mode="list"]', t("paperLibraryListView"));
   setText('[data-paper-library-mode="map"]', t("paperLibraryMapView"));
@@ -699,6 +719,8 @@ function applyLanguage() {
   if (!state.activeTopicPackId) setText("#topicResultMeta", t("chooseTopicPack"));
 
   setText("#view-tags .panel:first-child .panel-head h3", t("tagLibrary"));
+  setPlaceholder("#tagLibraryFilter", t("quickTagSearch"));
+  setText("#analyzeRedundantTagsButton", t("analyzeRedundantTags"));
   setText("#refreshGraphButton", t("generateMergeSuggestions"));
   if (!state.activeTagId) {
     setText("#selectedTagName", t("tagDetail"));
@@ -1412,11 +1434,17 @@ function createTagInputRow(value = "", placeholder = "") {
 }
 
 function renderTagTree() {
-  if (!state.tags.length) {
+  const query = normalizeText(els.tagLibraryFilter?.value || "");
+  const visibleTags = state.tags.filter((tag) => {
+    if (!query) return true;
+    const linkedTitles = (tag.paperIds || []).map((id) => paperById(id)?.title || "").join(" ");
+    return normalizeText(`${tag.name} ${(tag.aliases || []).join(" ")} ${tag.description || ""} ${linkedTitles}`).includes(query);
+  });
+  if (!visibleTags.length) {
     els.tagTree.innerHTML = `<div class="empty">${escapeHtml(t("noTags"))}</div>`;
     return;
   }
-  const orderedTags = [...state.tags].sort(compareTags);
+  const orderedTags = [...visibleTags].sort(compareTags);
   els.tagTree.innerHTML = `
     <div class="tag-library-grid">
       ${orderedTags
@@ -1495,14 +1523,21 @@ function renderMergeReview() {
   els.mergeReviewList.innerHTML = state.pendingMerges
     .map((merge, index) => {
       const sourceTags = splitMergeTags(merge.tags);
+      const allTags = uniq([merge.canonical, ...sourceTags]);
       return `
         <article class="merge-review-card" data-merge-index="${index}">
           <div class="merge-route">
             <span class="merge-target">${escapeHtml(merge.canonical)}</span>
             <span class="merge-arrow">${state.language === "en" ? "keep" : "保留"}</span>
           </div>
+          <label class="merge-canonical-control">
+            <span>${escapeHtml(t("keepTag"))}</span>
+            <select data-merge-canonical="${index}">
+              ${allTags.map((name) => `<option value="${escapeHtml(name)}" ${name === merge.canonical ? "selected" : ""}>${escapeHtml(name)}</option>`).join("")}
+            </select>
+          </label>
           <div class="merge-sources">
-            ${sourceTags.map((name) => `<span class="tag-chip">${escapeHtml(name)}</span>`).join("")}
+            ${allTags.map((name) => `<span class="tag-chip">${escapeHtml(name)}</span>`).join("")}
           </div>
           <p>${escapeHtml(merge.reason || (state.language === "en" ? "The LLM considers these tags highly similar" : "LLM 认为这些标签语义十分相似"))}</p>
           <small>${state.language === "en" ? "Confidence" : "置信度"}：${(Number(merge.confidence || 0) * 100).toFixed(0)}%</small>
@@ -1633,6 +1668,18 @@ function collectPaperForm() {
   };
 }
 
+async function chooseDuplicateAction(payload) {
+  const duplicate = await api("/api/papers/check-duplicate", {
+    method: "POST",
+    body: JSON.stringify(payload)
+  });
+  if (!duplicate.duplicate) return "";
+  const merge = window.confirm(t("duplicatePrompt", duplicate.paper?.title || "", duplicate.score || 1));
+  if (merge) return "merge";
+  const create = window.confirm(t("duplicateCreatePrompt"));
+  return create ? "create" : "cancel";
+}
+
 function collectSettingsForm() {
   return {
     provider: document.querySelector('input[name="provider"]:checked')?.value || "qwen",
@@ -1715,9 +1762,12 @@ els.paperForm.addEventListener("submit", async (event) => {
   const button = els.paperForm.querySelector(".primary-button");
   const done = setBusy(button, "保存中...");
   try {
+    const payload = collectPaperForm();
+    const duplicateAction = await chooseDuplicateAction(payload);
+    if (duplicateAction === "cancel") return;
     const result = await api("/api/papers", {
       method: "POST",
-      body: JSON.stringify(collectPaperForm())
+      body: JSON.stringify({ ...payload, duplicateAction })
     });
     state.papers = result.papers || [result.paper, ...state.papers.filter((paper) => paper.id !== result.paper.id)];
     state.tags = result.tags || state.tags;
@@ -1727,7 +1777,7 @@ els.paperForm.addEventListener("submit", async (event) => {
     els.previewTags.textContent = t("mergePrompt");
     els.previewTags.classList.add("empty");
     renderAll();
-    toast(result.duplicate ? t("duplicatePaperSaved") : t("paperSaved"));
+    toast(result.duplicateMerged ? t("duplicatePaperMerged") : result.duplicate ? t("duplicatePaperSaved") : t("paperSaved"));
   } catch (err) {
     toast(err.message);
   } finally {
@@ -1779,6 +1829,8 @@ els.paperFilter.addEventListener("input", () => renderPapers());
 els.paperLibraryFilter.addEventListener("input", () => renderPaperLibrary());
 
 els.paperLibrarySort.addEventListener("change", () => renderPaperLibrary());
+
+els.tagLibraryFilter.addEventListener("input", () => renderTagTree());
 
 document.querySelectorAll("[data-paper-library-mode]").forEach((button) => {
   button.addEventListener("click", () => {
@@ -2133,6 +2185,30 @@ els.tagDetail.addEventListener("click", async (event) => {
   }
 });
 
+els.analyzeRedundantTagsButton.addEventListener("click", async () => {
+  const done = setBusy(els.analyzeRedundantTagsButton, t("generating"));
+  try {
+    const result = await api("/api/tags/analyze-redundancy", {
+      method: "POST",
+      body: JSON.stringify({})
+    });
+    state.papers = result.papers || state.papers;
+    state.tags = result.tags || state.tags;
+    state.meta = result.meta || state.meta;
+    state.pendingMerges = result.merges || [];
+    state.reviewedMergeCount = 0;
+    renderAll();
+    renderMergeReview();
+    els.mergeReviewDialog.showModal();
+    const mergeCount = state.pendingMerges.length;
+    toast(mergeCount ? t("redundancySuggestions", mergeCount) : t("redundancyNoSuggestions"));
+  } catch (err) {
+    toast(err.message);
+  } finally {
+    done();
+  }
+});
+
 els.refreshGraphButton.addEventListener("click", async () => {
   const done = setBusy(els.refreshGraphButton, t("generating"));
   try {
@@ -2233,9 +2309,16 @@ els.mergeReviewList.addEventListener("click", async (event) => {
     const index = Number(approveButton.dataset.approveMerge);
     const merge = state.pendingMerges[index];
     if (!merge) return;
+    const selectedCanonical = els.mergeReviewList.querySelector(`[data-merge-canonical="${index}"]`)?.value || merge.canonical;
+    const allNames = uniq([merge.canonical, ...splitMergeTags(merge.tags)]);
+    const reviewedMerge = {
+      ...merge,
+      canonical: selectedCanonical,
+      tags: allNames.filter((name) => normalizeText(name) !== normalizeText(selectedCanonical))
+    };
     const done = setBusy(approveButton, state.language === "en" ? "Merging..." : "合并中...");
     try {
-      await mergeTags(merge);
+      await mergeTags(reviewedMerge);
       state.pendingMerges.splice(index, 1);
       renderMergeReview();
       if (!state.pendingMerges.length) await finishMergeReview();

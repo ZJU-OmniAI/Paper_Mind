@@ -16,9 +16,12 @@ Core features:
 
 - Quick-add papers from the current Chrome tab
 - Search existing tags or create new tags
-- Save notes, abstracts, and selected text
+- Save notes, abstracts, selected text, source URLs, and optional clipboard text
 - Open a full local management page inside the extension
 - Browse papers and tags
+- Fast local search for large paper and tag libraries
+- Local duplicate-paper checks before saving
+- Local redundant-tag analysis for tags linked to identical paper sets
 - Keep untagged papers in a built-in "Unsorted" tag for later organization
 - Create topic packs that aggregate papers by included and excluded tags
 - Daily JSON backup to the user's Chrome downloads location
@@ -45,4 +48,5 @@ The extension stores paper and tag data locally in IndexedDB and stores settings
 - `unlimitedStorage`: allows the user's IndexedDB paper library to grow beyond the default extension storage quota.
 - `alarms`: schedules the daily local JSON backup.
 - `downloads`: saves the daily backup file to the user's Chrome downloads location.
+- `clipboardRead`: pre-fills the paper notes field from clipboard text when the user opens the popup.
 - `host_permissions` for DashScope and Zhipu: calls the configured LLM provider only when the user uses an LLM feature.
