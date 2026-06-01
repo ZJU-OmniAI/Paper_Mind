@@ -233,6 +233,7 @@ const translations = {
     noAbstract: "暂无摘要",
     noConversation: "暂无对话记录",
     viewDetail: "查看详情",
+    openSource: "打开链接",
     deletePaper: "删除论文",
     paperDeleted: "论文已删除，未被其他论文使用的标签也已清理",
     created: "创建",
@@ -366,6 +367,7 @@ const translations = {
     noAbstract: "No abstract",
     noConversation: "No conversation",
     viewDetail: "View Detail",
+    openSource: "Open Link",
     deletePaper: "Delete Paper",
     paperDeleted: "Paper deleted; unused tags were cleaned up",
     created: "Created",
@@ -826,6 +828,22 @@ function paperSearchText(paper) {
   return normalizeText(`${paper.title} ${paper.abstract} ${paper.conversation} ${tags}`);
 }
 
+function paperSourceUrl(paper) {
+  const explicit = String(paper?.sourceUrl || "").trim();
+  if (/^https?:\/\//i.test(explicit)) return explicit;
+  const conversation = String(paper?.conversation || "");
+  const labelled = conversation.match(/(?:来源页面|Source page)：?\s*(https?:\/\/\S+)/i);
+  if (labelled) return labelled[1].trim();
+  const anyUrl = conversation.match(/https?:\/\/\S+/i);
+  return anyUrl ? anyUrl[0].trim() : "";
+}
+
+function sourceLinkHtml(paper, className = "source-link") {
+  const url = paperSourceUrl(paper);
+  if (!url) return "";
+  return `<a class="${className}" href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(t("openSource"))}</a>`;
+}
+
 function paperSemanticTagIds(paper) {
   return (paper?.tagIds || []).filter((id) => {
     const tag = tagById(id);
@@ -1249,6 +1267,7 @@ function paperCardActions(paper) {
   return `
     <div class="paper-card-actions">
       <button class="secondary-button" data-paper-id="${paper.id}" type="button">${escapeHtml(t("viewDetail"))}</button>
+      ${sourceLinkHtml(paper, "secondary-button source-link")}
       <button class="secondary-button danger-button" data-delete-paper-id="${paper.id}" type="button">${escapeHtml(t("deletePaper"))}</button>
     </div>
   `;
@@ -1283,7 +1302,7 @@ function renderPaperDetail(paperId) {
   state.activePaperId = paper.id;
   const tags = paperTags(paper);
   els.paperDetailTitle.textContent = paper.title;
-  els.paperDetailMeta.textContent = `${t("created")} ${formatDate(paper.createdAt)} · ${t("updated")} ${formatDate(paper.updatedAt)}`;
+  els.paperDetailMeta.innerHTML = `${escapeHtml(t("created"))} ${escapeHtml(formatDate(paper.createdAt))} · ${escapeHtml(t("updated"))} ${escapeHtml(formatDate(paper.updatedAt))}${paperSourceUrl(paper) ? ` · ${sourceLinkHtml(paper, "source-inline-link")}` : ""}`;
   els.paperDetailTags.innerHTML = tags.length ? tags.map((tag) => `<span class="tag-chip">${escapeHtml(tag.name)}</span>`).join("") : `<span class="empty">${escapeHtml(t("noTags"))}</span>`;
   els.paperDetailAbstract.textContent = paper.abstract || t("noAbstract");
   els.paperDetailConversation.innerHTML = renderMarkdown(paper.conversation);

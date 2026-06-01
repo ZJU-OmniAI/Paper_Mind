@@ -489,8 +489,25 @@ textarea:focus {
   align-items: center;
 }
 
-.paper-card-actions button {
+.paper-card-actions button,
+.paper-card-actions .secondary-button {
   margin-top: 10px;
+}
+
+.source-link,
+.source-inline-link {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+}
+
+.source-inline-link {
+  color: var(--accent);
+  font-weight: 750;
+}
+
+.source-inline-link:hover {
+  text-decoration: underline;
 }
 
 .paper-library-layout {
