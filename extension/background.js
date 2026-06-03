@@ -2,27 +2,55 @@ import { handleApi } from "./storage.js";
 
 const DAILY_BACKUP_ALARM = "daily-json-backup";
 const BACKUP_META_KEY = "paperTagDailyBackupMeta";
-const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+const BACKUP_HOUR = 16;
+const BACKUP_MINUTE = 0;
+const ALARM_DRIFT_TOLERANCE_MS = 60 * 1000;
 
 function todayString(date = new Date()) {
-  return date.toISOString().slice(0, 10);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function backupTimeFor(date = new Date()) {
+  const backupTime = new Date(date);
+  backupTime.setHours(BACKUP_HOUR, BACKUP_MINUTE, 0, 0);
+  return backupTime;
+}
+
+function nextBackupTime(from = new Date()) {
+  const backupTime = backupTimeFor(from);
+  if (backupTime <= from) {
+    backupTime.setDate(backupTime.getDate() + 1);
+  }
+  return backupTime;
+}
+
+function isPastBackupTime(date = new Date()) {
+  return date >= backupTimeFor(date);
 }
 
 async function scheduleDailyBackup() {
   const existing = await chrome.alarms.get(DAILY_BACKUP_ALARM);
-  if (existing) return;
+  const nextTime = nextBackupTime();
+  if (existing && Math.abs((existing.scheduledTime || 0) - nextTime.getTime()) < ALARM_DRIFT_TOLERANCE_MS) {
+    return;
+  }
+  if (existing) {
+    await chrome.alarms.clear(DAILY_BACKUP_ALARM);
+  }
   await chrome.alarms.create(DAILY_BACKUP_ALARM, {
-    delayInMinutes: 5,
-    periodInMinutes: 24 * 60
+    when: nextTime.getTime()
   });
 }
 
 async function shouldBackupNow() {
   const values = await chrome.storage.local.get([BACKUP_META_KEY]);
   const meta = values[BACKUP_META_KEY] || {};
-  const now = Date.now();
+  const now = new Date();
   if (meta.lastDate === todayString()) return false;
-  return !meta.lastBackupAt || now - Date.parse(meta.lastBackupAt) >= ONE_DAY_MS * 0.8;
+  return isPastBackupTime(now);
 }
 
 async function markBackupComplete() {
@@ -59,7 +87,11 @@ chrome.runtime.onStartup.addListener(() => {
 
 chrome.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name !== DAILY_BACKUP_ALARM) return;
-  runDailyBackup().catch(() => {});
+  runDailyBackup()
+    .catch(() => {})
+    .finally(() => {
+      scheduleDailyBackup().catch(() => {});
+    });
 });
 
 scheduleDailyBackup().catch(() => {});

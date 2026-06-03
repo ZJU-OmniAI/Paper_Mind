@@ -24,7 +24,7 @@ Core features:
 - Local redundant-tag analysis for tags linked to identical paper sets
 - Keep untagged papers in a built-in "Unsorted" tag for later organization
 - Create topic packs that aggregate papers by included and excluded tags
-- Daily JSON backup to the user's Chrome downloads location
+- Daily 4 PM JSON backup to the user's Chrome downloads location
 - Review LLM-generated tag merge suggestions before applying them
 - Optional smart search and similar-paper recommendations with the user's own Qwen or Zhipu API Key
 - Bilingual interface: Chinese and English
@@ -46,7 +46,7 @@ The extension stores paper and tag data locally in IndexedDB and stores settings
 - `scripting`: extracts page description, heading, and selected text after user action.
 - `storage`: stores model settings, optional API keys, and migration flags locally.
 - `unlimitedStorage`: allows the user's IndexedDB paper library to grow beyond the default extension storage quota.
-- `alarms`: schedules the daily local JSON backup.
+- `alarms`: schedules the daily 4 PM local JSON backup.
 - `downloads`: saves the daily backup file to the user's Chrome downloads location.
 - `clipboardRead`: pre-fills the paper notes field from clipboard text when the user opens the popup.
 - `host_permissions` for DashScope and Zhipu: calls the configured LLM provider only when the user uses an LLM feature.

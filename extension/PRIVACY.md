@@ -2,7 +2,7 @@
 
 Paper Tag Library stores paper titles, abstracts, notes, and tags locally in the extension's IndexedDB database on the user's computer. Model settings and optional API keys are stored locally in `chrome.storage.local`.
 
-The extension may create a daily JSON backup using Chrome's downloads API. The backup is saved to the user's configured Chrome downloads location and does not include API keys.
+The extension may create a daily JSON backup at 4 PM local time using Chrome's downloads API. The backup is saved to the user's configured Chrome downloads location and does not include API keys.
 
 When the popup is opened to add a paper, the extension may read plain text from the clipboard to prefill the notes/conversation field. Clipboard text is stored only if the user saves the paper.
 

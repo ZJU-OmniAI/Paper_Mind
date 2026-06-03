@@ -18,7 +18,7 @@
 ## 数据保存位置
 
 - 论文、标签、摘要和备注保存在插件的 IndexedDB 本地数据库中。
-- 每日自动 JSON 备份会下载到 Chrome 默认下载目录；如果希望保存到桌面，可以把 Chrome 默认下载位置设为桌面。
+- 每日下午 4 点自动 JSON 备份会下载到 Chrome 默认下载目录；如果希望保存到桌面，可以把 Chrome 默认下载位置设为桌面。
 - 模型设置和可选 API Key 保存在 `chrome.storage.local`。
 - 不需要注册账号。
 - 不需要启动 `127.0.0.1:5173`。
@@ -30,7 +30,7 @@
 
 - “本地 JSON 导入 Chrome”：可以选择旧本地服务的 `data/store.json`，也可以选择本插件之前导出的 JSON。
 - “从 Chrome 导出本地 JSON”：会把当前 Chrome IndexedDB 里的论文和标签下载成本地 JSON 备份。
-- 插件也会每日自动下载一份 JSON 备份到 Chrome 默认下载目录。
+- 插件也会每日下午 4 点自动下载一份 JSON 备份到 Chrome 默认下载目录。
 - API Key 不会随论文标签数据一起导出。
 
 ## 功能
