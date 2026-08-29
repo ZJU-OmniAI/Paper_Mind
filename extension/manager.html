@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>论文标签管理系统</title>
+    <title>Paper_Mind</title>
     <link rel="stylesheet" href="manager.css" />
   </head>
   <body>
@@ -12,7 +12,7 @@
         <div class="brand">
           <div class="brand-mark">P</div>
           <div>
-            <h1>论文标签库</h1>
+            <h1>Paper_Mind</h1>
             <p>本地 LLM 辅助管理</p>
           </div>
         </div>
@@ -69,6 +69,14 @@
                 <input id="paperTitle" name="title" autocomplete="off" placeholder="输入论文标题" required />
               </label>
 
+              <label class="value-score-field">
+                <div class="score-label-row">
+                  <span id="paperValueScoreLabel">价值评分</span>
+                  <strong id="paperValueScoreText">3分=热点引领</strong>
+                </div>
+                <input id="paperValueScore" name="valueScore" type="range" min="1" max="5" step="0.5" value="3" />
+              </label>
+
               <label>
                 <span>简介摘要</span>
                 <textarea id="paperAbstract" name="abstract" rows="6" placeholder="粘贴 abstract 或自己的简介"></textarea>
@@ -123,8 +131,10 @@
                 <option value="created">最近添加</option>
                 <option value="updated">最近更新</option>
                 <option value="title">标题</option>
+                <option value="citations">引用量</option>
               </select>
             </label>
+            <button id="refreshCitationsButton" class="secondary-button small-button" type="button">刷新全部引用量</button>
           </div>
 
           <div class="two-column paper-library-layout" id="paperLibraryListMode">
@@ -132,6 +142,7 @@
               <div class="panel-head">
                 <h3 id="paperLibraryTitle">全部论文</h3>
                 <input class="compact-input" id="paperLibraryFilter" placeholder="搜索论文或标签" />
+                <button class="secondary-button small-button" type="button" id="paperLibraryLlmSearchButton">LLM 检索</button>
               </div>
               <div class="paper-list" id="paperLibraryList"></div>
             </section>
@@ -154,6 +165,8 @@
                   <option value="any">包含任一标签</option>
                   <option value="all">包含全部标签</option>
                 </select>
+                <button class="map-focus-toggle active" type="button" id="paperMapFocusToggle">聚焦所选</button>
+                <button class="secondary-button small-button is-hidden" type="button" id="paperMapClearButton">清除选择</button>
               </div>
             </div>
             <div class="paper-map-hint" id="paperMapHint">点击标签或论文，高亮它们之间的映射关系</div>
@@ -177,19 +190,44 @@
                 <h3 id="paperDetailTitle">论文详情</h3>
                 <div class="detail-title-actions">
                   <div class="chip-row" id="paperDetailTags"></div>
+                  <button class="secondary-button small-button" type="button" id="refreshPaperDetailCitationButton">更新引用量</button>
                   <button class="secondary-button small-button" type="button" id="editPaperDetailButton">编辑</button>
+                  <button class="secondary-button small-button" type="button" id="absorbPaperButton">并入另一篇</button>
                 </div>
               </div>
 
               <div class="paper-detail-read-view" id="paperDetailReadView">
                 <div class="detail-block">
-                  <h4 id="paperDetailAbstractHeading">摘要</h4>
-                  <pre id="paperDetailAbstract">暂无摘要</pre>
+                  <h4 id="paperDetailLinksHeading">外部资料</h4>
+                  <div class="link-list" id="paperDetailLinks"></div>
+                  <form class="link-form" id="paperLinkForm">
+                    <input id="paperLinkUrl" placeholder="粘贴链接，如小红书 / 知乎 / 公众号文章" required />
+                    <input id="paperLinkTitle" placeholder="备注标题（可选）" />
+                    <button class="secondary-button" type="submit" id="paperLinkSubmit">添加链接</button>
+                  </form>
                 </div>
 
                 <div class="detail-block">
-                  <h4 id="paperDetailConversationHeading">对话记录</h4>
-                  <div class="markdown-body" id="paperDetailConversation"></div>
+                  <div class="abstract-head">
+                    <h4 id="paperDetailAbstractHeading">摘要</h4>
+                    <div class="abstract-lang-toggle" id="abstractLangToggle" hidden>
+                      <button type="button" data-abstract-lang="zh">中文</button>
+                      <button type="button" data-abstract-lang="en">EN</button>
+                    </div>
+                    <button class="secondary-button small-button" type="button" id="translateAbstractButton" hidden>翻译成中文</button>
+                    <button class="secondary-button small-button" type="button" id="openClipFolderButton" hidden>打开图片文件夹</button>
+                  </div>
+                  <p class="clip-warning" id="paperDetailClipWarning" hidden></p>
+                  <pre id="paperDetailAbstract">暂无摘要</pre>
+                  <div class="clip-sections" id="paperDetailClips"></div>
+                </div>
+
+                <div class="detail-block">
+                  <div class="conversation-head">
+                    <h4 id="paperDetailConversationHeading">alphaXiv 对话记录</h4>
+                    <button class="secondary-button small-button" type="button" id="toggleConversationButton" hidden>展开全部</button>
+                  </div>
+                  <div class="markdown-body conversation-body collapsed" id="paperDetailConversation"></div>
                 </div>
               </div>
 
@@ -199,10 +237,20 @@
                   <input id="paperDetailTitleInput" autocomplete="off" required />
                 </label>
 
+                <label class="value-score-field">
+                  <div class="score-label-row">
+                    <span id="paperDetailValueScoreLabel">价值评分</span>
+                    <strong id="paperDetailValueScoreText">3分=热点引领</strong>
+                  </div>
+                  <input id="paperDetailValueScoreInput" type="range" min="1" max="5" step="0.5" value="3" />
+                </label>
+
                 <label>
                   <span id="paperDetailAbstractLabel">简介摘要</span>
                   <textarea id="paperDetailAbstractInput" rows="7"></textarea>
                 </label>
+
+                <div class="clip-editor-list" id="paperDetailClipsEditor"></div>
 
                 <label>
                   <span id="paperDetailConversationLabel">对话记录</span>
@@ -233,6 +281,7 @@
               <div class="panel">
                 <div class="panel-head">
                   <h3>LLM 相似论文</h3>
+                  <span class="muted" id="llmSimilarMeta"></span>
                   <button class="secondary-button small-button" type="button" id="loadLlmSimilarButton">生成推荐</button>
                 </div>
                 <div class="paper-list compact-list" id="llmSimilarPaperList">
@@ -266,7 +315,17 @@
               <div class="panel-head">
                 <h3>标签库</h3>
                 <span class="curation-status stale" id="tagCurationStatus">未整理</span>
+                <div class="tag-view-toggle" role="group" aria-label="标签库视图">
+                  <button type="button" data-tag-view="grouped" class="active">按主题分组</button>
+                  <button type="button" data-tag-view="flat">平铺</button>
+                </div>
+                <label class="tag-threshold-control" id="tagThresholdControl">
+                  <span id="tagThresholdLabel">分组阈值</span>
+                  <input type="range" id="tagThresholdRange" min="10" max="90" step="5" value="50" />
+                  <span class="tag-threshold-value" id="tagThresholdValue">50%</span>
+                </label>
                 <input class="compact-input" id="tagLibraryFilter" placeholder="快速检索标签" />
+                <button class="secondary-button" type="button" id="tagLibraryLlmSearchButton">LLM 检索</button>
                 <button class="secondary-button" id="analyzeRedundantTagsButton">分析冗余标签</button>
                 <button class="secondary-button" id="refreshGraphButton">LLM 生成合并建议</button>
               </div>
@@ -357,6 +416,8 @@
               <div class="segmented">
                 <label><input type="radio" name="provider" value="qwen" checked /> Qwen/百炼</label>
                 <label><input type="radio" name="provider" value="zhipu" /> 智谱 GLM</label>
+                <label><input type="radio" name="provider" value="kimi" /> Kimi Code</label>
+                <label><input type="radio" name="provider" value="deepseek" /> DeepSeek</label>
               </div>
             </fieldset>
 
@@ -367,16 +428,12 @@
               </label>
               <label>
                 <span>Qwen 模型</span>
-                <input id="qwenModel" list="qwenModelOptions" placeholder="qwen3.7-max" />
-                <datalist id="qwenModelOptions">
-                  <option value="qwen3.7-max"></option>
-                  <option value="qwen3.6-plus"></option>
-                  <option value="qwen3.6-flash"></option>
-                  <option value="qwen-plus-latest"></option>
-                  <option value="glm-5.1"></option>
-                  <option value="kimi-k2.6"></option>
-                  <option value="deepseek-v4-pro"></option>
-                </datalist>
+                <div class="model-picker">
+                  <select id="qwenModelSelect" data-model-select="qwen"></select>
+                  <button class="icon-button model-refresh" type="button" data-refresh-models="qwen" title="拉取 Qwen 当前可用模型">🔄</button>
+                </div>
+                <input id="qwenModel" class="model-custom-input" data-model-input="qwen" placeholder="qwen3.7-max" hidden />
+                <span class="model-hint muted" data-model-hint="qwen"></span>
               </label>
               <label class="wide">
                 <span>Qwen Base URL</span>
@@ -389,30 +446,66 @@
               </label>
               <label>
                 <span>智谱模型</span>
-                <input id="zhipuModel" list="zhipuModelOptions" placeholder="glm-5.1" />
-                <datalist id="zhipuModelOptions">
-                  <option value="glm-5.1"></option>
-                  <option value="glm-5"></option>
-                  <option value="glm-5-turbo"></option>
-                  <option value="glm-4.7"></option>
-                  <option value="glm-4.7-flash"></option>
-                  <option value="glm-4.6"></option>
-                </datalist>
+                <div class="model-picker">
+                  <select id="zhipuModelSelect" data-model-select="zhipu"></select>
+                  <button class="icon-button model-refresh" type="button" data-refresh-models="zhipu" title="拉取智谱当前可用模型">🔄</button>
+                </div>
+                <input id="zhipuModel" class="model-custom-input" data-model-input="zhipu" placeholder="glm-5.1" hidden />
+                <span class="model-hint muted" data-model-hint="zhipu"></span>
               </label>
               <label class="wide">
                 <span>智谱 Base URL</span>
                 <input id="zhipuBaseUrl" placeholder="https://open.bigmodel.cn/api/paas/v4" />
+              </label>
+
+              <label>
+                <span>Kimi Code API Key</span>
+                <input id="kimiKey" type="password" autocomplete="off" placeholder="留空表示不修改" />
+              </label>
+              <label>
+                <span>Kimi 模型</span>
+                <div class="model-picker">
+                  <select id="kimiModelSelect" data-model-select="kimi"></select>
+                  <button class="icon-button model-refresh" type="button" data-refresh-models="kimi" title="拉取 Kimi 当前可用模型">🔄</button>
+                </div>
+                <input id="kimiModel" class="model-custom-input" data-model-input="kimi" placeholder="kimi-for-coding" hidden />
+                <span class="model-hint muted" data-model-hint="kimi"></span>
+              </label>
+              <label class="wide">
+                <span>Kimi Base URL</span>
+                <input id="kimiBaseUrl" placeholder="https://api.kimi.com/coding/v1" />
+              </label>
+
+              <label>
+                <span>DeepSeek API Key</span>
+                <input id="deepseekKey" type="password" autocomplete="off" placeholder="留空表示不修改" />
+              </label>
+              <label>
+                <span>DeepSeek 模型</span>
+                <div class="model-picker">
+                  <select id="deepseekModelSelect" data-model-select="deepseek"></select>
+                  <button class="icon-button model-refresh" type="button" data-refresh-models="deepseek" title="拉取 DeepSeek 当前可用模型">🔄</button>
+                </div>
+                <input id="deepseekModel" class="model-custom-input" data-model-input="deepseek" placeholder="deepseek-v4-pro" hidden />
+                <span class="model-hint muted" data-model-hint="deepseek"></span>
+              </label>
+              <label class="wide">
+                <span>DeepSeek Base URL</span>
+                <input id="deepseekBaseUrl" placeholder="https://api.deepseek.com" />
               </label>
             </div>
 
             <div class="key-actions">
               <label><input type="checkbox" id="clearQwenKey" /> 清除 Qwen Key</label>
               <label><input type="checkbox" id="clearZhipuKey" /> 清除 智谱 Key</label>
+              <label><input type="checkbox" id="clearKimiKey" /> 清除 Kimi Key</label>
+              <label><input type="checkbox" id="clearDeepseekKey" /> 清除 DeepSeek Key</label>
             </div>
 
             <div class="button-row">
               <button class="primary-button" type="submit">保存设置</button>
               <button class="secondary-button" type="button" id="openModelTest">测试模型</button>
+              <button class="secondary-button" type="button" id="refreshAllModels">刷新全部模型列表</button>
             </div>
 
             <section class="data-transfer">
@@ -437,6 +530,18 @@
         <button class="icon-button" id="closeDialog" title="关闭">×</button>
       </div>
       <div id="dialogBody"></div>
+    </dialog>
+
+    <dialog id="absorbDialog">
+      <div class="dialog-head">
+        <div>
+          <h3 id="absorbDialogTitle">并入另一篇论文</h3>
+          <p class="muted" id="absorbDialogHint">当前这篇会被并进你选中的论文，剪藏材料、外部链接和标签都会搬过去，然后这条记录消失</p>
+        </div>
+        <button class="icon-button" id="closeAbsorbDialog" title="关闭">×</button>
+      </div>
+      <input class="compact-input" id="absorbFilter" placeholder="搜索目标论文" />
+      <div class="absorb-list" id="absorbList"></div>
     </dialog>
 
     <dialog id="modelTestDialog">

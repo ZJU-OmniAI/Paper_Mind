@@ -1,14 +1,14 @@
 {
   "extName": {
-    "message": "论文标签库"
+    "message": "Paper_Mind"
   },
   "extShortName": {
-    "message": "论文标签库"
+    "message": "Paper_Mind"
   },
   "extDescription": {
-    "message": "从 Chrome 当前页面保存论文、备注和标签，数据保存在插件本地。"
+    "message": "从 Chrome 当前页面保存论文和网页剪藏（正文+图片）、备注和标签，数据保存在插件本地。"
   },
   "actionTitle": {
-    "message": "添加到论文标签库"
+    "message": "保存到 Paper_Mind（论文 / 网页剪藏）"
   }
 }

@@ -82,7 +82,7 @@ const els = {
 
 const translations = {
   zh: {
-    appName: "论文标签库",
+    appName: "Paper_Mind",
     appSubtitle: "本地 LLM 辅助管理",
     language: "语言",
     library: "论文录入",
@@ -159,7 +159,7 @@ const translations = {
     tagInputPlaceholder: "搜索已有标签或输入新标签"
   },
   en: {
-    appName: "Paper Tag Library",
+    appName: "Paper_Mind",
     appSubtitle: "Local LLM-assisted manager",
     language: "Language",
     library: "Add Paper",

@@ -1,14 +1,14 @@
 {
   "extName": {
-    "message": "Paper Tag Library"
+    "message": "Paper_Mind"
   },
   "extShortName": {
-    "message": "Paper Tags"
+    "message": "Paper_Mind"
   },
   "extDescription": {
-    "message": "Save papers, notes, and tags from Chrome. Data stays in local extension storage."
+    "message": "Save papers and full web clips (text + images), notes, and tags from Chrome. Data stays in local extension storage."
   },
   "actionTitle": {
-    "message": "Add to Paper Tag Library"
+    "message": "Save to Paper_Mind (paper / web clip)"
   }
 }

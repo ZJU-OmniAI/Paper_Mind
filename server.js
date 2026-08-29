@@ -770,7 +770,7 @@ async function mergeSimilarTagsWithLLM(config, store) {
     {
       role: "system",
       content:
-        "你是论文标签库清理助手。你的唯一任务是找出语义十分相似、几乎同义、或中英文/缩写表达同一概念的已有标签，并给出合并方案。只返回 JSON，不要 Markdown。"
+        "你是Paper_Mind清理助手。你的唯一任务是找出语义十分相似、几乎同义、或中英文/缩写表达同一概念的已有标签，并给出合并方案。只返回 JSON，不要 Markdown。"
     },
     {
       role: "user",
@@ -1073,5 +1073,5 @@ const server = http.createServer(async (req, res) => {
 });
 
 server.listen(PORT, HOST, () => {
-  console.log(`Paper Tag LLM Manager running at http://${HOST}:${PORT}`);
+  console.log(`Paper_Mind running at http://${HOST}:${PORT}`);
 });

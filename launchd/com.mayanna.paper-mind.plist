@@ -3,17 +3,17 @@
 <plist version="1.0">
 <dict>
   <key>Label</key>
-  <string>com.mayanna.paper-tag-manager</string>
+  <string>com.mayanna.paper-mind</string>
 
   <key>ProgramArguments</key>
   <array>
     <string>/bin/zsh</string>
     <string>-c</string>
-    <string>cd /Users/mayanna/Documents/Codex/2026-05-30/mac-qwen-api-key-llm-llm &amp;&amp; exec /Users/mayanna/.nvm/versions/node/v22.22.2/bin/node server.js</string>
+    <string>cd /Users/mayanna/Desktop/Agent开发/Paper_Mind &amp;&amp; exec /Users/mayanna/.nvm/versions/node/v22.22.2/bin/node server.js</string>
   </array>
 
   <key>WorkingDirectory</key>
-  <string>/Users/mayanna/Documents/Codex/2026-05-30/mac-qwen-api-key-llm-llm</string>
+  <string>/Users/mayanna/Desktop/Agent开发/Paper_Mind</string>
 
   <key>EnvironmentVariables</key>
   <dict>
@@ -32,9 +32,9 @@
   <true/>
 
   <key>StandardOutPath</key>
-  <string>/Users/mayanna/Documents/Codex/2026-05-30/mac-qwen-api-key-llm-llm/logs/launchd.out.log</string>
+  <string>/Users/mayanna/Desktop/Agent开发/Paper_Mind/logs/launchd.out.log</string>
 
   <key>StandardErrorPath</key>
-  <string>/Users/mayanna/Documents/Codex/2026-05-30/mac-qwen-api-key-llm-llm/logs/launchd.err.log</string>
+  <string>/Users/mayanna/Desktop/Agent开发/Paper_Mind/logs/launchd.err.log</string>
 </dict>
 </plist>

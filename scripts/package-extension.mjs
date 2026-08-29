@@ -6,7 +6,7 @@ import zlib from "node:zlib";
 const root = process.cwd();
 const extensionDir = path.join(root, "extension");
 const distDir = path.join(root, "dist");
-const output = path.join(distDir, "paper-tag-library-extension.zip");
+const output = path.join(distDir, "Paper_Mind-extension.zip");
 
 const files = [];
 

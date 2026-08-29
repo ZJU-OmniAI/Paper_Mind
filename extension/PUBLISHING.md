@@ -13,7 +13,7 @@ npm run package:extension
 The output file is created under:
 
 ```text
-dist/paper-tag-library-extension.zip
+dist/Paper_Mind-extension.zip
 ```
 
 ## Chrome Web Store Steps

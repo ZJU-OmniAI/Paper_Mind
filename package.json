@@ -1,5 +1,5 @@
 {
-  "name": "paper-tag-llm-manager",
+  "name": "paper-mind",
   "version": "0.1.0",
   "private": true,
   "description": "Local web app for managing research papers with LLM-assisted tag organization.",
