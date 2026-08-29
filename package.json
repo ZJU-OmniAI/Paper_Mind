@@ -2,7 +2,7 @@
   "name": "paper-mind",
   "version": "1.3.3",
   "private": true,
-  "description": "A local-first Chrome extension for collecting papers and clipping articles.",
+  "description": "A tag-based library for the papers you collect: one-click capture, tags and topic packs, local and LLM search, recommendations from your own collection.",
   "license": "Apache-2.0",
   "author": "Wenqi Zhang",
   "homepage": "https://github.com/ZJU-OmniAI/Paper_Mind",
