@@ -1,12 +1,28 @@
 {
   "name": "paper-mind",
-  "version": "0.1.0",
+  "version": "1.3.3",
   "private": true,
-  "description": "Local web app for managing research papers with LLM-assisted tag organization.",
+  "description": "A local-first Chrome extension for collecting papers and clipping articles.",
+  "license": "Apache-2.0",
+  "author": "Wenqi Zhang",
+  "homepage": "https://github.com/zwq2018/Paper_Mind",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/zwq2018/Paper_Mind.git"
+  },
+  "bugs": {
+    "url": "https://github.com/zwq2018/Paper_Mind/issues"
+  },
+  "keywords": [
+    "chrome-extension",
+    "manifest-v3",
+    "paper-management",
+    "web-clipper",
+    "local-first",
+    "research-tools"
+  ],
   "type": "module",
   "scripts": {
-    "start": "node server.js",
-    "dev": "node server.js",
     "package:extension": "node scripts/package-extension.mjs"
   },
   "engines": {

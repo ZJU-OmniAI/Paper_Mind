@@ -1,19 +1,8 @@
-# Chrome 扩展安装说明
+# Paper_Mind 功能说明
 
-这个扩展是独立的本地优先Paper_Mind，不需要启动 `server.js`，也不需要本地 companion service。
+这是完整的功能文档。安装步骤见 [README_zh.md](../README_zh.md#快速开始)：打开 `chrome://extensions` → 开发者模式 → 加载已解压的扩展程序 → 选择仓库里的 `extension/` 目录。
 
-## 安装扩展
-
-1. 打开 Chrome，进入 `chrome://extensions`
-2. 打开右上角的“开发者模式”
-3. 点击“加载已解压的扩展程序”
-4. 选择这个目录：
-
-```text
-/Users/mayanna/Desktop/Agent开发/Paper_Mind/extension
-```
-
-5. 建议把扩展固定到工具栏，之后点击图标即可快速添加论文。
+扩展是完全独立的，不需要起任何服务，也不需要本地 companion service。
 
 ## 数据保存位置
 
@@ -21,7 +10,6 @@
 - 每日下午 4 点自动 JSON 备份会下载到 Chrome 默认下载目录；如果希望保存到桌面，可以把 Chrome 默认下载位置设为桌面。
 - 模型设置和可选 API Key 保存在 `chrome.storage.local`。
 - 不需要注册账号。
-- 不需要启动 `127.0.0.1:5173`。
 - 如果使用 LLM 功能，需要在“管理”里的模型设置页填写自己的 Qwen 或智谱 API Key。
 
 ## 导入 / 导出
