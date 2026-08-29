@@ -7,7 +7,7 @@
 [![Chrome Extension](https://img.shields.io/badge/Chrome-Manifest_V3-4285F4.svg)](https://developer.chrome.com/docs/extensions/mv3/intro/)
 [![License](https://img.shields.io/badge/License-Apache_2.0-green.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Version](https://img.shields.io/badge/version-1.3.3-blue.svg)](CHANGELOG.md)
-[![Stars](https://img.shields.io/github/stars/zwq2018/Paper_Mind?style=social)](https://github.com/zwq2018/Paper_Mind/stargazers)
+[![Stars](https://img.shields.io/github/stars/ZJU-OmniAI/Paper_Mind?style=social)](https://github.com/ZJU-OmniAI/Paper_Mind/stargazers)
 
 [English](README.md) | [中文](README_zh.md)
 
@@ -36,7 +36,7 @@ TODO: 录一段约 30 秒的演示存成 assets/demo.gif，然后取消下面这
 
 不用编译，不用起服务，直接加载：
 
-1. 下载最新的 [`Paper_Mind-extension.zip`](https://github.com/zwq2018/Paper_Mind/releases/latest) 解压——或者直接把这个仓库 clone 下来，用里面的 `extension/` 目录。
+1. 下载最新的 [`Paper_Mind-extension.zip`](https://github.com/ZJU-OmniAI/Paper_Mind/releases/latest) 解压——或者直接把这个仓库 clone 下来，用里面的 `extension/` 目录。
 2. 打开 `chrome://extensions`，右上角打开**开发者模式**。
 3. 点**加载已解压的扩展程序**，选中 `extension/` 目录。
 4. 把扩展固定到工具栏。之后在任意页面点图标即可保存。
@@ -103,10 +103,10 @@ Key 只存在本地扩展存储里，只在你主动触发的请求里用。
 
 ## Star History
 
-<a href="https://www.star-history.com/?repos=zwq2018%2FPaper_Mind&type=date&legend=top-left">
+<a href="https://www.star-history.com/?repos=ZJU-OmniAI%2FPaper_Mind&type=date&legend=top-left">
  <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=zwq2018/Paper_Mind&type=date&theme=dark&legend=top-left" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=zwq2018/Paper_Mind&type=date&legend=top-left" />
-   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=zwq2018/Paper_Mind&type=date&legend=top-left" />
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=ZJU-OmniAI/Paper_Mind&type=date&theme=dark&legend=top-left" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=ZJU-OmniAI/Paper_Mind&type=date&legend=top-left" />
+   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=ZJU-OmniAI/Paper_Mind&type=date&legend=top-left" />
  </picture>
 </a>

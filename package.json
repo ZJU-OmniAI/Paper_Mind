@@ -5,13 +5,13 @@
   "description": "A local-first Chrome extension for collecting papers and clipping articles.",
   "license": "Apache-2.0",
   "author": "Wenqi Zhang",
-  "homepage": "https://github.com/zwq2018/Paper_Mind",
+  "homepage": "https://github.com/ZJU-OmniAI/Paper_Mind",
   "repository": {
     "type": "git",
-    "url": "https://github.com/zwq2018/Paper_Mind.git"
+    "url": "https://github.com/ZJU-OmniAI/Paper_Mind.git"
   },
   "bugs": {
-    "url": "https://github.com/zwq2018/Paper_Mind/issues"
+    "url": "https://github.com/ZJU-OmniAI/Paper_Mind/issues"
   },
   "keywords": [
     "chrome-extension",

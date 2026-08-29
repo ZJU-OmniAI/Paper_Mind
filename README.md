@@ -7,7 +7,7 @@
 [![Chrome Extension](https://img.shields.io/badge/Chrome-Manifest_V3-4285F4.svg)](https://developer.chrome.com/docs/extensions/mv3/intro/)
 [![License](https://img.shields.io/badge/License-Apache_2.0-green.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Version](https://img.shields.io/badge/version-1.3.3-blue.svg)](CHANGELOG.md)
-[![Stars](https://img.shields.io/github/stars/zwq2018/Paper_Mind?style=social)](https://github.com/zwq2018/Paper_Mind/stargazers)
+[![Stars](https://img.shields.io/github/stars/ZJU-OmniAI/Paper_Mind?style=social)](https://github.com/ZJU-OmniAI/Paper_Mind/stargazers)
 
 [English](README.md) | [中文](README_zh.md)
 
@@ -36,7 +36,7 @@ TODO: record a ~30s demo and save it as assets/demo.gif, then uncomment:
 
 No build step, no server. Load the extension directly:
 
-1. Download the latest [`Paper_Mind-extension.zip`](https://github.com/zwq2018/Paper_Mind/releases/latest) and unzip it — or clone this repo and use the `extension/` folder as-is.
+1. Download the latest [`Paper_Mind-extension.zip`](https://github.com/ZJU-OmniAI/Paper_Mind/releases/latest) and unzip it — or clone this repo and use the `extension/` folder as-is.
 2. Open `chrome://extensions` and turn on **Developer mode** (top right).
 3. Click **Load unpacked** and pick the `extension/` folder.
 4. Pin the extension to the toolbar. Click the icon on any page to save it.
@@ -103,10 +103,10 @@ Licensed under the [Apache License 2.0](LICENSE).
 
 ## Star History
 
-<a href="https://www.star-history.com/?repos=zwq2018%2FPaper_Mind&type=date&legend=top-left">
+<a href="https://www.star-history.com/?repos=ZJU-OmniAI%2FPaper_Mind&type=date&legend=top-left">
  <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=zwq2018/Paper_Mind&type=date&theme=dark&legend=top-left" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=zwq2018/Paper_Mind&type=date&legend=top-left" />
-   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=zwq2018/Paper_Mind&type=date&legend=top-left" />
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=ZJU-OmniAI/Paper_Mind&type=date&theme=dark&legend=top-left" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=ZJU-OmniAI/Paper_Mind&type=date&legend=top-left" />
+   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=ZJU-OmniAI/Paper_Mind&type=date&legend=top-left" />
  </picture>
 </a>
