@@ -1,139 +1,123 @@
 <div align="center">
 
-<img src="assets/logo.png" height="120" alt="Paper_Mind">
+<img src="assets/logo.png" height="88" alt="Paper_Mind logo">
 
 <h1>Paper_Mind</h1>
 
-[![Chrome Extension](https://img.shields.io/badge/Chrome-Manifest_V3-4285F4.svg)](https://developer.chrome.com/docs/extensions/mv3/intro/)
-[![License](https://img.shields.io/badge/License-Apache_2.0-green.svg)](https://opensource.org/licenses/Apache-2.0)
-[![Version](https://img.shields.io/badge/version-1.3.3-blue.svg)](CHANGELOG.md)
-[![Stars](https://img.shields.io/github/stars/ZJU-OmniAI/Paper_Mind?style=social)](https://github.com/ZJU-OmniAI/Paper_Mind/stargazers)
+<h3>Save a paper. Find your next idea.</h3>
 
-[English](README.md) | [中文](README_zh.md)
+<p>Keep papers and their write-ups together. Organize with meaningful tags. Find them again from a single clue.</p>
+
+[![Version](https://img.shields.io/badge/version-1.4.0-0c7d72.svg)](CHANGELOG.md)
+[![Chrome Extension](https://img.shields.io/badge/Chrome-Manifest_V3-4285F4.svg)](extension/manifest.json)
+[![License](https://img.shields.io/badge/license-Apache_2.0-0c7d72.svg)](LICENSE)
+
+**English** · [中文](README_zh.md) · [Get started](#get-started) · [Full feature guide](docs/features.zh-CN.md)
 
 </div>
 
-<div align="center">
-<b>A tag-based library for the papers you collect.</b><br>
-Click once to save a paper, sort it with tags, and actually find it again — with search and recommendations over your own collection.
-</div>
+![Paper library: search for RAG and select the evaluation tag to find two relevant papers in the sample collection](assets/screenshots/library-en.png)
 
-<!--
-TODO: record a ~30s demo and save it as assets/demo.gif, then uncomment:
-<p align="center"><img src="assets/demo.gif" alt="Paper_Mind demo" width="100%"></p>
--->
+<p align="center"><sub>Actual interface, isolated sample library. Papers, notes and tag descriptions are demonstration content. No personal data or live model calls were used.</sub></p>
 
----
+## Saving a paper is easy. Finding it later should be, too.
 
-## What it does
+A few weeks after saving a paper, you remember that it had something to do with trustworthy RAG. Paper_Mind turns that clue into searchable content, useful tags and reusable reading lists.
 
-**1. One-click capture.** Click the icon on arXiv, alphaXiv or any paper page — title, abstract and source link are filled in for you. If the paper is already in the library, it offers to update that entry instead of creating a second one.
+| What you remember | How to find it |
+| --- | --- |
+| “I forgot the title, but it mentioned RAG and evaluation.” | Search across titles, abstracts, notes, tags and clipped article text with multiple keywords. |
+| “Show me RAG evaluation methods, starting with papers I rated highly.” | Combine tags with all/any matching, then add a score filter. |
+| “I saved a write-up explaining this method.” | Open the paper to browse its linked write-ups and materials in one record. |
+| “Which papers have I already read that connect to this one?” | Browse shared-tag matches or use optional LLM recommendations from your collection. |
 
-**2. Tags that stay tidy.** The tag box autocompletes against tags you already use, so one concept doesn't end up with three names. Anything saved without a tag lands in a built-in **Unsorted** bucket instead of quietly disappearing.
+`Cmd / Ctrl K` to search · Space-separated keywords · Quoted phrases · 24 papers per page
 
-**3. Topic packs.** More than a tag filter — a pack is a live query like *include A, include B, exclude C*. Build one for "embodied AI about navigation, but not pure simulation" and every paper you save afterwards flows into it automatically.
+## You choose the tags. AI helps explain their meaning.
 
-**4. Search, local first.** Instant full-text search across titles, abstracts, notes and clipped article bodies. No network, no cost, and remembering one sentence from a paper is enough to find it. When you want something fuzzier, switch to LLM search and describe what you are after in plain language.
+A tag should tell you **what belongs in it, and what makes it different from the next tag**.
 
-**5. Recommendations from your own library.** When a new paper comes in, a background job goes through what you already saved and tells you which of your papers are related. It recommends *your collection*, not the whole internet — it reconnects things you saved months apart.
+![Tag library: browse descriptions, inspect a tag's scope and aliases, and open its linked papers](assets/screenshots/tags-en.png)
 
-**6. Tag housekeeping.** Past a few hundred papers, tags get messy. Tags covering exactly the same set of papers are found locally, with no LLM involved. Near-duplicates that only a human would notice — `multimodal` vs `多模态`, `LLM agent` vs `智能体` — are proposed by the LLM as merge suggestions that you review one by one. Nothing is merged behind your back.
+For example, a description can distinguish retrieval used to ground generated answers from standalone retrieval ranking. Read that distinction while choosing a tag, before adding another near-duplicate.
 
-**And your data stays on your machine.** Everything above lives in the extension's own database on your computer. No account, no server, no cloud, and a JSON backup written to disk every day. The LLM features are optional — without an API key you keep capture, tags, packs, local search and backup.
+- **Grounded in your reading.** The model uses your tag names, aliases and excerpts from linked papers' abstracts, notes and clipped content.
+- **A manageable vocabulary.** Defaults allow **6 tags per paper** and **80 across the library**, adjustable in Settings. Existing tags are retained.
+- **Reuse before adding.** Search names, aliases and descriptions, with up to eight relevant suggestions. Normalized spelling variants reuse existing tags.
+- **Review semantic merges.** The model proposes synonyms; you decide what to merge. An identical set of linked papers is a review clue, not proof that two tags mean the same thing.
+- **Descriptions that can be maintained.** Background batches, caching and retries keep the process manageable. Changed source samples trigger updates; failed requests keep the previous description.
 
-## Quick start
+> Bringing an existing collection? Configure a model, then open **Tag Library → Update tag descriptions**. You can also regenerate an individual tag's description.
 
-No build step, no server. Load the extension directly:
+## Keep the useful details while you are reading
 
-1. Download the latest [`Paper_Mind-extension.zip`](https://github.com/ZJU-OmniAI/Paper_Mind/releases/latest) and unzip it — or clone this repo and use the `extension/` folder as-is.
-2. Open `chrome://extensions` and turn on **Developer mode** (top right).
-3. Click **Load unpacked** and pick the `extension/` folder.
-4. Pin the extension to the toolbar. Click the icon on any page to save it.
+<p align="center">
+  <img src="assets/screenshots/capture-en.png" width="420" alt="Capture popup: extracted title, abstract and source, with descriptions beside existing tag suggestions">
+</p>
 
-**One switch you should turn on:** in `chrome://extensions` → Paper_Mind → enable **"Allow access to file URLs"**. Without it the manager page cannot display the clipped images it saved to your disk (it falls back to the original web images and shows a hint).
+Open a paper or a write-up and click the toolbar icon. The extension attempts to extract its title, abstract and source. Add a value score, a note and a few core tags, then save.
 
-Building the distributable ZIP yourself:
+| While reading | In your library |
+| --- | --- |
+| Save a paper | Keep its title, abstract, source and notes together. Untagged entries go to **Unsorted**. |
+| Clip a blog post or other write-up | Save the body as Markdown, preserving headings, lists, tables and code blocks. |
+| Collect several explanations of one paper | Matching by arXiv ID, DOI or title suggests a connection. Confirm the merge to keep the materials under one paper. |
+| Encounter an already saved paper | Update the existing record or choose to keep a separate entry. |
 
-```bash
-npm run package:extension   # writes dist/Paper_Mind-extension.zip
-```
+Clipped images are downloaded to local files when possible; successfully saved images can be viewed offline. Clipboard text is read only after clicking **Paste clipboard**.
 
-## Also in the box
+## Turn a research question into an evolving reading list
 
-| | |
-|---|---|
-| ✂️ **Web clipping** | A paper usually comes with write-ups — a blog post, a WeChat article, a Zhihu answer. Clip any of them and the whole article is stored as Markdown, headings, lists, tables and code blocks intact. |
-| 🔗 **Write-ups live under the paper** | A clipped article is matched to a paper already in your library by arXiv ID, DOI or title (and the other way round), so one paper and its three explainers stay one entry with three materials — not four rows. |
-| 🖼️ **Clipped images go to disk** | Images are downloaded as ordinary files into your downloads folder rather than kept inside the browser, so a clip is still readable after the original page is taken down. |
-| 📈 **Citation counts** | Fetched from Semantic Scholar by arXiv ID, DOI or title. |
-| 💾 **Daily backup** | A JSON backup lands in your downloads folder every day at 4 PM. Import/export any time from the manager page. |
-| 🌗 **Bilingual + dark mode** | English and Simplified Chinese UI, following the system light/dark setting. |
+“Trustworthy RAG” can be a rule: include both **Retrieval-augmented generation + Evaluation**, exclude **Agents**. Save it as a topic pack and newly collected papers that meet the criteria appear there too.
 
-Full feature documentation (Chinese): [`docs/features.zh-CN.md`](docs/features.zh-CN.md)
+![Topic packs: save a research direction as inclusion and exclusion rules that can be reused](assets/screenshots/topics-en.png)
 
-## Privacy
+Use packs for a reading group, related-work section or ongoing research direction. Merging tags also migrates the pack's inclusion and exclusion references.
 
-Paper_Mind is local-first by design:
+## Useful locally. AI when you want it.
 
-- Papers, tags, abstracts, notes and clipped text live in the extension's own IndexedDB database on your computer.
-- Model settings and any API key are stored in `chrome.storage.local` and are **never** included in exports or backups.
-- Clipped images are fetched directly from the page's image hosts with no referrer, no cookies and no credentials, then written to your downloads folder.
-- No analytics, no telemetry, no account service, no third-party data sharing.
-- Text is sent off your machine **only** when you actively use an LLM feature, and only to the provider you configured yourself.
+| No model API key needed | Available with a configured model |
+| --- | --- |
+| Paper capture, web clipping and tag organization | Tag descriptions based on your paper content |
+| Local full-text search, tag and score filters | Natural-language semantic search |
+| Topic packs and shared-tag paper matches | Content-based recommendations from your library |
+| JSON import/export and backup | Suggestions for merging synonymous tags |
 
-Full policy: [`PRIVACY.md`](PRIVACY.md)
+Supports **Qwen / DashScope, Zhipu GLM, Kimi Code and DeepSeek**, with configurable models and base URLs.
 
-## Optional: LLM features
+Your library is stored on your machine, with no account required. **After configuring an API key, automatic tag descriptions, abstract translation and new-paper recommendations may send relevant text to your selected provider in the background.** You can disable automatic tag descriptions in Settings. Descriptions use excerpts from up to six linked papers; they do not imply the model has read an entire PDF. API keys are excluded from JSON exports and backups.
 
-Smart search, similar-paper recommendation and tag-merge suggestions need a model. Open **Manager → Model settings** and add a key for one of:
+Also included: English and Simplified Chinese interfaces, system-aware dark mode, citation lookup and a daily JSON backup scheduled for 4 PM. Chrome must be running; larger libraries should also use manual export. See the [feature guide](docs/features.zh-CN.md) and [privacy policy](PRIVACY.md) for details.
 
-- Qwen / DashScope
-- Zhipu GLM
+## Get started
 
-The key stays in local extension storage and is used only for requests you trigger. Everything else works with no key at all.
+**No build step or local server is required to load the extension.**
 
-## Roadmap
+1. Use **Code → Download ZIP** on the repository page and unzip it, or clone this repository.
+2. Open `chrome://extensions` and enable **Developer mode**.
+3. Click **Load unpacked** and select the project's **`extension/` folder**, not the repository root.
+4. Pin Paper_Mind to the toolbar. Open a paper and click the icon to save it.
 
-- [ ] Chrome Web Store listing
-- [ ] Export to BibTeX / Zotero
-- [ ] Firefox and Edge builds
-- [ ] Configurable clip destination folder
+**Already installed?** Update your local files, click **↻ Reload** on the extension card and reopen the manager. No uninstall is needed.
 
-## Contributing
+**Want AI descriptions?** Add an API key in **Manager → Model settings**, then update descriptions in the Tag Library.
 
-Issues and pull requests are welcome — see [`CONTRIBUTING.md`](CONTRIBUTING.md). The extension is plain ES modules with no build step, so the loop is: edit a file in `extension/`, hit reload in `chrome://extensions`, test.
+**Want to view saved images?** Enable **Allow access to file URLs** in the extension's details.
 
-## License
+## Development and contributions
 
-Licensed under the [Apache License 2.0](LICENSE).
-
-## Star History
-
-<a href="https://www.star-history.com/?repos=ZJU-OmniAI%2FPaper_Mind&type=date&legend=top-left">
- <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=ZJU-OmniAI/Paper_Mind&type=date&theme=dark&legend=top-left" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=ZJU-OmniAI/Paper_Mind&type=date&legend=top-left" />
-   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=ZJU-OmniAI/Paper_Mind&type=date&legend=top-left" />
- </picture>
-</a>
-
-
-## Version 1.4: focused tags and easier discovery
-
-The manager opens the paper library by default. Search across paper content, tag aliases and descriptions with multiple keywords or quoted phrases; combine tags (all/any), filter by score and browse 24 papers per page. Use `Cmd/Ctrl K` to focus search.
-
-Tag limits default to **6 per paper / 80 total**, adjustable in Settings. Existing tags are retained, and merging paper records preserves their combined tags. Suggestions show up to eight relevant tags and their descriptions. Exact normalized names and aliases are reused; semantic merges remain reviewable and preserve topic-pack references.
-
-With an API key configured, AI descriptions run in background batches, using the user-selected tag and excerpts from up to six linked papers. Descriptions include model/time provenance, refresh when sampled evidence changes, and retain the last description on failure. Use **Tag Library → Update tag descriptions** for older tags or retries, or regenerate a single tag in its details. Automatic generation can be disabled in Settings. This feature sends abstract, note and clip excerpts to the configured provider; it does not read an entire PDF. Clipboard text is now read only after clicking **Paste clipboard**.
-
-### Validation
+The extension uses native ES modules. Edit `extension/`, reload the extension and verify the change.
 
 ```bash
 npm ci
-npm test
+npm test                         # Search, storage and background-task checks
 npx playwright install chromium
-npm run test:ui
-npm run package:extension
+npm run test:ui                  # Browser interaction regression checks
+npm run package:extension        # Writes dist/Paper_Mind-extension.zip
 ```
 
-To use an installed Chrome for UI tests: `PW_CHANNEL=chrome npm run test:ui`. Tests use isolated data and mocked model replies, without accessing the user's extension database or paid models.
+With Chrome already installed, use `PW_CHANNEL=chrome npm run test:ui`. Tests use isolated data and mocked model replies.
+
+- [Contributing](CONTRIBUTING.md) · [Changelog](CHANGELOG.md) · [Reproducing the screenshots](assets/screenshots/README.md)
+- Planned directions: Chrome Web Store, BibTeX / Zotero export, other browsers and configurable clip destinations. These are not current features.
+- [Apache License 2.0](LICENSE)

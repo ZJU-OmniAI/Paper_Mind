@@ -1,140 +1,123 @@
 <div align="center">
 
-<img src="assets/logo.png" height="120" alt="Paper_Mind">
+<img src="assets/logo.png" height="88" alt="Paper_Mind 标志">
 
 <h1>Paper_Mind</h1>
 
-[![Chrome Extension](https://img.shields.io/badge/Chrome-Manifest_V3-4285F4.svg)](https://developer.chrome.com/docs/extensions/mv3/intro/)
-[![License](https://img.shields.io/badge/License-Apache_2.0-green.svg)](https://opensource.org/licenses/Apache-2.0)
-[![Version](https://img.shields.io/badge/version-1.3.3-blue.svg)](CHANGELOG.md)
-[![Stars](https://img.shields.io/github/stars/ZJU-OmniAI/Paper_Mind?style=social)](https://github.com/ZJU-OmniAI/Paper_Mind/stargazers)
+<h3>把收藏的论文，变成下一次研究的起点。</h3>
 
-[English](README.md) | [中文](README_zh.md)
+<p>一键保存论文与解读，用有说明的标签整理，再用一个线索找到它。</p>
+
+[![Version](https://img.shields.io/badge/version-1.4.0-0c7d72.svg)](CHANGELOG.md)
+[![Chrome Extension](https://img.shields.io/badge/Chrome-Manifest_V3-4285F4.svg)](extension/manifest.json)
+[![License](https://img.shields.io/badge/license-Apache_2.0-0c7d72.svg)](LICENSE)
+
+[English](README.md) · **中文** · [开始使用](#几步开始使用) · [完整功能](docs/features.zh-CN.md)
 
 </div>
 
-<div align="center">
-<b>一个论文标签管理系统。</b><br>
-看到好论文点一下存进来，用标签归类，之后真的能搜得到——还能在你自己的收藏里给你推相关的。
-</div>
+![论文库：搜索 RAG 并选择评估标签，从示例收藏中找到两篇相关论文](assets/screenshots/library-zh.png)
 
-<!--
-TODO: 录一段约 30 秒的演示存成 assets/demo.gif，然后取消下面这行注释：
-<p align="center"><img src="assets/demo.gif" alt="Paper_Mind 演示" width="100%"></p>
--->
+<p align="center"><sub>实际界面截图，使用独立的示例论文库。论文、笔记和标签说明均为演示内容；不含个人数据，未调用真实模型。</sub></p>
 
----
+## 收藏时很容易，回头找也应该很容易
 
-## 它能干什么
+读到一篇好论文，顺手存下；几周后，只记得“和 RAG 的可信度有关”。Paper_Mind 帮你把这个模糊线索变成可查找的内容、标签和研究专题。
 
-**1. 一键收藏，不用手抄。** 在 arXiv、alphaXiv 或任意论文页点一下插件图标，标题、摘要、来源链接自动填好。库里已经有这篇了会认出来，提示「更新已有」而不是再存一条。
+| 你手里的线索 | 在 Paper_Mind 里怎么找 |
+| --- | --- |
+| “标题忘了，只记得提到了 RAG 和 evaluation。” | 输入多个关键词，搜索标题、摘要、笔记、标签及剪藏正文。 |
+| “我要看 RAG 的评估方法，优先看之前打过高分的。” | 组合标签，选择“全部 / 任一”，再加评分筛选。 |
+| “我记得存过一篇讲这个方法的解读。” | 打开论文详情，在同一条记录里查看关联的解读与材料。 |
+| “这篇和我之前读过的哪几篇有关？” | 查看共享标签的相似论文，或使用可选的 LLM 推荐。 |
 
-**2. 打标签，不怕乱也不怕忘。** 输入时只显示相关候选，名称、别名和说明都能搜到。默认每篇最多 6 个标签、全库最多 80 个，可在设置中调整，已有标签不会被删除。配置模型后，AI 根据你选择的标签和关联论文内容自动编写说明；论文更新后会刷新，失败可重试。没打标签的自动进内置的**「待归类」**，不会存完就石沉大海。
+`⌘ / Ctrl K` 聚焦搜索 · 空格组合关键词 · 双引号查短语 · 每页 24 篇
 
-**3. 主题包：按标签组合出专题。** 不是简单的标签筛选，而是一条实时的查询：*含 A、含 B、排除 C*。比如做一个「具身智能里跟导航有关、但不要纯仿真的」，之后新存的论文只要符合条件就自动进这个包。
+## 你选标签，AI 补上含义与边界
 
-**4. 检索：本地秒搜 + 大模型语义搜。** 本地全文搜标题、标签别名和说明、摘要、中文译文、备注、链接及剪藏正文，支持多个关键词和引号短语，并可组合标签与评分筛选；不联网、不花钱，只记得论文里某一句话也能搜出来。想模糊找的时候切到 LLM 智能检索，用大白话描述你要什么就行。
+一个标签不只是名字，还应该回答：**它适合收什么论文，和旁边的标签有什么区别？**
 
-**5. 推荐：在你自己的库里找相似。** 新论文入库后后台自动跑一遍，告诉你「你之前存的这几篇跟它有关」。推的是**你的收藏**，不是全网——把你隔了几个月分别存下的东西重新串起来。
+![标签库：左侧浏览有说明的标签，右侧查看完整含义、别名和关联论文](assets/screenshots/tags-zh.png)
 
-**6. 标签治理：库大了帮你收拾。** 论文攒到几百篇标签必然乱。论文集合完全重合的冗余标签，本地直接算出来，一次 LLM 都不用调；只有人才看得出的近义标签——`多模态` 和 `multimodal`、`LLM Agent` 和 `智能体`——交给 LLM 提合并建议，你一条条审核，绝不自作主张替你合。
+以“检索增强生成”为例，说明可以区分“用外部知识支撑生成”与“单纯的检索排序”。输入标签时就能读到这些说明，选标签更有依据。
 
-**数据都在你自己电脑上。** 上面这些全都存在扩展自己的数据库里，不注册、不起服务、不上云，每天还会自动往磁盘写一份 JSON 备份。LLM 功能是可选的——不填 key，收藏、标签、主题包、本地搜索、备份照样全能用。
+- **从你的论文出发。** LLM 根据人工选择的标签、别名，以及关联论文的摘要、笔记和正文片段编写说明。
+- **让数量保持可控。** 默认每篇最多 **6 个**、全库最多 **80 个**标签，可在设置中调整；历史标签保留。
+- **优先复用。** 名称、别名和说明都能搜，每次最多显示 8 个相关候选。大小写与全角拼写等确定性变体会复用已有标签。
+- **合并由你判断。** LLM 提出同义标签的合并建议，你逐项审核。标签关联了相同论文，只是整理线索，不代表概念相同。
+- **说明可以持续维护。** 支持后台分批生成、缓存和重试；采样内容改变后会更新，失败时保留已有说明。
 
-## 快速开始
+> 已有论文库？配置模型后，进入 **标签库 → 补全 / 更新标签说明**。单个标签也可以重新生成。
 
-不用编译，不用起服务，直接加载：
+## 看到值得读的，先把线索留下来
 
-1. 下载最新的 [`Paper_Mind-extension.zip`](https://github.com/ZJU-OmniAI/Paper_Mind/releases/latest) 解压——或者直接把这个仓库 clone 下来，用里面的 `extension/` 目录。
-2. 打开 `chrome://extensions`，右上角打开**开发者模式**。
-3. 点**加载已解压的扩展程序**，选中 `extension/` 目录。
-4. 把扩展固定到工具栏。之后在任意页面点图标即可保存。
+<p align="center">
+  <img src="assets/screenshots/capture-zh.png" width="420" alt="收藏弹窗：自动填入标题、摘要和来源，选择已有标签时可查看说明">
+</p>
 
-**有个开关建议打开**：`chrome://extensions` → Paper_Mind → 打开**「允许访问文件网址」**。不开的话管理页读不到自己存在磁盘上的剪藏图片（会回落显示网页原图，并在正文上方提示你去哪开）。
+打开论文页或解读文章，点击工具栏图标。扩展会尝试提取标题、摘要与来源，你补上价值评分、笔记和几个核心标签，再保存。
 
-自己打包分发用的 ZIP：
+| 阅读时的动作 | 保存后的结果 |
+| --- | --- |
+| 收藏论文 | 标题、摘要、来源与阅读笔记汇入论文库；未选标签的进入“待归类”。 |
+| 收藏博客、公众号文章等解读 | 正文保存为 Markdown，保留标题层级、列表、表格和代码块。 |
+| 保存同一篇论文的多份解读 | 根据 arXiv 编号、DOI 或标题提示配对；确认并入后，材料归在同一条论文记录下。 |
+| 再次遇到已收藏的论文 | 提示已有记录，可更新或按需单独保存。 |
 
-```bash
-npm run package:extension   # 产出 dist/Paper_Mind-extension.zip
-```
+剪藏图片会尝试下载为本地文件；下载成功的图片可以离线查看。剪贴板内容只在你点击 **“粘贴剪贴板”** 后读取。
 
-## 附带的功能
+## 为一个研究问题，留一份持续更新的阅读清单
 
-| | |
-|---|---|
-| ✂️ **网页剪藏** | 一篇论文往往还配着解读——公众号文章、博客、知乎回答。这些页面点一下就能整篇存进来，转成 Markdown，标题层级、列表、表格、代码块都保留。 |
-| 🔗 **解读挂在论文底下** | 剪藏的文章会靠 arXiv 编号 / DOI / 标题跟库里已有的论文双向配对，一篇论文加三份解读还是**一条记录三份材料**，不是散成四条。 |
-| 🖼️ **剪藏图片存磁盘** | 图片下载成下载目录里的真实文件，不留在浏览器里——公众号原文哪天被删了，你存的那份照样能看。 |
-| 📈 **引用量** | 通过 arXiv 编号 / DOI / 标题从 Semantic Scholar 拉取。 |
-| 💾 **每日备份** | 每天下午 4 点往下载目录写一份 JSON，管理页也随时可以手动导入/导出。 |
-| 🌗 **双语 + 深色模式** | 中英文界面，跟随系统浅色/深色自动切换。 |
+“更可信的 RAG”可以是一组规则：同时包含 **检索增强生成 + 评估与可靠性**，排除 **智能体**。把它保存成研究主题包，以后符合条件的新论文也会出现在清单里。
 
-完整功能说明见 [`docs/features.zh-CN.md`](docs/features.zh-CN.md)。
+![研究主题包：编辑包含与排除标签，将研究方向保存成可重复使用的筛选规则](assets/screenshots/topics-zh.png)
 
-## 隐私
+适合准备组会、整理相关工作，或者持续跟进一个小方向。标签合并后，主题包里的包含 / 排除条件也会迁移。
 
-这个扩展从设计上就是本地优先：
+## 本地就能用，AI 按需开启
 
-- 论文、标签、摘要、备注、剪藏正文都在扩展自己的 IndexedDB 里，存在你电脑上。
-- 模型设置和 API Key 存在 `chrome.storage.local`，**不会**跟着导出和备份走。
-- 剪藏图片直接向原网页的图床请求，不带 Referer、不带 Cookie、不带任何凭证，拿到就写进你的下载目录。
-- 没有埋点、没有统计、没有账号服务、不向任何第三方共享数据。
-- 只有你主动用 LLM 功能时才会有文本离开这台机器，而且只发给你自己配置的那个模型服务商。
+| 无需模型 API Key | 配置模型后可用 |
+| --- | --- |
+| 论文收藏、网页剪藏、标签整理 | 根据论文内容生成标签说明 |
+| 本地全文搜索、标签和评分筛选 | 用自然语言做语义检索 |
+| 研究主题包、共享标签相似推荐 | 结合论文内容推荐库内相关论文 |
+| JSON 导入 / 导出、备份 | 提出同义标签合并建议 |
 
-完整声明见 [`PRIVACY.md`](PRIVACY.md)。
+支持 **Qwen / DashScope、智谱 GLM、Kimi Code、DeepSeek**；模型和 Base URL 可在设置中配置。
 
-## 可选：LLM 功能
+论文库保存在本机，不需要注册账号。**配置 API Key 后，自动说明、摘要翻译和新论文相似推荐可能在后台向所选服务商发送必要文本。** 自动标签说明可在设置中关闭；生成说明会使用最多 6 篇关联论文的内容片段，并不表示模型读过完整 PDF。API Key 不进入 JSON 导出和备份。
 
-智能检索、相似论文推荐、标签说明生成和标签合并建议需要模型。去**管理页 → 模型设置**填一个：
+还支持中英文界面、跟随系统的深色模式、引用量查询，以及每天下午 4 点触发的自动 JSON 备份。浏览器需运行；大库请同时使用手动导出。详见 [功能说明](docs/features.zh-CN.md) 与 [隐私政策](PRIVACY.md)。
 
-- 通义千问 / DashScope
-- 智谱 GLM
+## 几步开始使用
 
-Key 只存在本地扩展存储里，只在你主动触发的请求里用。除这三个以外的功能不填 key 全都能用。
+**加载扩展不需要编译，也不需要启动服务。**
 
-## 路线图
+1. 在仓库页面点击 **Code → Download ZIP** 并解压，或克隆这个仓库。
+2. 打开 `chrome://extensions`，开启右上角 **开发者模式**。
+3. 点击 **加载已解压的扩展程序**，选择项目中的 **`extension/` 文件夹**，不是整个项目文件夹。
+4. 把 Paper_Mind 固定到工具栏。打开一篇论文，点击图标即可收藏。
 
-- [ ] 上架 Chrome 应用商店
-- [ ] 导出 BibTeX / Zotero
-- [ ] Firefox、Edge 版本
-- [ ] 剪藏目录可自定义
+**已安装旧版？** 更新本地文件后，点击扩展卡片上的 **↻ 刷新**，重新打开管理页即可，无需卸载。
 
-## 参与贡献
+**需要 AI 标签说明？** 在 **管理页 → 模型设置** 填写 API Key，再到标签库补全说明。
 
-欢迎提 Issue 和 PR，见 [`CONTRIBUTING.md`](CONTRIBUTING.md)。扩展是纯 ES 模块、没有构建步骤，改代码的循环就是：改 `extension/` 里的文件 → 去 `chrome://extensions` 点刷新 → 试。
+**需要查看本地剪藏图片？** 在扩展详情中开启 **允许访问文件网址**。
 
-## 许可证
+## 开发与贡献
 
-[Apache License 2.0](LICENSE)。
-
-## Star History
-
-<a href="https://www.star-history.com/?repos=ZJU-OmniAI%2FPaper_Mind&type=date&legend=top-left">
- <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=ZJU-OmniAI/Paper_Mind&type=date&theme=dark&legend=top-left" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=ZJU-OmniAI/Paper_Mind&type=date&legend=top-left" />
-   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=ZJU-OmniAI/Paper_Mind&type=date&legend=top-left" />
- </picture>
-</a>
-
-
-## 1.4 使用提示
-
-- 管理页默认打开论文库；使用 `⌘ / Ctrl K` 聚焦搜索。空格分隔的关键词须全部匹配，双引号中的短语作为整体匹配。
-- 点击右侧标签组合筛选，可选择“全部”或“任一”；所选标签可逐个移除，也可清除全部条件。列表每页 24 篇。
-- “标签库 → 补全 / 更新标签说明”处理旧标签或失败项；标签详情可单独重新生成。系统“待归类”的说明为固定说明。
-- 自动说明可在“模型设置 → 标签管理”关闭。生成时会向你配置的模型发送标签名称、别名，以及最多 6 篇关联论文的摘要、笔记和剪藏片段；不发送 API Key 到导出文件。说明只覆盖采样到的内容，不表示模型已阅读全文或 PDF。
-- 同义标签由你审核后合并；大小写、全角拼写等确定性变体自动复用。论文集合相同不代表标签含义相同。
-- 剪贴板现在需要点击“粘贴剪贴板”才会读取。
-
-## 开发验证
+扩展使用原生 ES 模块。日常修改流程：编辑 `extension/` → 刷新扩展 → 验证功能。
 
 ```bash
 npm ci
-npm test
+npm test                         # 搜索、存储、后台任务等逻辑测试
 npx playwright install chromium
-npm run test:ui
-npm run package:extension
+npm run test:ui                  # 浏览器交互回归
+npm run package:extension        # 产出 dist/Paper_Mind-extension.zip
 ```
 
-本机已有 Chrome 时可运行 `PW_CHANNEL=chrome npm run test:ui`。浏览器测试使用隔离数据库与模拟模型回复，不调用真实付费模型，不触碰现有扩展数据。测试覆盖说明生成与缓存、写入冲突、标签合并、搜索筛选、键盘操作及窄屏 / 深色布局。
+已有 Chrome 时可使用 `PW_CHANNEL=chrome npm run test:ui`。测试使用隔离数据与模拟模型回复。
+
+- [参与贡献](CONTRIBUTING.md) · [版本记录](CHANGELOG.md) · [截图生成说明](assets/screenshots/README.md)
+- 计划探索：Chrome 应用商店、BibTeX / Zotero 导出、其他浏览器与自定义剪藏目录。以上尚未作为现有功能提供。
+- [Apache License 2.0](LICENSE)
