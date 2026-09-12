@@ -732,8 +732,9 @@ const translations = {
 const ui = (zh, en) => state.language === "en" ? en : zh;
 function renderLibraryLabels() {
   const labels = {
-    libraryHeading: ["找到下一条研究线索", "Find your next research connection"],
-    libraryHint: ["用关键词查内容，用标签缩小范围。值得保留的想法，都在这里。", "Search your ideas. Filter by topic. Keep your research connected."],
+    libraryEyebrow: ["从记忆中的概念出发", "START WITH WHAT YOU REMEMBER"],
+    libraryHeading: ["通过脑海中的标签，找到你的论文", "Find your papers through the tags you remember"],
+    libraryHint: ["从记得的关键词或概念开始，搜索并选择标签，找回读过的论文。", "Start with a keyword or concept you remember. Search and select tags to find papers you have read."],
     libraryAddPaper: ["＋ 添加论文", "+ Add paper"],
     clearLibraryFilters: ["清除筛选", "Clear filters"],
     librarySearchHelp: ["多个关键词用空格分隔；英文短语可加双引号。⌘ / Ctrl K 快速搜索", 'Separate keywords with spaces; use quotes for phrases. ⌘ / Ctrl K to search'],
