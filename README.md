@@ -4,9 +4,9 @@
 
 <h1>Paper_Mind</h1>
 
-<h3>Save a paper. Find your next idea.</h3>
+<h3>Find the paper through the ideas you remember.</h3>
 
-<p>Keep papers and their write-ups together. Organize with meaningful tags. Find them again from a single clue.</p>
+<p>Organize papers with tags. Explore them with AI assistance. Lightweight capture, simple organization.</p>
 
 [![Version](https://img.shields.io/badge/version-1.4.0-0c7d72.svg)](CHANGELOG.md)
 [![Chrome Extension](https://img.shields.io/badge/Chrome-Manifest_V3-4285F4.svg)](extension/manifest.json)
@@ -15,6 +15,12 @@
 **English** · [中文](README_zh.md) · [Screenshot walkthrough](#one-paper-from-saving-to-finding) · [Install](#get-started) · [Full feature guide](docs/features.zh-CN.md)
 
 </div>
+
+Some time after reading a paper, its full title may escape us. What stays is often a handful of keywords, a few concepts, or a memorable method: retrieval-augmented generation, agents, evidence verification. Together, these fragments form our lasting impression of the paper—and often give us the first clue when we want to revisit it.
+
+**A library organized around those concepts lets you find a paper starting with the word you still remember.** That is the idea behind Paper_Mind: a lightweight paper management platform built around tags, with optional LLM assistance, delivered as a Chrome extension that fits into your reading. Save a paper, leave a note and choose a few core tags to turn a fleeting impression into something you can search, connect and return to.
+
+You choose the tags that describe your papers. An LLM can use those tags and content from linked papers to explain their meaning and scope, assist retrieval and suggest related reading. Reusing existing tags and limiting new ones keeps the collection manageable. **Keep organization simple, and let discovery begin with a concept.** Your library stays on your machine; basic capture and search work without a configured model.
 
 ![Paper library: search for RAG and select the evaluation tag to find two relevant papers in the sample collection](assets/screenshots/library-en.png)
 
