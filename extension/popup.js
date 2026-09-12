@@ -1,3 +1,4 @@
+import { tagKey, splitTags, suggestTags, DEFAULT_TAG_POLICY } from "./library-tools.js";
 import { handleApi } from "./storage.js";
 import { CLIP_MIN_TEXT_LENGTH, buildClipRecord, clipExcerpt, pageClipExtractor } from "./clipper.js";
 
@@ -22,6 +23,7 @@ const VALUE_SCORE_LABELS = {
 
 const state = {
   tags: [],
+  config: {},
   paperCount: 0,
   selectedTags: [],
   currentTab: null,
@@ -215,17 +217,7 @@ function escapeHtml(value) {
     .replaceAll("'", "&#039;");
 }
 
-function normalize(value) {
-  return String(value || "").trim().toLocaleLowerCase("zh-CN");
-}
-
-function normalizeTagName(value) {
-  return String(value || "")
-    .trim()
-    .replace(/\s+/g, " ")
-    .replace(/^#+/, "")
-    .trim();
-}
+function normalize(value) { return tagKey(value); }
 
 function normalizeValueScore(value, fallback = 3) {
   if (value === null || value === undefined || value === "") return fallback;
@@ -273,12 +265,13 @@ function applyLanguage() {
   els.valueScoreLabel.textContent = t("valueScore");
   els.abstractLabel.textContent = t("abstract");
   els.notesLabel.textContent = t("notes");
+  document.getElementById("pasteNotesButton").textContent = state.language === "en" ? "Paste clipboard" : "粘贴剪贴板";
   els.title.placeholder = t("titlePlaceholder");
   els.abstract.placeholder = t("abstractPlaceholder");
   els.conversation.placeholder = t("notesPlaceholder");
   els.tagsLabel.textContent = t("tags");
   els.tagInput.placeholder = t("tagInputPlaceholder");
-  els.quickTagsLabel.textContent = t("quickTags");
+  els.quickTagsLabel.textContent = state.language === "en" ? "Frequently used · search for more" : "常用标签 · 输入可查找更多";
   els.dupCreateButton.textContent = t("dupCreate");
   els.dupCancelButton.textContent = t("dupCancel");
   els.savedOpenButton.textContent = t("viewInManager");
@@ -374,12 +367,12 @@ function renderChips() {
 }
 
 function addTag(name) {
-  const clean = normalizeTagName(name);
-  if (!clean) return;
-  if (!state.selectedTags.some((tag) => normalize(tag) === normalize(clean))) {
-    state.selectedTags.push(clean);
-    renderChips();
-  }
+  const incoming = splitTags(name).map((name) => state.tags.find((tag) => [tag.name, ...(tag.aliases || [])].some((value) => tagKey(value) === tagKey(name)))?.name || name);
+  const next = [...new Map([...state.selectedTags, ...incoming].map((name) => [tagKey(name), name])).values()];
+  const limit = Math.max(state.config.maxTagsPerPaper || DEFAULT_TAG_POLICY.maxTagsPerPaper, state.existingPaper?.paper?.tagIds?.length || 0);
+  if (next.length > limit) { setMessage(state.language === "en" ? `Use up to ${limit} core tags per paper.` : `每篇最多 ${limit} 个核心标签，细节可写入笔记。`, "error"); return; }
+  state.selectedTags = next;
+  renderChips();
   els.tagInput.value = "";
   hideSuggestions();
 }
@@ -390,61 +383,34 @@ function removeTag(name) {
 }
 
 function renderQuickTags() {
+  const limit = state.config.maxTagsPerPaper || DEFAULT_TAG_POLICY.maxTagsPerPaper;
+  document.getElementById("tagPolicyNote").textContent = state.language === "en" ? `${state.selectedTags.length} / ${limit} tags · reuse existing topics${state.config.autoDescribeTags !== false ? " · AI writes descriptions after saving" : ""}` : `${state.selectedTags.length} / ${limit} 个标签 · 优先复用已有概念${state.config.autoDescribeTags !== false ? " · 保存后 AI 编写说明" : ""}`;
+
   const selected = new Set(state.selectedTags.map(normalize));
   const top = state.tags
     .filter((tag) => !isSystemTag(tag) && !selected.has(normalize(tag.name)))
-    .sort((a, b) => (b.paperIds?.length || 0) - (a.paperIds?.length || 0) || a.name.localeCompare(b.name, "zh-CN"));
+    .sort((a, b) => (b.paperIds?.length || 0) - (a.paperIds?.length || 0) || a.name.localeCompare(b.name, "zh-CN")).slice(0, 8);
   els.quickTags.hidden = !top.length;
   els.quickTagsList.innerHTML = top
-    .map((tag) => `<button type="button" class="quick-tag" data-quick-tag="${escapeHtml(tag.name)}" title="${escapeHtml(tag.name)}">${escapeHtml(tag.name)}</button>`)
+    .map((tag) => `<button type="button" class="quick-tag" data-quick-tag="${escapeHtml(tag.name)}" title="${escapeHtml(tag.description || tag.name)}">${escapeHtml(tag.name)}</button>`)
     .join("");
 }
 
 /* ----- tag suggestions ----- */
-
-function tagMatchScore(tag, query, context) {
-  const q = normalize(query);
-  const ctx = normalize(context);
-  const names = [tag.name, ...(tag.aliases || [])].map(normalize);
-  let score = 0;
-  if (q) {
-    if (names.some((name) => name === q)) score += 40;
-    else if (names.some((name) => name.startsWith(q))) score += 30;
-    else if (names.some((name) => name.includes(q))) score += 20;
-    else if (names.some((name) => q.includes(name))) score += 10;
-  }
-  if (ctx) {
-    if (names.some((name) => name && ctx.includes(name))) score += 8;
-    if (tag.description && ctx.includes(normalize(tag.description))) score += 3;
-  }
-  return score;
-}
 
 function paperContextText() {
   return `${els.title.value} ${els.abstract.value} ${els.conversation.value}`;
 }
 
 function matchingTags(query) {
-  const q = normalize(query);
-  const selected = new Set(state.selectedTags.map(normalize));
-  const ctx = normalize(paperContextText());
-  const tagTime = (tag) => Date.parse(tag.updatedAt || tag.createdAt || "") || 0;
-  const tagSortValue = (tag) => (isSystemTag(tag) ? 1 : 0);
-  const candidates = state.tags.filter((tag) => !selected.has(normalize(tag.name)));
-  if (!q && !ctx) {
-    return candidates.sort((a, b) => tagSortValue(a) - tagSortValue(b) || tagTime(b) - tagTime(a) || a.name.localeCompare(b.name, "zh-CN"));
-  }
-  return candidates
-    .map((tag) => ({ tag, score: tagMatchScore(tag, query, ctx) }))
-    .sort((a, b) => b.score - a.score || tagSortValue(a.tag) - tagSortValue(b.tag) || tagTime(b.tag) - tagTime(a.tag) || a.tag.name.localeCompare(b.tag.name, "zh-CN"))
-    .map((item) => item.tag);
+  return suggestTags(state.tags, query, { selected: state.selectedTags, context: paperContextText() });
 }
 
 function suggestionItems() {
   const query = els.tagInput.value.trim();
   const matches = matchingTags(query);
-  const items = matches.map((tag) => ({ value: tag.name, count: tag.paperIds?.length || 0, create: false }));
-  const exact = query && state.tags.some((tag) => normalize(tag.name) === normalize(query));
+  const items = matches.map((tag) => ({ value: tag.name, count: tag.paperIds?.length || 0, description: tag.description || "", create: false }));
+  const exact = query && state.tags.some((tag) => [tag.name, ...(tag.aliases || [])].some((name) => tagKey(name) === tagKey(query)));
   if (query && !exact) items.push({ value: query, count: 0, create: true });
   return items;
 }
@@ -464,7 +430,7 @@ function renderSuggestions() {
       }
       return `
         <button type="button" class="tag-suggestion${active}" data-tag-value="${escapeHtml(item.value)}">
-          <span>${escapeHtml(item.value)}</span>
+          <span>${escapeHtml(item.value)}${item.description ? `<small class="suggestion-description">${escapeHtml(item.description)}</small>` : ""}</span>
           <small>${escapeHtml(t("paperCount", item.count))}</small>
         </button>
       `;
@@ -671,7 +637,7 @@ async function fillConversationFromClipboard() {
     if (els.conversation.value.includes(text)) return;
     els.conversation.value = `${els.conversation.value.trim()}${els.conversation.value.trim() ? "\n\n" : ""}${t("clipboardLabel")}\n${text}`;
   } catch {
-    // Clipboard access can be denied by the browser; adding a paper should still work.
+    setMessage(state.language === "en" ? "Clipboard unavailable. Paste directly into notes." : "无法读取剪贴板，请直接粘贴到备注框。", "error");
   }
 }
 
@@ -800,7 +766,6 @@ async function initialize() {
   applyLanguage();
   try {
     await Promise.all([loadState(), readCurrentPage()]);
-    await fillConversationFromClipboard();
     await detectExistingPaper();
     await detectMergeTarget();
   } catch (err) {
@@ -810,6 +775,8 @@ async function initialize() {
 }
 
 /* ----- events ----- */
+
+document.getElementById("pasteNotesButton").addEventListener("click", fillConversationFromClipboard);
 
 els.reloadButton.addEventListener("click", async () => {
   setMessage("");
@@ -846,6 +813,7 @@ els.tagInput.addEventListener("focus", () => {
 });
 
 els.tagInput.addEventListener("keydown", (event) => {
+  if (event.isComposing) return;
   if (event.key === "ArrowDown" || event.key === "ArrowUp") {
     event.preventDefault();
     if (els.tagSuggestions.hidden) renderSuggestions();

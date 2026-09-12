@@ -116,3 +116,24 @@ Licensed under the [Apache License 2.0](LICENSE).
    <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=ZJU-OmniAI/Paper_Mind&type=date&legend=top-left" />
  </picture>
 </a>
+
+
+## Version 1.4: focused tags and easier discovery
+
+The manager opens the paper library by default. Search across paper content, tag aliases and descriptions with multiple keywords or quoted phrases; combine tags (all/any), filter by score and browse 24 papers per page. Use `Cmd/Ctrl K` to focus search.
+
+Tag limits default to **6 per paper / 80 total**, adjustable in Settings. Existing tags are retained, and merging paper records preserves their combined tags. Suggestions show up to eight relevant tags and their descriptions. Exact normalized names and aliases are reused; semantic merges remain reviewable and preserve topic-pack references.
+
+With an API key configured, AI descriptions run in background batches, using the user-selected tag and excerpts from up to six linked papers. Descriptions include model/time provenance, refresh when sampled evidence changes, and retain the last description on failure. Use **Tag Library → Update tag descriptions** for older tags or retries, or regenerate a single tag in its details. Automatic generation can be disabled in Settings. This feature sends abstract, note and clip excerpts to the configured provider; it does not read an entire PDF. Clipboard text is now read only after clicking **Paste clipboard**.
+
+### Validation
+
+```bash
+npm ci
+npm test
+npx playwright install chromium
+npm run test:ui
+npm run package:extension
+```
+
+To use an installed Chrome for UI tests: `PW_CHANNEL=chrome npm run test:ui`. Tests use isolated data and mocked model replies, without accessing the user's extension database or paid models.

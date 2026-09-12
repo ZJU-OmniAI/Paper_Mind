@@ -636,3 +636,13 @@ input[type="range"] {
   background: var(--accent);
   font-weight: 700;
 }
+
+.suggestion-description { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; color: var(--muted); font-size: 11px; line-height: 1.6; margin-top: 4px; text-align: left; }
+.tag-suggestion > span { min-width: 0; }
+.tag-suggestion > small { flex-shrink: 0; }
+button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.notes-heading { display: flex; justify-content: space-between; align-items: center; }
+#pasteNotesButton { border: 0; background: transparent; color: var(--accent); font-size: 11px; padding: 3px 0; }
+
+.tag-policy-note { font-size: 11px; color: var(--muted); line-height: 1.6; margin: 6px 0; }

@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "__MSG_extName__",
   "short_name": "__MSG_extShortName__",
-  "version": "1.3.3",
+  "version": "1.4.0",
   "description": "__MSG_extDescription__",
   "default_locale": "zh_CN",
   "icons": {
@@ -26,6 +26,20 @@
     "type": "module"
   },
   "options_page": "manager.html",
-  "permissions": ["activeTab", "scripting", "storage", "tabs", "unlimitedStorage", "alarms", "downloads", "clipboardRead", "offscreen"],
-  "host_permissions": ["https://*/*", "http://*/*", "file:///*"]
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "storage",
+    "tabs",
+    "unlimitedStorage",
+    "alarms",
+    "downloads",
+    "clipboardRead",
+    "offscreen"
+  ],
+  "host_permissions": [
+    "https://*/*",
+    "http://*/*",
+    "file:///*"
+  ]
 }

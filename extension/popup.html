@@ -70,7 +70,7 @@
         </label>
 
         <label>
-          <span id="notesLabel">备注 / 对话记录</span>
+          <span class="notes-heading"><span id="notesLabel">备注 / 对话记录</span><button type="button" id="pasteNotesButton">粘贴剪贴板</button></span>
           <textarea id="conversationInput" rows="3"></textarea>
         </label>
 
@@ -82,6 +82,7 @@
             </div>
             <div class="tag-suggestions" id="tagSuggestions" hidden></div>
           </div>
+          <p class="tag-policy-note" id="tagPolicyNote"></p>
           <div class="quick-tags" id="quickTags" hidden>
             <span class="quick-tags-label" id="quickTagsLabel">全部标签</span>
             <div class="quick-tags-list" id="quickTagsList"></div>

@@ -140,6 +140,39 @@ async function autoTranslateForPaper(paperId) {
   }
 }
 
+// Separate queue: saving papers never waits for descriptions, translations or recommendations.
+let descriptionRunning = false;
+let descriptionRequested = false;
+let descriptionManualRequested = false;
+async function queueTagDescriptions({ retry = false } = {}) {
+  descriptionRequested = true;
+  descriptionManualRequested ||= retry;
+  if (descriptionRunning) return;
+  descriptionRunning = true;
+  const stop = startKeepAlive();
+  let manualRun = false;
+  const attempted = new Set();
+  try {
+    do {
+      descriptionRequested = false;
+      manualRun ||= descriptionManualRequested;
+      descriptionManualRequested = false;
+      const state = await handleApi("/api/state");
+      if (state.config.autoDescribeTags === false && !manualRun) break;
+      const result = await handleApi("/api/tags/describe", { method: "POST", body: { retry: manualRun, excludeTagIds: [...attempted] } });
+      for (const id of result.attemptedIds || []) attempted.add(id);
+      chrome.runtime.sendMessage({ type: "tag-descriptions-updated", generated: result.generated || 0, error: result.error || "" }).catch(() => {});
+      if (result.error || (!result.generated && !result.remaining)) break;
+      if (result.remaining > 0) descriptionRequested = true;
+    } while (descriptionRequested);
+  } catch (err) {
+    chrome.runtime.sendMessage({ type: "tag-descriptions-updated", error: err.message }).catch(() => {});
+  } finally {
+    descriptionRunning = false;
+    stop();
+  }
+}
+
 /* ----- 网页剪藏：把正文里的图片存成磁盘上的真实文件 ----- */
 
 const OFFSCREEN_URL = "offscreen.html";
@@ -227,7 +260,9 @@ async function sweepPendingClipArchives() {
   }
 }
 
-chrome.runtime.onMessage.addListener((message) => {
+chrome.runtime.onMessage.addListener((message, sender) => {
+  if (sender.id !== chrome.runtime.id) return;
+  if (message?.type === "auto-describe-tags") { queueTagDescriptions({ retry: Boolean(message.retry) }); return; }
   if (message?.target === "offscreen") return;
   if (message?.type === "clip-archive-sweep") {
     sweepPendingClipArchives();
@@ -246,12 +281,14 @@ chrome.runtime.onMessage.addListener((message) => {
 chrome.runtime.onInstalled.addListener(() => {
   scheduleDailyBackup();
   sweepPendingClipArchives();
+  queueTagDescriptions();
 });
 
 chrome.runtime.onStartup.addListener(() => {
   scheduleDailyBackup();
   runDailyBackup().catch(() => {});
   sweepPendingClipArchives();
+  queueTagDescriptions();
 });
 
 chrome.alarms.onAlarm.addListener((alarm) => {

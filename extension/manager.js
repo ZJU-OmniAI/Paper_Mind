@@ -1,3 +1,4 @@
+import { DEFAULT_TAG_POLICY, tagKey as canonicalTagKey, splitTags, suggestTags, paperSearchScore, matchesText, safeWebUrl } from "./library-tools.js";
 import { handleApi } from "./storage.js";
 
 const VALUE_SCORE_LABELS = {
@@ -28,6 +29,12 @@ const state = {
   activePaperId: null,
   searchTagId: null,
   paperLlmSearch: null,
+  libraryTagIds: [],
+  libraryPage: 1,
+  libraryTagLimit: 16,
+  tagDisplayLimit: 48,
+  searchRequest: 0,
+  tagSearchRequest: 0,
   tagLlmSearch: null,
   abstractLang: localStorage.getItem("abstractLang") === "en" ? "en" : "zh",
   // 展开了正文的材料 id（一条记录可以挂多份材料）
@@ -47,7 +54,7 @@ const state = {
   activeTopicPackId: null,
   editingTopicPackId: null,
   paperLibraryMode: localStorage.getItem("paperLibraryMode") || "list",
-  tagLibraryView: localStorage.getItem("tagLibraryView") || "grouped",
+  tagLibraryView: localStorage.getItem("tagLibraryView") || "flat",
   tagGroupThreshold: Math.min(90, Math.max(10, Number(localStorage.getItem("tagGroupThreshold")) || 50)),
   selectedMapTagIds: [],
   selectedMapPaperId: null,
@@ -222,7 +229,7 @@ const translations = {
     paperCount: "论文",
     tagCount: "标签",
     addPaper: "添加论文",
-    manualTagsOnly: "仅使用人工标签",
+    manualTagsOnly: "人工选择标签 · AI 编写说明",
     paperTitle: "论文标题",
     paperTitlePlaceholder: "输入论文标题",
     valueScore: "价值评分",
@@ -460,7 +467,7 @@ const translations = {
     similarEmpty: "暂无相似论文",
     llmUnavailable: (error) => `模型不可用：${error}`,
     loadingLlmSimilar: "正在调用模型推荐相似论文...",
-    mergePrompt: "保存后可在“标签库”中用 LLM 合并十分相似的标签",
+    mergePrompt: "建议每篇使用 3–6 个核心标签。优先复用已有标签；保存后 AI 自动编写说明。",
     createTag: (name) => `新建标签：${name}`,
     tagInputPlaceholder: "搜索已有标签或输入新标签"
   },
@@ -478,7 +485,7 @@ const translations = {
     paperCount: "Papers",
     tagCount: "Tags",
     addPaper: "Add Paper",
-    manualTagsOnly: "Manual tags only",
+    manualTagsOnly: "Your tags · AI descriptions",
     paperTitle: "Paper title",
     paperTitlePlaceholder: "Enter paper title",
     valueScore: "Value score",
@@ -716,11 +723,45 @@ const translations = {
     similarEmpty: "No similar papers",
     llmUnavailable: (error) => `Model unavailable: ${error}`,
     loadingLlmSimilar: "Calling the model for similar-paper recommendations...",
-    mergePrompt: "After saving, use the Tag Library to merge highly similar tags",
+    mergePrompt: "Use 3–6 core tags. Reuse existing tags; AI writes descriptions after saving.",
     createTag: (name) => `Create tag: ${name}`,
     tagInputPlaceholder: "Search existing tags or enter a new tag"
   }
 };
+
+const ui = (zh, en) => state.language === "en" ? en : zh;
+function renderLibraryLabels() {
+  const labels = {
+    libraryHeading: ["找到下一条研究线索", "Find your next research connection"],
+    libraryHint: ["用关键词查内容，用标签缩小范围。值得保留的想法，都在这里。", "Search your ideas. Filter by topic. Keep your research connected."],
+    libraryAddPaper: ["＋ 添加论文", "+ Add paper"],
+    clearLibraryFilters: ["清除筛选", "Clear filters"],
+    librarySearchHelp: ["多个关键词用空格分隔；英文短语可加双引号。⌘ / Ctrl K 快速搜索", 'Separate keywords with spaces; use quotes for phrases. ⌘ / Ctrl K to search'],
+    tagHealthTitle: ["让标签保持精简", "A focused tag library"],
+    describeTagsButton: ["补全 / 更新标签说明", "Update tag descriptions"],
+    tagPolicyLegend: ["标签管理", "Tag management"],
+    maxTagsPerPaperLabel: ["每篇论文标签上限", "Tags per paper"],
+    maxTagsLabel: ["标签库总数上限", "Total tag limit"],
+    autoDescribeTagsLabel: ["保存后自动用 LLM 生成或更新标签说明", "Automatically write tag descriptions with AI after saving"],
+    tagPolicyHint: ["优先复用已有标签与别名。上限只限制新增，不删除已有标签。自动说明会将关联论文的摘要、笔记和正文片段发送给你配置的模型。", "Reuse existing tags and aliases. Limits apply to additions; existing tags are kept. Descriptions send excerpts of linked papers and notes to your configured model."]
+  };
+  for (const [id, text] of Object.entries(labels)) {
+    const el = document.getElementById(id);
+    if (el && !el.disabled) el.textContent = ui(...text);
+  }
+  document.getElementById("libraryTagFilter").placeholder = ui("查找标签或标签说明", "Find tags or descriptions");
+  els.paperLibraryFilter.placeholder = ui("搜索标题、标签、说明与正文…", "Search titles, tags, descriptions and content…");
+  document.getElementById("libraryMatchMode").options[0].textContent = ui("包含全部所选标签", "Match all selected tags");
+  document.getElementById("libraryMatchMode").options[1].textContent = ui("包含任一所选标签", "Match any selected tag");
+  document.getElementById("libraryMinScore").options[0].textContent = ui("全部评分", "Any score");
+  for (const option of [...document.getElementById("libraryMinScore").options].slice(1)) option.textContent = ui("评分 ≥ ", "Score ≥ ") + option.value;
+}
+
+function tagDescriptionLabel(tag) {
+  if (isSystemTag(tag)) return tag.description;
+  if (tag.description) return tag.description;
+  return tag.descriptionError || ui("等待 AI 根据关联论文生成说明", "Awaiting a description from linked papers");
+}
 
 function t(key, ...args) {
   const value = translations[state.language]?.[key] ?? translations.zh[key] ?? key;
@@ -1461,14 +1502,8 @@ function paperValueScore(paper, fallback = null) {
   return normalizeValueScore(paper?.valueScore, fallback);
 }
 
-function paperTitleColor(paper) {
-  const score = paperValueScore(paper);
-  if (score === null) return "";
-  const heat = (score - 1) / 4;
-  const ink = [27, 39, 35];
-  const red = [207, 47, 47];
-  const rgb = ink.map((channel, index) => Math.round(channel + (red[index] - channel) * heat));
-  return `rgb(${rgb.join(", ")})`;
+function paperTitleColor() {
+  return "var(--ink)";
 }
 
 function paperTitleStyle(paper) {
@@ -1554,6 +1589,7 @@ function setPlaceholder(selector, text) {
 }
 
 function applyLanguage() {
+  renderLibraryLabels();
   document.documentElement.lang = state.language === "en" ? "en" : "zh-CN";
   els.languageSelect.value = state.language;
   els.languageLabel.textContent = t("language");
@@ -1587,7 +1623,7 @@ function applyLanguage() {
 
   setText("#paperLibraryTitle", t("allPapers"));
   setText("#paperLibraryTagsTitle", t("allTags"));
-  setPlaceholder("#paperLibraryFilter", t("quickPaperSearch"));
+  setPlaceholder("#paperLibraryFilter", ui("搜索标题、标签、说明与正文…", "Search titles, tags, descriptions and content…"));
   setText("#paperLibraryLlmSearchButton", t("llmSearch"));
   setText("#tagLibraryLlmSearchButton", t("llmSearch"));
   setText("#translateAbstractButton", t("translateAbstract"));
@@ -1676,7 +1712,7 @@ function applyLanguage() {
 
   setText("#view-settings .panel-head h3", t("modelSettings"));
   setText("#view-settings .panel-head .muted", t("apiKeyLocal"));
-  setText("#view-settings legend", t("defaultModel"));
+  setText("#view-settings fieldset:not(.tag-policy-settings) legend", t("defaultModel"));
   setText("#settingsForm .primary-button", t("saveSettings"));
   setText("#openModelTest", t("testModel"));
   setText("#refreshAllModels", t("refreshAllModels"));
@@ -1824,7 +1860,7 @@ function renderAll() {
   renderTagCurationStatus();
   renderTagTree();
   renderTagDetail();
-  if (state.activePaperId) renderPaperDetail(state.activePaperId);
+  if (state.activePaperId && !state.paperDetailEditing) renderPaperDetail(state.activePaperId);
 }
 
 function renderStats() {
@@ -2064,6 +2100,9 @@ function renderTagCurationStatus() {
 
 function renderSettings() {
   const cfg = state.config;
+  document.getElementById("maxTagsPerPaper").value = cfg.maxTagsPerPaper || DEFAULT_TAG_POLICY.maxTagsPerPaper;
+  document.getElementById("maxTags").value = cfg.maxTags || DEFAULT_TAG_POLICY.maxTags;
+  document.getElementById("autoDescribeTags").checked = cfg.autoDescribeTags !== false;
   document.querySelectorAll('input[name="provider"]').forEach((input) => {
     input.checked = input.value === (cfg.provider || "qwen");
   });
@@ -2084,7 +2123,7 @@ function renderSettings() {
 
 function renderPapers(target = els.paperList, papers = state.papers) {
   const filter = target === els.paperList ? els.paperFilter.value.trim().toLowerCase() : "";
-  const visible = papers.filter((paper) => `${paper.title} ${paper.abstract}`.toLowerCase().includes(filter));
+  const visible = papers.filter((paper) => paperSearchScore(paper, state.tags, filter) > 0).slice(0, 30);
   if (!visible.length) {
     target.innerHTML = `<div class="empty">${escapeHtml(t("noPapers"))}</div>`;
     return;
@@ -2093,12 +2132,12 @@ function renderPapers(target = els.paperList, papers = state.papers) {
     .map((paper) => {
       const tags = (paper.tagIds || []).map(tagById).filter(Boolean);
       return `
-        <article class="paper-card" data-open-paper-id="${paper.id}">
+        <article class="paper-card" data-open-paper-id="${escapeHtml(paper.id)}" role="button" tabindex="0" aria-label="${escapeHtml(paper.title)}">
           ${paperTitleHtml(paper)}
           ${paperCardMetaHtml(paper)}
           <p>${escapeHtml(truncate(paper.abstract || t("noAbstract")))}</p>
           <div class="chip-row">
-            ${tags.map((tag) => `<span class="tag-chip">${escapeHtml(tag.name)}</span>`).join("")}
+            ${tags.map((tag) => `<button type="button" class="tag-chip" data-library-tag-id="${escapeHtml(tag.id)}" title="${escapeHtml(tagDescriptionLabel(tag))}">${escapeHtml(tag.name)}</button>`).join("")}
           </div>
           ${paperCardActions(paper)}
         </article>
@@ -2112,10 +2151,8 @@ function paperTags(paper) {
 }
 
 function paperSearchText(paper) {
-  const tags = paperTags(paper).map((tag) => tag.name).join(" ");
-  // 网页剪藏的正文也要能搜到，但整篇几万字全参与过滤太慢，截一段够用
-  const clipText = paperClips(paper).map((clip) => clip.markdown).join(" ").slice(0, 8000);
-  return normalizeText(`${paper.title} ${paper.abstract} ${paper.conversation} ${clipText} ${tags}`);
+  const tags = paperTags(paper).flatMap((tag) => [tag.name, ...(tag.aliases || []), tag.description]).join(" ");
+  return normalizeText(`${paper.title} ${paper.abstract} ${paper.abstractZh} ${paper.conversation} ${paperClips(paper).map((clip) => clip.markdown).join(" ")} ${tags}`);
 }
 
 function paperSourceUrl(paper) {
@@ -2153,7 +2190,8 @@ function paperCitationText(paper) {
 }
 
 function paperCardMetaHtml(paper) {
-  const parts = [formatDate(paper.createdAt || paper.updatedAt), paperClips(paper).length ? t("clipBadge", paperClips(paper).length) : "", sourceDomain(paper), paperCitationText(paper)].filter(Boolean);
+  const score = paperValueScore(paper);
+  const parts = [score !== null ? `★ ${score} / 5` : "", formatDate(paper.createdAt || paper.updatedAt), paperClips(paper).length ? t("clipBadge", paperClips(paper).length) : "", sourceDomain(paper), paperCitationText(paper)].filter(Boolean);
   return parts.length ? `<small class="paper-card-meta">${escapeHtml(parts.join(" · "))}</small>` : "";
 }
 
@@ -2258,44 +2296,43 @@ function renderLlmPaperMatchesHtml(matches) {
 }
 
 function renderPaperLibrary() {
-  const llmSearch = state.paperLlmSearch;
-  if (llmSearch) {
-    setText("#paperLibraryTitle", t("llmSearchPaperTitle", llmSearch.query, llmSearch.matches.length));
-    const note = llmSearch.llmUsed ? "" : `<div class="empty">${escapeHtml(t("llmSearchFallback", llmSearch.error))}</div>`;
-    els.paperLibraryList.innerHTML = note + renderLlmPaperMatchesHtml(llmSearch.matches);
+  const query = els.paperLibraryFilter.value.trim();
+  state.libraryTagIds = state.libraryTagIds.filter((id) => tagById(id));
+  const selected = state.libraryTagIds;
+  const matchMode = document.getElementById("libraryMatchMode").value;
+  const minScore = Number(document.getElementById("libraryMinScore").value);
+  const facetMatch = (paper) => (!minScore || Number(paper.valueScore) >= minScore) && (!selected.length || (matchMode === "all" ? selected.every((id) => paper.tagIds?.includes(id)) : selected.some((id) => paper.tagIds?.includes(id))));
+  const llm = state.paperLlmSearch;
+  let matches = [];
+  let papers;
+  if (llm) {
+    matches = llm.matches.filter((match) => paperById(match.paperId) && facetMatch(paperById(match.paperId)));
+    papers = matches.map((match) => paperById(match.paperId));
   } else {
-    setText("#paperLibraryTitle", t("allPapers"));
-    const query = normalizeText(els.paperLibraryFilter?.value || "");
-    const visiblePapers = state.papers.filter((paper) => !query || paperSearchText(paper).includes(query));
-    const sortedPapers = sortPapersForLibrary(visiblePapers);
-    const sortMode = els.paperLibrarySort?.value || "similar";
-    els.paperLibraryList.innerHTML =
-      sortMode === "similar"
-        ? renderPaperClustersHtml(clusterPapersByTags(visiblePapers))
-        : renderPaperCardsHtml(sortedPapers, { includeTags: true });
+    const scored = state.papers.filter(facetMatch).map((paper) => ({ paper, score: paperSearchScore(paper, state.tags, query) })).filter((item) => item.score > 0);
+    papers = query ? scored.sort((a, b) => b.score - a.score).map((item) => item.paper) : sortPapersForLibrary(scored.map((item) => item.paper));
   }
-
-  document.querySelectorAll("[data-paper-library-mode]").forEach((button) => {
-    button.classList.toggle("active", button.dataset.paperLibraryMode === state.paperLibraryMode);
-  });
+  const pageSize = 24;
+  const pages = Math.max(1, Math.ceil(papers.length / pageSize));
+  state.libraryPage = Math.min(pages, state.libraryPage);
+  const page = papers.slice((state.libraryPage - 1) * pageSize, state.libraryPage * pageSize);
+  els.paperLibraryList.setAttribute("aria-busy", "false");
+  setText("#paperLibraryTitle", `${llm ? ui("AI 检索", "AI search") : ui("论文", "Papers")} · ${papers.length} / ${state.papers.length}`);
+  const note = llm && !llm.llmUsed ? `<p class="search-notice">${escapeHtml(t("llmSearchFallback", llm.error))}</p>` : "";
+  els.paperLibraryList.innerHTML = note + (papers.length ? (llm ? renderLlmPaperMatchesHtml(matches.slice((state.libraryPage - 1) * pageSize, state.libraryPage * pageSize)) : !query && els.paperLibrarySort.value === "similar" ? renderPaperClustersHtml(clusterPapersByTags(page)) : renderPaperCardsHtml(page, { includeTags: true })) : `<div class="library-empty"><span class="empty-symbol">⌕</span><h4>${ui(state.papers.length ? "没有找到匹配论文" : "从第一篇论文开始", state.papers.length ? "No matching papers" : "Start with your first paper")}</h4><p>${ui(state.papers.length ? "试试更短的关键词，或移除部分标签和评分筛选。" : "添加论文、摘要和核心标签，让研究积累变得有序。", state.papers.length ? "Try a shorter query or remove a filter." : "Save a paper, its abstract and a few useful tags.")}</p><button type="button" class="secondary-button" data-library-empty>${ui(state.papers.length ? "清除筛选" : "添加论文", state.papers.length ? "Clear filters" : "Add paper")}</button></div>`);
+  document.getElementById("activeLibraryFilters").innerHTML = selected.map((id) => `<button class="tag-chip selected" type="button" data-library-tag-id="${escapeHtml(id)}" title="${escapeHtml(tagDescriptionLabel(tagById(id)))}">${escapeHtml(tagById(id).name)} ×</button>`).join("");
+  document.getElementById("clearLibraryFilters").hidden = !query && !selected.length && !minScore && !llm;
+  document.getElementById("libraryPagination").innerHTML = pages > 1 ? `<button type="button" class="secondary-button small-button" data-library-page="${state.libraryPage - 1}" ${state.libraryPage === 1 ? "disabled" : ""}>${ui("上一页", "Previous")}</button><span>${state.libraryPage} / ${pages}</span><button type="button" class="secondary-button small-button" data-library-page="${state.libraryPage + 1}" ${state.libraryPage === pages ? "disabled" : ""}>${ui("下一页", "Next")}</button>` : "";
+  document.querySelectorAll("[data-paper-library-mode]").forEach((button) => button.classList.toggle("active", button.dataset.paperLibraryMode === state.paperLibraryMode));
   els.paperLibraryListMode.classList.toggle("is-hidden", state.paperLibraryMode !== "list");
   els.paperLibraryMapMode.classList.toggle("is-hidden", state.paperLibraryMode !== "map");
-
-  const orderedTags = [...state.tags].sort(compareTags);
-  els.paperLibraryTagMeta.textContent = t("tagsMeta", orderedTags.length);
-  els.paperLibraryTagList.innerHTML = orderedTags.length
-    ? orderedTags
-        .map(
-          (tag) => `
-          <button class="tag-summary-item" data-tag-id="${tag.id}" type="button">
-            <strong>${escapeHtml(tag.name)}</strong>
-            <span>${escapeHtml(t("tagPaperCount", tag.paperIds?.length || 0))}</span>
-            ${(tag.aliases || []).length ? `<small>${escapeHtml(tag.aliases.slice(0, 4).join(" / "))}</small>` : ""}
-          </button>
-        `
-        )
-        .join("")
-    : `<div class="empty">${escapeHtml(t("noTags"))}</div>`;
+  const tagQuery = document.getElementById("libraryTagFilter").value;
+  const tags = [...state.tags].filter((tag) => matchesText(`${tag.name} ${(tag.aliases || []).join(" ")} ${tag.description || ""}`, tagQuery)).sort(compareTags);
+  els.paperLibraryTagMeta.textContent = ui("点击组合筛选", "Combine tags to filter");
+  els.paperLibraryTagList.innerHTML = tags.slice(0, state.libraryTagLimit).map((tag) => `<button class="tag-summary-item ${selected.includes(tag.id) ? "selected" : ""}" data-library-tag-id="${escapeHtml(tag.id)}" type="button" aria-pressed="${selected.includes(tag.id)}" title="${escapeHtml(tagDescriptionLabel(tag))}"><strong>${escapeHtml(tag.name)}</strong><span>${tag.paperIds?.length || 0}</span><small>${escapeHtml(truncate(tagDescriptionLabel(tag), 80))}</small></button>`).join("") || `<p class="empty">${ui("没有匹配标签", "No matching tags")}</p>`;
+  const more = document.getElementById("showMoreLibraryTags");
+  more.hidden = tags.length <= state.libraryTagLimit;
+  more.textContent = ui(`显示更多（还有 ${Math.max(0, tags.length - state.libraryTagLimit)} 个）`, `Show more (${Math.max(0, tags.length - state.libraryTagLimit)} remaining)`);
   renderPaperMap();
 }
 
@@ -2619,7 +2656,7 @@ function renderSimilarResults(target, matches, emptyText = "暂无相似论文")
         <article class="paper-card recommendation-card" data-open-paper-id="${paper.id}">
           ${paperTitleHtml(paper)}
           <p>${escapeHtml(match.reason || truncate(paper.abstract || t("noAbstract")))}</p>
-          <div class="chip-row">${tags.slice(0, 5).map((tag) => `<span class="tag-chip">${escapeHtml(tag.name)}</span>`).join("")}</div>
+          <div class="chip-row">${tags.slice(0, 5).map((tag) => `<button type="button" class="tag-chip" data-library-tag-id="${escapeHtml(tag.id)}" title="${escapeHtml(tagDescriptionLabel(tag))}">${escapeHtml(tag.name)}</button>`).join("")}</div>
           <small>${escapeHtml(t("similarity"))} ${(score * 100).toFixed(0)}%</small>
         </article>
       `;
@@ -2681,10 +2718,10 @@ function renderPaperLinks(paper) {
       const source = link.previewSiteName || platform.host || link.url;
       return `
         <div class="link-card">
-          <a class="link-preview-card" href="${escapeHtml(link.url)}" target="_blank" rel="noopener noreferrer">
+          <a class="link-preview-card" href="${escapeHtml(safeWebUrl(link.url))}" target="_blank" rel="noopener noreferrer">
             <span class="link-thumb ${platform.className}">
               <span class="link-thumb-label">${escapeHtml(platform.name)}</span>
-              ${link.previewImage ? `<img src="${escapeHtml(link.previewImage)}" alt="" loading="lazy" referrerpolicy="no-referrer" />` : ""}
+              ${safeWebUrl(link.previewImage) ? `<img src="${escapeHtml(safeWebUrl(link.previewImage))}" alt="" loading="lazy" referrerpolicy="no-referrer" />` : ""}
               <span class="link-badge">${escapeHtml(platform.name)}</span>
             </span>
             <span class="link-text">
@@ -2981,7 +3018,7 @@ function renderPaperDetail(paperId) {
   else els.paperDetailTitle.style.removeProperty("color");
   const detailCitation = paperCitationText(paper);
   els.paperDetailMeta.innerHTML = `${escapeHtml(t("created"))} ${escapeHtml(formatDate(paper.createdAt))} · ${escapeHtml(t("updated"))} ${escapeHtml(formatDate(paper.updatedAt))} · ${escapeHtml(t("valueScoreMeta", valueScoreLabel(paperValueScore(paper))))}${detailCitation ? ` · ${escapeHtml(detailCitation)}` : ""}${paperSourceUrl(paper) ? ` · ${sourceLinkHtml(paper, "source-inline-link")}` : ""}`;
-  els.paperDetailTags.innerHTML = tags.length ? tags.map((tag) => `<span class="tag-chip">${escapeHtml(tag.name)}</span>`).join("") : `<span class="empty">${escapeHtml(t("noTags"))}</span>`;
+  els.paperDetailTags.innerHTML = tags.length ? tags.map((tag) => `<button type="button" class="tag-chip" data-library-tag-id="${escapeHtml(tag.id)}" title="${escapeHtml(tagDescriptionLabel(tag))}">${escapeHtml(tag.name)}</button>`).join("") : `<span class="empty">${escapeHtml(t("noTags"))}</span>`;
   renderAbstractSection(paper);
   els.absorbPaperButton.hidden = state.papers.length < 2;
   setText("#paperDetailConversationHeading", paperClips(paper).length ? t("notesHeading") : t("conversationHeading"));
@@ -3012,24 +3049,6 @@ function tagInputRow(value = "", placeholder = "") {
   `;
 }
 
-function tagMatchScore(tag, query, context) {
-  const q = normalizeText(query);
-  const ctx = normalizeText(context);
-  const names = [tag.name, ...(tag.aliases || [])].map(normalizeText);
-  let score = 0;
-  if (q) {
-    if (names.some((name) => name === q)) score += 40;
-    else if (names.some((name) => name.startsWith(q))) score += 30;
-    else if (names.some((name) => name.includes(q))) score += 20;
-    else if (names.some((name) => q.includes(name))) score += 10;
-  }
-  if (ctx) {
-    if (names.some((name) => name && ctx.includes(name))) score += 8;
-    if (tag.description && ctx.includes(normalizeText(tag.description))) score += 3;
-  }
-  return score;
-}
-
 function paperContextTextForTagInput(input) {
   if (input.closest("#paperDetailTagForm")) {
     return `${els.paperDetailTitleInput.value} ${els.paperDetailAbstractInput.value} ${els.paperDetailConversationInput.value}`;
@@ -3040,24 +3059,19 @@ function paperContextTextForTagInput(input) {
   return `${document.querySelector("#paperTitle").value} ${document.querySelector("#paperAbstract").value} ${document.querySelector("#paperConversation").value}`;
 }
 
-function matchingTags(query, context = "") {
-  const q = normalizeText(query);
-  const ctx = normalizeText(context);
-  const tagTime = (tag) => Date.parse(tag.updatedAt || tag.createdAt || "") || 0;
-  if (!q && !ctx) return [...state.tags].sort((a, b) => tagSortValue(a) - tagSortValue(b) || tagTime(b) - tagTime(a) || a.name.localeCompare(b.name, "zh-CN"));
-  return [...state.tags]
-    .map((tag) => ({ tag, score: tagMatchScore(tag, query, context) }))
-    .sort((a, b) => b.score - a.score || tagSortValue(a.tag) - tagSortValue(b.tag) || tagTime(b.tag) - tagTime(a.tag) || a.tag.name.localeCompare(b.tag.name, "zh-CN"))
-    .map((item) => item.tag);
+function matchingTags(query, context = "", selected = []) {
+  return suggestTags(state.tags, query, { context, selected });
 }
 
+let suggestionListId = 0;
 function renderTagSuggestions(input) {
   const box = input.closest(".tag-combobox");
   const suggestions = box?.querySelector(".tag-suggestions");
   if (!suggestions) return;
-  const matches = matchingTags(input.value, paperContextTextForTagInput(input));
+  const selected = [...(input.closest(".manual-tag-list")?.querySelectorAll(".manual-tag-input") || [])].filter((el) => el !== input).map((el) => el.value);
+  const matches = matchingTags(input.value, paperContextTextForTagInput(input), selected);
   const current = input.value.trim();
-  const exact = current && state.tags.some((tag) => normalizeText(tag.name) === normalizeText(current));
+  const exact = current && state.tags.some((tag) => [tag.name, ...(tag.aliases || [])].some((name) => canonicalTagKey(name) === canonicalTagKey(current)));
   const createOption = current && !exact ? `<button type="button" class="tag-suggestion create" data-tag-value="${escapeHtml(current)}">${escapeHtml(t("createTag", current))}</button>` : "";
   if (!matches.length && !createOption) {
     suggestions.hidden = true;
@@ -3069,18 +3083,29 @@ function renderTagSuggestions(input) {
       .map(
         (tag) => `
         <button type="button" class="tag-suggestion" data-tag-value="${escapeHtml(tag.name)}">
-          <span>${escapeHtml(tag.name)}</span>
+          <span>${escapeHtml(tag.name)}<small class="suggestion-description">${escapeHtml(truncate(tagDescriptionLabel(tag), 80))}</small></span>
           <small>${escapeHtml(t("tagPaperCount", tag.paperIds?.length || 0))}</small>
         </button>
       `
       )
       .join("") + createOption;
   suggestions.hidden = false;
+  input.setAttribute("role", "combobox");
+  input.setAttribute("aria-expanded", "true");
+  input.setAttribute("aria-autocomplete", "list");
+  suggestions.id ||= `tag-options-${++suggestionListId}`;
+  suggestions.setAttribute("role", "listbox");
+  input.setAttribute("aria-controls", suggestions.id);
+  input.removeAttribute("aria-activedescendant");
+  suggestions.querySelectorAll(".tag-suggestion").forEach((option, index) => { option.id = `${suggestions.id}-${index}`; option.setAttribute("role", "option"); option.setAttribute("aria-selected", "false"); });
 }
 
 function hideTagSuggestions(root = document) {
   root.querySelectorAll(".tag-suggestions").forEach((el) => {
     el.hidden = true;
+    const input = el.parentElement.querySelector("input");
+    input?.setAttribute("aria-expanded", "false");
+    input?.removeAttribute("aria-activedescendant");
   });
 }
 
@@ -3097,6 +3122,7 @@ function tagCardHtml(tag) {
     <div class="tag-library-card${selected}${system}" data-tag-id="${tag.id}" draggable="${isSystemTag(tag) ? "false" : "true"}" role="button" tabindex="0">
       <strong>${escapeHtml(tag.name)}</strong>
       <span>${escapeHtml(t("tagPaperCountLong", tag.paperIds?.length || 0))}</span>
+      <p class="tag-card-description">${escapeHtml(tagDescriptionLabel(tag))}</p>
       ${(tag.aliases || []).length ? `<small>${escapeHtml(tag.aliases.slice(0, 3).join(" / "))}</small>` : ""}
     </div>
   `;
@@ -3138,11 +3164,22 @@ function clusterTagsByTopic(tags) {
 
 function renderTagTree() {
   const query = normalizeText(els.tagLibraryFilter?.value || "");
-  const visibleTags = state.tags.filter((tag) => {
+  let visibleTags = state.tags.filter((tag) => {
     if (!query) return true;
     const linkedTitles = (tag.paperIds || []).map((id) => paperById(id)?.title || "").join(" ");
-    return normalizeText(`${tag.name} ${(tag.aliases || []).join(" ")} ${tag.description || ""} ${linkedTitles}`).includes(query);
+    return matchesText(`${tag.name} ${(tag.aliases || []).join(" ")} ${tag.description || ""} ${linkedTitles}`, query);
   });
+  const normal = state.tags.filter((tag) => !isSystemTag(tag));
+  const missing = normal.filter((tag) => !tag.description || tag.descriptionStatus !== "ready").length;
+  const errors = normal.filter((tag) => tag.descriptionError).length;
+  const singles = normal.filter((tag) => tag.paperIds?.length === 1).length;
+  document.getElementById("tagHealthSummary").textContent = ui(`${normal.length} / ${state.config.maxTags || 80} 个标签 · ${missing} 个说明待更新${errors ? `（${errors} 个失败，可重试）` : ""} · ${singles} 个仅关联一篇论文`, `${normal.length} / ${state.config.maxTags || 80} tags · ${missing} descriptions pending · ${errors} failed · ${singles} used once`);
+  const tagTotal = visibleTags.length;
+  visibleTags = visibleTags.sort(compareTags).slice(0, state.tagDisplayLimit);
+  let moreButton = document.getElementById("moreTagCards");
+  if (!moreButton) { moreButton = document.createElement("button"); moreButton.id = "moreTagCards"; moreButton.type = "button"; moreButton.className = "text-button"; els.tagTree.after(moreButton); moreButton.addEventListener("click", () => { state.tagDisplayLimit += 48; renderTagTree(); }); }
+  moreButton.hidden = tagTotal <= state.tagDisplayLimit || Boolean(state.tagLlmSearch);
+  moreButton.textContent = ui(`显示更多标签（${Math.max(0, tagTotal - state.tagDisplayLimit)}）`, `Show more tags (${Math.max(0, tagTotal - state.tagDisplayLimit)})`);
   document.querySelectorAll("[data-tag-view]").forEach((button) => {
     button.classList.toggle("active", button.dataset.tagView === state.tagLibraryView);
   });
@@ -3244,8 +3281,10 @@ function renderTagDetail() {
   els.selectedTagMeta.textContent = t("tagPaperCountLong", directPapers.length);
 
   els.tagDetail.innerHTML = `
-    ${tag.description ? `<p>${escapeHtml(tag.description)}</p>` : ""}
+    <div class="tag-description-block"><p>${escapeHtml(tagDescriptionLabel(tag))}</p>${!isSystemTag(tag) ? `<small class="muted">${escapeHtml(tag.descriptionModel ? `${tag.descriptionProvider} / ${tag.descriptionModel} · ${formatDate(tag.descriptionUpdatedAt)}` : ui("根据你提供的标签和关联论文生成", "Based on your tag and linked papers"))} ${tag.descriptionStatus === "stale" ? ui(" · 待更新", " · Update pending") : ""}</small>${tag.descriptionError ? `<p class="description-error">${escapeHtml(tag.descriptionError)}</p>` : ""}` : ""}</div>
     <div class="button-row">
+      <button class="secondary-button" type="button" data-filter-from-tag="${escapeHtml(tag.id)}">${ui("在论文库中筛选", "Filter library")}</button>
+      ${!isSystemTag(tag) ? `<button class="secondary-button" type="button" data-describe-tag="${escapeHtml(tag.id)}">${ui("重新生成说明", "Regenerate description")}</button>` : ""}
       ${isSystemTag(tag) ? `<span class="muted">${state.language === "en" ? "System tag · cannot be deleted" : "系统标签 · 不可删除"}</span>` : `<button class="secondary-button danger-button" data-delete-tag-id="${tag.id}" type="button">${state.language === "en" ? "Delete Tag" : "删除标签"}</button>`}
     </div>
     <div class="relation-row">
@@ -3352,11 +3391,11 @@ function renderPaperCardsHtml(papers, { includeTags = false } = {}) {
       (paper) => {
         const tags = includeTags ? paperTags(paper) : [];
         return `
-          <article class="paper-card" data-open-paper-id="${paper.id}">
+          <article class="paper-card" data-open-paper-id="${escapeHtml(paper.id)}" role="button" tabindex="0" aria-label="${escapeHtml(paper.title)}">
             ${paperTitleHtml(paper)}
             ${paperCardMetaHtml(paper)}
             <p>${escapeHtml(truncate(paper.abstract || t("noAbstract")))}</p>
-            ${includeTags ? `<div class="chip-row">${tags.map((tag) => `<span class="tag-chip">${escapeHtml(tag.name)}</span>`).join("")}</div>` : ""}
+            ${includeTags ? `<div class="chip-row">${tags.map((tag) => `<button type="button" class="tag-chip" data-library-tag-id="${escapeHtml(tag.id)}" title="${escapeHtml(tagDescriptionLabel(tag))}">${escapeHtml(tag.name)}</button>`).join("")}</div>` : ""}
             ${paperCardActions(paper)}
           </article>
         `;
@@ -3397,6 +3436,72 @@ function showPaper(paperId) {
   switchView("paperDetail");
   renderPaperDetail(paper.id);
 }
+
+function clearLibraryFilters() {
+  state.libraryTagIds = []; state.libraryPage = 1; state.paperLlmSearch = null; state.searchRequest++;
+  els.paperLibraryFilter.value = "";
+  document.getElementById("libraryMinScore").value = "0";
+  document.getElementById("libraryTagFilter").value = "";
+  renderPaperLibrary();
+}
+
+document.getElementById("libraryAddPaper").addEventListener("click", () => { switchView("library"); document.getElementById("paperTitle").focus(); });
+document.getElementById("clearLibraryFilters").addEventListener("click", clearLibraryFilters);
+for (const id of ["libraryMatchMode", "libraryMinScore"]) document.getElementById(id).addEventListener("change", () => { state.libraryPage = 1; renderPaperLibrary(); });
+document.getElementById("libraryTagFilter").addEventListener("input", () => { state.libraryTagLimit = 16; renderPaperLibrary(); });
+document.getElementById("showMoreLibraryTags").addEventListener("click", () => { state.libraryTagLimit += 16; renderPaperLibrary(); });
+document.body.addEventListener("click", (event) => {
+  const tag = event.target.closest("[data-library-tag-id], [data-filter-from-tag]");
+  if (tag) {
+    const id = tag.dataset.libraryTagId || tag.dataset.filterFromTag;
+    state.libraryTagIds = tag.dataset.filterFromTag ? [id] : state.libraryTagIds.includes(id) ? state.libraryTagIds.filter((value) => value !== id) : [...state.libraryTagIds, id];
+    state.libraryPage = 1;
+    state.paperLibraryMode = "list";
+    switchView("papers"); renderPaperLibrary();
+  }
+  const page = event.target.closest("[data-library-page]");
+  if (page) { state.libraryPage = Number(page.dataset.libraryPage); renderPaperLibrary(); els.paperLibraryList.scrollIntoView({ block: "start", behavior: "smooth" }); }
+  if (event.target.closest("[data-library-empty]")) { if (state.papers.length) clearLibraryFilters(); else switchView("library"); }
+});
+
+document.addEventListener("keydown", (event) => {
+  if (event.isComposing) return;
+  if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k" && !document.querySelector("dialog[open]")) {
+    event.preventDefault(); state.paperLibraryMode = "list"; switchView("papers"); renderPaperLibrary(); els.paperLibraryFilter.focus(); els.paperLibraryFilter.select(); return;
+  }
+  const input = event.target.closest(".manual-tag-input");
+  if (input) {
+    const list = input.parentElement.querySelector(".tag-suggestions");
+    if (!list || list.hidden) return;
+    const options = [...list.querySelectorAll(".tag-suggestion")];
+    if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+      event.preventDefault(); event.stopPropagation();
+      let index = options.findIndex((option) => option.classList.contains("active"));
+      index = (index + (event.key === "ArrowDown" ? 1 : -1) + options.length) % options.length;
+      options.forEach((option, position) => { option.classList.toggle("active", position === index); option.setAttribute("aria-selected", String(position === index)); });
+      if (options[index]) { input.setAttribute("aria-activedescendant", options[index].id); options[index].scrollIntoView({ block: "nearest" }); }
+    } else if (event.key === "Enter") {
+      const active = options.find((option) => option.classList.contains("active"));
+      if (active) { event.preventDefault(); event.stopPropagation(); active.click(); }
+    } else if (event.key === "Escape") { event.preventDefault(); event.stopPropagation(); hideTagSuggestions(); }
+    return;
+  }
+  if (["Enter", " "].includes(event.key) && event.target.matches('[role="button"][data-open-paper-id], .tag-library-card')) { event.preventDefault(); event.target.click(); }
+}, true);
+
+async function generateDescriptions(button, tagId = "") {
+  const done = setBusy(button, ui("生成中…", "Generating…"));
+  try {
+    const result = await api("/api/tags/describe", { method: "POST", body: { tagIds: tagId ? [tagId] : [], force: Boolean(tagId), retry: true } });
+    if (result.tags) state.tags = result.tags;
+    renderTagTree(); renderTagDetail(); renderPaperLibrary();
+    toast(result.error || (result.failed ? ui(`${result.failed} 个说明生成失败，请在标签详情中重试`, `${result.failed} descriptions failed; retry in tag details`) : ui(`已更新 ${result.generated} 个标签说明${result.remaining ? "，其余将在后台继续" : ""}`, `Updated ${result.generated} descriptions${result.remaining ? "; continuing in the background" : ""}`)));
+    if (result.remaining && !result.error) chrome.runtime.sendMessage({ type: "auto-describe-tags", retry: true }).catch(() => {});
+  } catch (err) { toast(err.message); } finally { done(); }
+}
+document.getElementById("describeTagsButton").addEventListener("click", (event) => generateDescriptions(event.currentTarget));
+document.getElementById("tagDetail").addEventListener("click", (event) => { const button = event.target.closest("[data-describe-tag]"); if (button) generateDescriptions(button, button.dataset.describeTag); });
+
 
 function switchView(name) {
   document.querySelectorAll(".nav-item").forEach((button) => button.classList.toggle("active", button.dataset.view === name));
@@ -3452,6 +3557,9 @@ async function chooseDuplicateAction(payload) {
 
 function collectSettingsForm() {
   const payload = {
+    maxTagsPerPaper: Number(document.getElementById("maxTagsPerPaper").value),
+    maxTags: Number(document.getElementById("maxTags").value),
+    autoDescribeTags: document.getElementById("autoDescribeTags").checked,
     provider: document.querySelector('input[name="provider"]:checked')?.value || "qwen"
   };
   for (const provider of MODEL_PROVIDERS) {
@@ -3516,8 +3624,8 @@ document.body.addEventListener("click", (event) => {
     const row = suggestion.closest(".manual-tag-row");
     const input = row?.querySelector(".manual-tag-input");
     if (input) input.value = suggestion.dataset.tagValue || "";
-    hideTagSuggestions(row || document);
     input?.focus();
+    hideTagSuggestions(row || document);
     return;
   }
   if (!event.target.closest(".tag-combobox")) hideTagSuggestions();
@@ -3577,7 +3685,7 @@ els.manualTagList.addEventListener("click", (event) => {
 });
 
 els.manualTagList.addEventListener("keydown", (event) => {
-  if (event.key !== "Enter") return;
+  if (event.isComposing || event.key !== "Enter") return;
   event.preventDefault();
   addManualTagInput();
 });
@@ -3594,7 +3702,7 @@ els.paperDetailTagList.addEventListener("click", (event) => {
 });
 
 els.paperDetailTagList.addEventListener("keydown", (event) => {
-  if (event.key !== "Enter") return;
+  if (event.isComposing || event.key !== "Enter") return;
   event.preventDefault();
   const row = createTagInputRow("", t("tagInputPlaceholder"));
   els.paperDetailTagList.append(row);
@@ -3604,6 +3712,8 @@ els.paperDetailTagList.addEventListener("keydown", (event) => {
 els.paperFilter.addEventListener("input", () => renderPapers());
 
 els.paperLibraryFilter.addEventListener("input", () => {
+  state.searchRequest++;
+  state.libraryPage = 1;
   state.paperLlmSearch = null; // 修改检索词即退出 LLM 结果模式，回到本地即时过滤
   renderPaperLibrary();
 });
@@ -3615,9 +3725,12 @@ els.paperLibraryLlmSearchButton.addEventListener("click", async () => {
     els.paperLibraryFilter.focus();
     return;
   }
+  const request = ++state.searchRequest;
   const done = setBusy(els.paperLibraryLlmSearchButton, t("searching"));
   try {
     const result = await api("/api/search-papers", { method: "POST", body: JSON.stringify({ query }) });
+    if (request !== state.searchRequest || query !== els.paperLibraryFilter.value.trim()) return;
+    state.libraryPage = 1;
     state.paperLlmSearch = { query, matches: result.matches || [], llmUsed: result.llmUsed, error: result.error || "" };
     renderPaperLibrary();
   } catch (err) {
@@ -3644,6 +3757,8 @@ els.refreshCitationsButton.addEventListener("click", async () => {
 });
 
 els.tagLibraryFilter.addEventListener("input", () => {
+  state.tagSearchRequest++;
+  state.tagDisplayLimit = 48;
   state.tagLlmSearch = null; // 修改检索词即退出 LLM 结果模式，回到本地即时过滤
   renderTagTree();
 });
@@ -3655,10 +3770,12 @@ els.tagLibraryLlmSearchButton.addEventListener("click", async () => {
     els.tagLibraryFilter.focus();
     return;
   }
+  const request = ++state.tagSearchRequest;
   const done = setBusy(els.tagLibraryLlmSearchButton, t("searching"));
   try {
     // 复用智能检索的 LLM 标签检索路由
     const result = await api("/api/search", { method: "POST", body: JSON.stringify({ query }) });
+    if (request !== state.tagSearchRequest || query !== els.tagLibraryFilter.value.trim()) return;
     state.tagLlmSearch = { query, matches: result.matches || [], llmUsed: result.llmUsed, error: result.error || "" };
     renderTagTree();
   } catch (err) {
@@ -4142,7 +4259,7 @@ els.topicExcludeTagList.addEventListener("click", (event) => {
 
 for (const list of [els.topicIncludeTagList, els.topicExcludeTagList]) {
   list.addEventListener("keydown", (event) => {
-    if (event.key !== "Enter") return;
+    if (event.isComposing || event.key !== "Enter") return;
     event.preventDefault();
     const row = createTagInputRow("", t("tagInputPlaceholder"));
     list.append(row);
@@ -4228,7 +4345,7 @@ els.topicPackList.addEventListener("click", async (event) => {
 });
 
 document.body.addEventListener("click", async (event) => {
-  if (event.target.closest("a")) return;
+  if (event.target.closest("a, [data-library-tag-id], [data-filter-from-tag], [data-describe-tag]")) return;
 
   const refreshCitationButton = event.target.closest("[data-refresh-citation-id]");
   if (refreshCitationButton) {
@@ -4754,6 +4871,10 @@ els.translateAbstractButton.addEventListener("click", async () => {
 // 后台自动任务（翻译摘要 / 相似推荐）完成后，实时更新管理页数据；
 // 如果正好开着这篇论文的详情页，直接刷新对应区块
 chrome.runtime?.onMessage?.addListener((message) => {
+  if (message?.type === "tag-descriptions-updated") {
+    api("/api/state").then((data) => { state.tags = data.tags; renderTagTree(); renderTagDetail(); renderPaperLibrary(); }).catch(() => {});
+    return;
+  }
   if (message?.type === "clip-archive-images-failed") {
     if (state.clipArchiveRestore) {
       state.clipArchiveRestore();
@@ -4794,5 +4915,7 @@ loadState()
   .then(() => {
     const hashMatch = location.hash.match(/^#paper=(.+)$/);
     if (hashMatch) showPaper(decodeURIComponent(hashMatch[1]));
+    else switchView("papers");
+    chrome.runtime.sendMessage({ type: "auto-describe-tags" }).catch(() => {});
   })
   .catch((err) => toast(err.message));

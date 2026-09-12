@@ -2186,3 +2186,90 @@ dialog::backdrop {
 .absorb-item small {
   color: var(--muted);
 }
+
+/* Library workspace: clear hierarchy, bounded lists, visible filter state. */
+:root { --shadow: 0 3px 18px rgba(23, 38, 34, .045); }
+.app-shell { grid-template-columns: 228px minmax(0, 1fr); }
+.sidebar { position: sticky; top: 0; height: 100vh; padding: 30px 18px; }
+.nav-item.active { background: var(--accent-soft); color: var(--accent); border-color: var(--accent-border); }
+.workspace { padding: 28px 36px 48px; min-width: 0; }
+.topbar { padding-bottom: 20px; border-bottom: 1px solid var(--line); }
+.topbar h2 { font-size: 24px; letter-spacing: -.6px; }
+.topbar .eyebrow { font-size: 10px; letter-spacing: 1.5px; margin-bottom: 6px; }
+.library-intro { display: flex; gap: 24px; align-items: center; justify-content: space-between; padding: 16px 0 26px; }
+.library-intro .eyebrow { color: var(--accent); font-size: 10px; font-weight: 700; letter-spacing: 2px; margin: 0 0 10px; }
+.library-intro h3 { font-size: clamp(24px, 2.5vw, 34px); font-weight: 650; letter-spacing: -1px; margin: 0 0 10px; }
+.library-intro p:last-child { color: var(--muted); font-size: 13px; margin: 0; line-height: 1.8; }
+.library-intro > button { flex-shrink: 0; }
+.panel { border-radius: 14px; }
+.paper-library-layout { grid-template-columns: minmax(0, 1fr) 286px; align-items: start; gap: 22px; }
+.paper-library-layout > .panel { min-width: 0; }
+.paper-library-layout > .panel > .panel-head { flex-wrap: wrap; gap: 10px; }
+#paperLibraryTitle { flex-basis: 100%; font-size: 14px; padding-bottom: 3px; }
+#paperLibraryFilter { flex: 1; min-width: 150px; width: auto; font-size: 14px; padding: 13px 14px; border-radius: 9px; background: var(--surface-3); }
+#paperLibraryLlmSearchButton { padding: 12px; }
+.library-filters { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin: 4px 0 14px; }
+.library-filters select { width: auto; font-size: 12px; padding: 7px 9px; min-height: 34px; }
+.text-button { background: transparent; color: var(--accent); border: 0; padding: 8px 4px; font-size: 12px; cursor: pointer; }
+.text-button:hover { text-decoration: underline; }
+.search-help { font-size: 11px; line-height: 1.7; margin: 12px 0 16px; }
+#paperLibraryList { max-height: none; overflow: visible; }
+.paper-card { border-radius: 10px; padding: 18px; transition: border-color .15s, background .15s; }
+.paper-card:hover { border-color: var(--accent-border); background: var(--surface-3); }
+.paper-card h4 { line-height: 1.5; }
+.paper-card > p { line-height: 1.75; }
+button.tag-chip { cursor: pointer; font: inherit; font-size: 11px; }
+.tag-chip.selected { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
+#libraryTagFilter { width: 100%; font-size: 12px; margin-bottom: 12px; padding: 10px; }
+.tag-summary-item { padding: 12px; grid-template-columns: minmax(0, 1fr) auto; text-align: left; border-radius: 9px; }
+.tag-summary-item strong { font-size: 13px; overflow-wrap: anywhere; }
+.tag-summary-item > span { font-size: 11px; }
+.tag-summary-item small { grid-column: 1 / -1; white-space: normal; font-size: 11px; line-height: 1.6; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.tag-summary-item.selected { border-color: var(--accent); background: var(--accent-soft); }
+#paperLibraryTagList { max-height: 65vh; overflow-y: auto; }
+.pagination { display: flex; justify-content: center; align-items: center; gap: 20px; margin-top: 20px; font-size: 12px; color: var(--muted); }
+.library-empty { padding: 48px 20px; text-align: center; color: var(--muted); }
+.library-empty h4 { color: var(--ink); font-size: 17px; margin: 12px 0; }
+.library-empty p { font-size: 13px; line-height: 1.8; }
+.empty-symbol { font-size: 40px; color: var(--accent); }
+.tag-health { display: flex; align-items: center; gap: 20px; justify-content: space-between; padding: 20px 24px; margin-bottom: 20px; background: var(--accent-soft); }
+.tag-health p { font-size: 12px; margin: 8px 0 0; line-height: 1.7; }
+.tag-health > button { flex-shrink: 0; }
+.tag-layout { grid-template-columns: minmax(0, 1.4fr) minmax(300px, 1fr); align-items: start; }
+.tag-layout > .panel > .panel-head { flex-wrap: wrap; }
+.tag-library-card { cursor: pointer; min-width: 0; }
+.tag-card-description { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; font-size: 12px; line-height: 1.7; color: var(--muted); margin: 6px 0; font-weight: 400; }
+.tag-description-block { background: var(--surface-3); border: 1px solid var(--line); border-radius: 10px; padding: 16px; margin-bottom: 14px; text-align: left; }
+.tag-description-block > p { margin: 0 0 10px; line-height: 1.85; color: var(--ink); font-size: 13px; }
+.description-error { color: var(--danger) !important; font-size: 12px !important; }
+.suggestion-description { display: block; white-space: normal; max-width: 100%; font-size: 11px; line-height: 1.6; color: var(--muted); margin-top: 4px; text-align: left; }
+.tag-suggestion.active { background: var(--accent-soft); outline: 1px solid var(--accent-border); }
+.tag-suggestions { max-height: 310px; }
+.tag-policy-settings p { font-size: 12px; line-height: 1.8; }
+.checkbox-label { display: flex; align-items: center; gap: 8px; margin-top: 14px; }
+.checkbox-label input { width: auto; }
+button:focus-visible, [role="button"]:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+button:disabled { cursor: default; opacity: .55; }
+@media (min-width: 1600px) { .workspace { max-width: 1600px; width: 100%; margin-inline: auto; } }
+@media (max-width: 1180px) { .workspace { padding: 24px; } .app-shell { grid-template-columns: 196px minmax(0, 1fr); } .paper-library-layout { grid-template-columns: minmax(0, 1fr) 250px; gap: 16px; } }
+@media (max-width: 940px) {
+  .app-shell, .paper-library-layout, .tag-layout { grid-template-columns: 1fr; }
+  .sidebar { position: static; height: auto; gap: 12px; padding: 16px 20px; }
+  .brand-mark { width: 32px; height: 32px; }
+  .brand p { display: none; }
+  .nav { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .paper-library-toolbar { flex-direction: row; flex-wrap: wrap; }
+  #paperLibraryTagList { max-height: 300px; }
+  .tag-health { flex-wrap: wrap; }
+  .topbar { flex-direction: row; align-items: center; }
+}
+@media (max-width: 640px) {
+  .workspace { padding: 18px 14px 32px; }
+  .topbar-actions { gap: 6px; flex-wrap: wrap; justify-content: end; }
+  .model-pill { max-width: 160px; }
+  .library-intro { align-items: start; flex-direction: column; gap: 14px; }
+  .library-intro h3 { font-size: 25px; }
+  .panel { padding: 16px; }
+  .library-filters { align-items: stretch; }
+}
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; animation: none !important; } }

@@ -2,7 +2,19 @@
 
 Notable changes to Paper_Mind. Versions follow the `version` field in `extension/manifest.json`.
 
-## 1.3.x — current
+## 1.4.0
+
+- The paper library is now the default view, with multi-keyword search across titles, tag aliases/descriptions, abstracts, translations, notes, links and full clipped text; quoted phrases, tag intersection/union, score filters, pagination and a search shortcut.
+- Tags reuse normalized names and aliases. Defaults allow 6 tags per paper and 80 tags in the library; both limits are configurable. Existing data is preserved. Merging paper records preserves their combined tags even above the per-paper limit.
+- AI writes descriptions from user-selected tags and up to six linked papers (bounded abstract, notes and clip excerpts). Descriptions retain their model, timestamp, source fingerprint and failure state. Changed evidence triggers regeneration; unsuccessful requests retain previous descriptions. Batch completion continues in the background.
+- Tag suggestions are relevant and bounded, support keyboard selection, and show descriptions. Frequently used tags replace the unbounded popup tag list. Tag cards and library filters show descriptions.
+- Tag merges migrate research topic-pack include/exclude references; identical paper sets are explicitly described as review candidates, not proof of semantic equivalence.
+- Cross-page writes use a shared lock and field-level conflict checks. Unrelated edits are preserved; conflicting edits fail explicitly. Delayed AI results cannot replace a newer search query.
+- Import validation rejects unsafe IDs and malformed records; external links accept HTTP(S) only; model requests have timeouts, disallow credential redirects and require HTTPS for remote endpoints (HTTP loopback is supported).
+- Clipboard text is read only after clicking Paste clipboard. Score badges replace red paper titles for readability in light and dark modes.
+- Added storage, background queue, search and browser interaction regression tests.
+
+## 1.3.x
 
 - **Web clipping.** Any page — WeChat articles, blogs, Zhihu answers — can be saved as an entry. The body is converted to Markdown with headings, lists, quotes, code blocks, tables and video links preserved; the opening paragraph pre-fills the abstract.
 - **Clipped images are written to disk** as ordinary files under `<Downloads>/Paper_Mind剪藏/`, fetched without a referrer so referrer-protected image hosts (WeChat) return the real image instead of a placeholder. Clips stay readable after the original page is gone.

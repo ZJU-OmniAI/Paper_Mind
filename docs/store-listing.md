@@ -50,7 +50,7 @@ The extension stores paper and tag data locally in IndexedDB and stores settings
 - `unlimitedStorage`: allows the user's IndexedDB paper library to grow beyond the default extension storage quota.
 - `alarms`: schedules the daily 4 PM local JSON backup.
 - `downloads`: saves the daily backup file to the user's Chrome downloads location.
-- `clipboardRead`: pre-fills the paper notes field from clipboard text when the user opens the popup.
+- `clipboardRead`: reads clipboard text only when the user clicks Paste clipboard to fill the notes field.
 - `host_permissions` for DashScope and Zhipu: calls the configured LLM provider only when the user uses an LLM feature.
 - `host_permissions` for web pages: reads the current page for clipping and downloads that page's images when the user saves a clip.
 - `host_permissions` for `file:///*`: displays the clipped images that were saved to the user's own downloads folder.
