@@ -1,6 +1,6 @@
 // Isolated, synthetic data for documentation screenshots and the feature video.
-export async function installDemo(context, language, origin) {
-  await context.addInitScript(({ language, origin }) => {
+export async function installDemo(context, language, origin, { overview = false } = {}) {
+  await context.addInitScript(({ language, origin, overview }) => {
     localStorage.setItem('paperTagLanguage', language);
     localStorage.setItem('tagLibraryView', 'flat');
     const text = (zh, en) => language === 'zh' ? zh : en;
@@ -25,6 +25,20 @@ export async function installDemo(context, language, origin) {
       ['Planning with Feedback from Tools', ['agent'], '把工具执行结果反馈给模型，分析多步任务中的失败恢复与计划修正。', 'Use tool feedback to study failure recovery and plan revision in multi-step tasks.', 4]
     ];
     const papers = rows.map(([title, tagIds, zh, en, valueScore], i) => ({ id: `paper-${i}`, title, abstract: text(zh, en), conversation: text('阅读笔记：关注适用场景、评估设计和下一步可验证的问题。', 'Reading note: focus on scope, evaluation design and the next question to test.'), tagIds, valueScore, citationCount: null, citationStatus: 'notfound', citationUpdatedAt: new Date().toISOString(), createdAt: date, updatedAt: date }));
+    if (overview) {
+      papers[0].abstract = 'Compare retrieval strategies through answer faithfulness, separating retrieval quality from generation reliability.';
+      papers[0].abstractZh = '比较不同检索策略对回答事实一致性的影响，将检索质量与生成可信度分开评估。（示例译文）';
+      papers[0].abstractZhModel = 'Demo translation';
+      papers[1].abstract = 'Study how models handle conflicting retrieved evidence, express uncertainty and produce traceable answers.';
+      papers[1].abstractZh = '研究模型如何处理相互冲突的检索证据、表达不确定性，并给出可追溯的回答。（示例译文）';
+      papers[1].abstractZhModel = 'Demo translation';
+      papers[0].memory = text('检索质量与回答可信度，需要分开评估。', 'Evaluate retrieval quality separately from answer reliability.');
+      papers[0].links = [{id:'demo-resource',title:text('补充实验与阅读记录', 'Supplementary experiments and notes'),url:'https://example.org/research/grounded-answers/notes',createdAt:date}];
+      papers[0].clips = [
+        {id:'demo-reading',title:text('方法解读：证据如何支撑回答', 'Commentary: how evidence supports answers'),sourceUrl:'https://example.org/commentary/evidence',siteName:'Demo reading notes',markdown:text('## 方法概览\n\n将检索过程与生成过程分开评估，观察证据是否能够支撑回答。\n\n- 检查来源的相关性\n- 比较结论的一致性\n- 记录值得继续验证的问题', '## Method overview\n\nEvaluate retrieval and generation separately to see whether the evidence supports the answer.\n\n- Check source relevance\n- Compare consistency\n- Keep questions for the next reading'),imageCount:0,createdAt:date},
+        {id:'demo-discussion',title:text('组会讨论：适用范围与局限', 'Reading group: scope and limitations'),sourceUrl:'https://example.org/discussion/evidence',siteName:'Demo reading group',markdown:text('## 讨论要点\n\n关注冲突证据、任务边界，以及下一次实验需要控制的变量。', '## Discussion notes\n\nConsider conflicting evidence, task boundaries, and variables to control in the next experiment.'),imageCount:0,createdAt:date}
+      ];
+    }
     const topicPacks = [
       { id: 'pack-rag', name: text('更可信的 RAG', 'Trustworthy RAG'), description: text('同时关注检索增强生成与可靠性评估，整理下一次组会要讨论的方法。', 'Retrieval-augmented generation and reliability evaluation for the next reading group.'), includeTagIds: ['rag', 'eval'], excludeTagIds: ['agent'], matchMode: 'all', createdAt: date, updatedAt: date },
       { id: 'pack-agent', name: text('能完成任务的智能体', 'Agents that finish tasks'), description: text('围绕工具调用与执行反馈积累可复用的方法。', 'Methods for tool use, planning and execution feedback.'), includeTagIds: ['agent'], excludeTagIds: [], matchMode: 'any', createdAt: date, updatedAt: date }
@@ -36,5 +50,5 @@ export async function installDemo(context, language, origin) {
       tabs: { async query() { return [{ id: 1, title: 'Reading Papers with Evidence-Aware Agents', url: 'https://example.org/research/evidence-aware-agents' }]; }, async create({ url }) { location.assign(url); } },
       scripting: { async executeScript({ func }) { return [{ result: func.name === 'pageClipExtractor' ? { ok: false } : { title: 'Reading Papers with Evidence-Aware Agents', description: text('探索研究型智能体如何收集证据、比较观点，并将每一步结论关联到可追溯的来源。', 'Explore how research agents gather evidence, compare claims and connect each conclusion to a traceable source.'), selectedText: text('值得关注：工具调用之后，如何验证收集到的证据？', 'Question to revisit: how should an agent verify evidence after using a tool?') } }]; } }
     };
-  }, { language, origin });
+  }, { language, origin, overview });
 }

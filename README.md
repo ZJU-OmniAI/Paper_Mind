@@ -24,11 +24,14 @@ You choose the tags that describe your papers. An LLM can use those tags and con
 
 ## Watch the feature tour
 
-[![Watch Paper_Mind: from a remembered concept to a saved paper](assets/videos/paper-mind-intro-poster.png)](assets/videos/paper-mind-intro-zh.mp4)
+| English narration | 中文配音 |
+| --- | --- |
+| [![Watch the English overview](assets/videos/paper-mind-intro-poster-en.png)](assets/videos/paper-mind-intro-en.mp4) | [![观看中文功能全景](assets/videos/paper-mind-intro-poster-zh.png)](assets/videos/paper-mind-intro-zh.mp4) |
+| [▶ Watch / download](assets/videos/paper-mind-intro-en.mp4) · [Bilingual SRT](assets/videos/paper-mind-intro-en.srt) | [▶ 观看 / 下载](assets/videos/paper-mind-intro-zh.mp4) · [双语 SRT](assets/videos/paper-mind-intro-zh.srt) |
 
-**[▶ Watch / download the video](assets/videos/paper-mind-intro-zh.mp4)** · 2:09 · 1080p · Mandarin narration and Chinese captions · [Production notes and subtitles](assets/videos/README.md)
+**English 2:34 / Mandarin 2:28 · 1080p · Warm neural male narration · Chinese and English subtitles visible together in both editions.** [Transcripts and production notes](assets/videos/README.md)
 
-Follow one paper from capture and a one-line memory to concept → existing tag → saved paper. The tour also covers reading progress, tag descriptions, and model/effort settings. Recorded in the actual interface with isolated demo data; no live model calls.
+A feature overview from remembered concepts to saved papers: capture and web clipping, connected materials, one-line memories, independent reading progress, concept and full-text search, meaningful tags, translation and discovery, topic packs, model/effort choices, and local backups. Recorded in the actual interface with an isolated sample library; AI examples are prewritten. Detailed steps follow below.
 
 ![Paper library: search for RAG and select the evaluation tag to find two relevant papers in the sample collection](assets/screenshots/library-en.png)
 

@@ -1,0 +1,60 @@
+{
+  "language": "en",
+  "voice": {
+    "name": "en-US-AndrewNeural",
+    "rate": "-8%",
+    "pitch": "-4Hz"
+  },
+  "duration": 154.4,
+  "resolution": "1920x1080",
+  "subtitles": [
+    "zh",
+    "en"
+  ],
+  "scenes": [
+    {
+      "id": "intro",
+      "start": 0.002
+    },
+    {
+      "id": "capture",
+      "start": 11.184
+    },
+    {
+      "id": "materials",
+      "start": 24.798
+    },
+    {
+      "id": "memory",
+      "start": 38.04
+    },
+    {
+      "id": "search",
+      "start": 50.762
+    },
+    {
+      "id": "tags",
+      "start": 66.027
+    },
+    {
+      "id": "discovery",
+      "start": 81.465
+    },
+    {
+      "id": "topics",
+      "start": 97.048
+    },
+    {
+      "id": "models",
+      "start": 110.637
+    },
+    {
+      "id": "data",
+      "start": 125.692
+    },
+    {
+      "id": "outro",
+      "start": 141.627
+    }
+  ]
+}

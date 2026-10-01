@@ -1,48 +1,77 @@
-// The narration is synthesized locally with the macOS Tingting voice.
+// Feature-level overview, with paired narration/subtitles for both editions.
+export const voices = {
+  zh: { name: 'zh-CN-YunyangNeural', rate: '-8%', pitch: '-5Hz' },
+  en: { name: 'en-US-AndrewNeural', rate: '-8%', pitch: '-4Hz' }
+};
 export const story = [
-  { id: 'intro', mode: 'title', section: '读过，然后呢？', title: '标题忘了，\n概念还在。', kicker: '从阅读时的印象，到下一次找回', minimum: 7.5,
-    voice: '读过一篇论文，过段时间，标题可能忘了。留在脑海里的，往往只是几个关键词，和一个印象深刻的概念。',
-    caption: '标题可能忘了，脑海中的概念还在。' },
-  { id: 'idea', mode: 'title', section: 'Paper_Mind 的出发点', title: '通过脑海中的标签，\n找到你的论文。', kicker: '一个轻量、简洁的论文管理平台', minimum: 7.5,
-    voice: '让论文库，也按照这些概念来组织。从脑海中的概念，找到已有标签，再找回读过的论文。',
-    caption: '脑海中的概念 → 已有标签 → 读过的论文' },
-  { id: 'capture', mode: 'popup', section: '01 / 收藏一篇论文', title: '阅读当下，\n顺手收藏。', kicker: '页面信息自动带入，缺失内容可以补充', minimum: 7.0,
-    voice: '先从收藏一篇论文开始。打开扩展，检查自动带入的标题、摘要和来源，也可以随时补充和修改。',
-    caption: '打开收藏窗口，检查标题、摘要与来源。' },
-  { id: 'memory', mode: 'popup', section: '02 / 留下一句记忆', title: '一句话，\n记住它。', kicker: '写下你自己的理解，让下一次回看更容易', minimum: 8.0,
-    voice: '再写下一句话，记住它。比如，先验证工具返回的证据，再让智能体回答论文问题。这是你对它的个人印象。',
-    caption: '先验证工具返回的证据，再让智能体回答论文问题。' },
-  { id: 'tags', mode: 'popup', section: '03 / 选择已有标签', title: '同一个概念，\n沿用同一个标签。', kicker: '名称、别名、说明，都可以帮助你定位标签', minimum: 9.0,
-    voice: '输入英文别名，也能找到对应的智能体标签。先读说明，再选择已有分类。需要多少标签就添加多少，数量不设上限。',
-    caption: '搜索别名 agent → 选择「智能体」，按需要添加标签。' },
-  { id: 'save', mode: 'popup', section: '04 / 保存到本地', title: '印象和笔记，\n一起留下。', kicker: '保存后即可在论文库中查看', minimum: 5.5,
-    voice: '选好标签和阅读状态，点击保存。论文、记忆句和阅读笔记，一起进入本地论文库。',
-    caption: '保存成功：论文、标签、记忆句与笔记一起保留。' },
-  { id: 'library', mode: 'manager', section: '05 / 回到论文库', title: '每一次阅读，都有迹可循。', minimum: 6.0,
-    voice: '打开管理页，刚刚收藏的论文已经在这里。卡片上的标签和记忆句，帮助你快速认出它。',
-    caption: '刚收藏的论文，已经进入你的阅读积累。' },
-  { id: 'recall', mode: 'manager', section: '06 / 从脑海中的概念出发', title: '不记得标题？从一个概念开始。', minimum: 8.0,
-    voice: '过几天，只记得它与智能体有关。在顶部输入这个概念，系统先匹配已有标签。描述模糊时，也可以让大模型帮助理解。',
-    caption: '先匹配标签名称、别名和说明；也支持 AI 理解模糊概念。' },
-  { id: 'find', mode: 'manager', section: '07 / 标签带你找到论文', title: '点选「智能体」，相关论文出现。', minimum: 6.5,
-    voice: '点击智能体标签，论文库缩小到相关的三篇。刚才保存的那篇，就在其中。搜索过程不会自动创建新标签。',
-    caption: '9 篇收藏 → 3 篇相关论文；搜索不会新建标签。' },
-  { id: 'detail', mode: 'manager', section: '08 / 回到当时的理解', title: '找回论文，也找回阅读时的印象。', minimum: 6.0,
-    voice: '打开论文详情，当时留下的一句话和阅读笔记都在。找到论文之后，也能接着上次的思考继续读。',
-    caption: '回看记忆句、摘要和笔记，接着上一次的思考。' },
-  { id: 'status', mode: 'manager', section: '09 / 独立管理阅读进度', title: '概念归标签，进度单独管理。', minimum: 8.0,
-    voice: '把这篇论文标记为待重读，再按阅读状态筛选。未读、在读、已读和待重读单独管理，不必再为进度建立标签。',
-    caption: '未读 / 在读 / 已读 / 待重读，独立筛选。' },
-  { id: 'descriptions', mode: 'manager', section: '10 / 让标签的含义清晰', title: '标签有说明，分类有依据。', minimum: 8.5,
-    voice: '你来给标签，大模型结合关联论文的内容，补充含义与适用范围。别名和相似标签合并，帮助分类保持清晰。',
-    caption: '人工标签 + 关联论文内容 → 含义与适用范围。', note: '标签说明为预置演示文本，本段未调用模型。' },
-  { id: 'models', mode: 'manager', section: '11 / 选择你的模型后端', title: '连接本机 Claude Code 或 Codex。', minimum: 9.5,
-    voice: '也可以通过本机桥接，复用已经登录的 Claude Code 或 Codex。分别选择模型和思考强度，让这些设置用于论文分析。',
-    caption: 'Claude Code / Codex：独立选择模型和 effort。', note: '设置为操作示例，未连接账号或发起在线生成。' },
-  { id: 'api', mode: 'manager', section: '12 / 保留调用方式的选择', title: '也支持兼容 API。', minimum: 7.0,
-    voice: '如果使用其他服务，选择兼容 API，填写接口地址和模型名。基础收藏和本地检索，无需配置大模型也能使用。',
-    caption: '支持 Chat Completions 兼容 API；基础收藏与查找无需模型。', note: '本机 CLI 仍会连接模型服务，并不代表离线推理。' },
-  { id: 'outro', mode: 'outro', section: 'Paper_Mind', title: '让下一次想起，\n成为一次找回。', kicker: '用你记住的概念，找回读过的论文。', minimum: 7.5,
-    voice: '让下一次想起，成为一次找回。用你记住的概念，找回读过的论文。现在，就从收藏第一篇论文开始。',
-    caption: 'GitHub · ZJU-OmniAI / Paper_Mind' }
+  { id: 'intro', mode: 'title', section: ['Paper_Mind · 功能全景', 'Paper_Mind · Feature overview'],
+    title: ['标题会忘记，\n概念会留下。', 'Titles fade.\nIdeas stay.'],
+    kicker: ['通过脑海中的标签，找到你的论文。', 'Find your papers through the ideas you remember.'],
+    beats: [
+      { zh: '读过的论文，标题可能忘了，脑海中的概念却还在。', en: 'A paper’s title may fade, but its ideas stay with you.' },
+      { zh: 'Paper Mind，让概念连接标签，让标签带你找回论文。', en: 'Paper Mind connects those ideas to existing tags, and those tags to your papers.' }
+    ] },
+  { id: 'capture', mode: 'popup', section: ['01 · 收藏与剪藏', '01 · Capture and collect'],
+    title: ['值得读的，\n顺手留下。', 'Keep what is\nworth reading.'],
+    kicker: ['论文、网页、阅读笔记，汇入同一个论文库。', 'Papers, web articles and notes, in one library.'],
+    chips: [['页面信息自动提取', '手动录入', '网页正文与图片'], ['Metadata capture', 'Manual entry', 'Web text and images']],
+    beats: [
+      { zh: '自动提取论文信息，也支持手动录入，保留来源和阅读笔记。', en: 'Capture paper details automatically, or add them manually, with sources and reading notes.' },
+      { zh: '博客和解读文章也能剪藏，正文与图片一并留存。', en: 'Clip blogs and commentary too, preserving article text and saving images locally.' }
+    ] },
+  { id: 'materials', mode: 'manager', section: ['02 · 材料归档', '02 · Connected materials'],
+    title: ['一篇论文，多份材料。', 'One paper. All its supporting material.'],
+    beats: [
+      { zh: '原论文、解读文章和外部链接，可以归在同一条记录下。', en: 'Keep the original paper, commentary and external links together in one record.' },
+      { zh: '重复收藏会提示，相关材料可确认合并，避免资料越存越散。', en: 'Duplicate alerts and confirmed merges keep related material together as your collection grows.' }
+    ] },
+  { id: 'memory', mode: 'manager', section: ['03 · 记忆与阅读进度', '03 · Memory and reading progress'],
+    title: ['记下理解，也管理进度。', 'Keep your insight. Track your progress.'],
+    beats: [
+      { zh: '用一句话记住论文，配合笔记和价值评分，保留自己的判断。', en: 'Save a one-line memory, reading notes and a rating to preserve your own perspective.' },
+      { zh: '未读、在读、已读和待重读独立管理，不再挤占概念标签。', en: 'Track To read, Reading, Read and Revisit separately from your concept tags.' }
+    ] },
+  { id: 'search', mode: 'manager', section: ['04 · 从概念找到论文', '04 · From concepts to papers'],
+    title: ['不记得标题，也能找到。', 'Find it, even without the title.'],
+    beats: [
+      { zh: '从记得的概念匹配已有标签，再找到对应论文；模糊描述也可交给大模型理解。', en: 'Match a remembered concept to existing tags and their papers, with optional AI help for vague descriptions.' },
+      { zh: '还支持全文检索、多标签组合，以及阅读状态和评分筛选。', en: 'Full-text search, combined tags, reading status and rating filters help narrow the results.' }
+    ] },
+  { id: 'tags', mode: 'manager', section: ['05 · 有含义的标签系统', '05 · Tags with meaning'],
+    title: ['你定义概念，AI 补充说明。', 'You define the concept. AI adds context.'],
+    beats: [
+      { zh: '大模型根据你给的标签和关联论文，生成含义与适用范围。', en: 'AI uses your tags and linked paper content to explain what each tag means and when it applies.' },
+      { zh: '别名复用、冗余分析和合并审核，让分类清晰；标签数量不设上限。', en: 'Aliases, redundancy checks and reviewed merge suggestions keep tags clear, with no limit on their number.' }
+    ] },
+  { id: 'discovery', mode: 'manager', section: ['06 · 阅读与发现', '06 · Reading and discovery'],
+    title: ['从一篇论文，看到更多关联。', 'See the connections beyond one paper.'],
+    beats: [
+      { zh: '摘要翻译、引用量和相似论文推荐，帮助理解内容与发现关联。', en: 'Abstract translation, citation counts and similar-paper recommendations support reading and discovery.' },
+      { zh: '标签映射直观呈现论文关系，也支持按时间、评分和引用量整理。', en: 'A tag-to-paper map reveals connections, while date, rating and citation sorting organize your view.' }
+    ] },
+  { id: 'topics', mode: 'manager', section: ['07 · 研究主题包', '07 · Research topic packs'],
+    title: ['把研究方向，变成持续更新的清单。', 'Turn a research question into a living list.'],
+    beats: [
+      { zh: '通过包含和排除标签，建立研究主题包，自动聚合相关论文。', en: 'Build topic packs with inclusion and exclusion tags to gather relevant papers automatically.' },
+      { zh: '适合准备组会、整理相关工作，也适合持续跟进一个方向。', en: 'Use them for reading groups, related-work reviews, or following a research direction over time.' }
+    ] },
+  { id: 'models', mode: 'manager', section: ['08 · 灵活的模型接入', '08 · Flexible model backends'],
+    title: ['选择适合你的模型与思考强度。', 'Choose your model and reasoning effort.'],
+    beats: [
+      { zh: '本机桥接可复用 Claude Code 和 Codex 登录，独立选择模型与思考强度。', en: 'A local bridge reuses Claude Code or Codex sign-in, with separate model and reasoning-effort choices.' },
+      { zh: '也支持通用兼容 API，以及通义、智谱、Kimi 和 DeepSeek 等预设服务。', en: 'You can also use compatible APIs and presets for Qwen, GLM, Kimi and DeepSeek.' }
+    ] },
+  { id: 'data', mode: 'manager', section: ['09 · 轻量使用，自主管理', '09 · Lightweight, with local control'],
+    title: ['数据留在本地，阅读习惯由你决定。', 'Your library stays on your device.'],
+    beats: [
+      { zh: '无需注册，基础收藏与检索无需模型；支持中英文界面、深浅主题和快捷操作。', en: 'No sign-up is needed. Basic capture and search work without a model, with bilingual UI, themes and shortcuts.' },
+      { zh: '本地导入导出与每日自动备份，让阅读积累可以迁移和保存。', en: 'Local import, export and daily automatic backups help you preserve and move your reading collection.' }
+    ] },
+  { id: 'outro', mode: 'outro', section: ['Paper_Mind', 'Paper_Mind'],
+    title: ['让下一次想起，\n成为一次找回。', 'Remember an idea.\nFind your paper.'],
+    kicker: ['轻量收藏 · 清晰整理 · 从概念开始查找', 'Capture simply. Organize clearly. Search from an idea.'],
+    beats: [
+      { zh: '从收藏到理解，从概念到论文，让每一次阅读都能再次被找到。', en: 'From capture to understanding, and from ideas back to papers, make every reading easier to revisit.' },
+      { zh: 'Paper Mind，现已开源。', en: 'Paper Mind is open source. Start with your next paper.' }
+    ] }
 ];

@@ -24,11 +24,14 @@
 
 ## 看一段功能介绍
 
-[![观看 Paper_Mind 功能介绍：通过脑海中的标签找到论文](assets/videos/paper-mind-intro-poster.png)](assets/videos/paper-mind-intro-zh.mp4)
+| 中文配音 | English narration |
+| --- | --- |
+| [![观看中文功能全景](assets/videos/paper-mind-intro-poster-zh.png)](assets/videos/paper-mind-intro-zh.mp4) | [![Watch the English overview](assets/videos/paper-mind-intro-poster-en.png)](assets/videos/paper-mind-intro-en.mp4) |
+| [▶ 观看 / 下载](assets/videos/paper-mind-intro-zh.mp4) · [双语 SRT](assets/videos/paper-mind-intro-zh.srt) | [▶ Watch / download](assets/videos/paper-mind-intro-en.mp4) · [Bilingual SRT](assets/videos/paper-mind-intro-en.srt) |
 
-**[▶ 观看 / 下载视频](assets/videos/paper-mind-intro-zh.mp4)** · 2 分 9 秒 · 1080p · 中文配音与字幕 · [制作说明与字幕文件](assets/videos/README.md)
+**中文版 2:28 / 英文版 2:34 · 1080p · 沉稳温暖的神经网络男声 · 两版均同时显示中英文字幕。** [文字稿与制作说明](assets/videos/README.md)
 
-跟随同一篇论文，看完“收藏 → 一句话记住它 → 概念匹配标签 → 找回论文”，以及阅读状态、标签说明、模型与 effort 设置。使用实际界面和隔离演示数据，未发起在线模型调用。
+从脑海中的概念到找回论文，概览收藏与剪藏、多份材料归档、一句话记忆、独立阅读进度、概念与全文检索、标签说明、翻译与关联发现、研究主题包、模型与 effort、数据备份。使用实际界面和隔离示例库，AI 内容为预置演示；具体操作可继续看下方图文教程。
 
 ![论文库：搜索 RAG 并选择评估标签，从示例收藏中找到两篇相关论文](assets/screenshots/library-zh.png)
 

@@ -1,79 +1,109 @@
 1
-00:00:00,404 --> 00:00:07,327
-读过一篇论文，过段时间，标题可能忘了。
-留在脑海里的，往往只是几个关键词，和一个印象深刻的概念。
+00:00:00,185 --> 00:00:05,129
+读过的论文，标题可能忘了，脑海中的概念却还在。
+A paper’s title may fade, but its ideas stay with you.
 
 2
-00:00:08,729 --> 00:00:14,824
-让论文库，也按照这些概念来组织。
-从脑海中的概念，找到已有标签，再找回读过的论文。
+00:00:05,679 --> 00:00:10,839
+Paper Mind，让概念连接标签，让标签带你找回论文。
+Paper Mind connects those ideas to existing tags, and those tags to your papers.
 
 3
-00:00:16,232 --> 00:00:23,034
-先从收藏一篇论文开始。
-打开扩展，检查自动带入的标题、摘要和来源，也可以随时补充和修改。
+00:00:11,397 --> 00:00:17,421
+自动提取论文信息，也支持手动录入，保留来源和阅读笔记。
+Capture paper details automatically, or add them manually, with sources and reading notes.
 
 4
-00:00:24,437 --> 00:00:31,503
-再写下一句话，记住它。
-比如，先验证工具返回的证据，再让智能体回答论文问题。
-这是你对它的个人印象。
+00:00:17,974 --> 00:00:23,086
+博客和解读文章也能剪藏，正文与图片一并留存。
+Clip blogs and commentary too, preserving article text and saving images locally.
 
 5
-00:00:32,903 --> 00:00:41,132
-输入英文别名，也能找到对应的智能体标签。
-先读说明，再选择已有分类。
-需要多少标签就添加多少，数量不设上限。
+00:00:23,646 --> 00:00:29,046
+原论文、解读文章和外部链接，可以归在同一条记录下。
+Keep the original paper, commentary and external links together in one record.
 
 6
-00:00:43,270 --> 00:00:49,087
-选好标签和阅读状态，点击保存。
-论文、记忆句和阅读笔记，一起进入本地论文库。
+00:00:29,599 --> 00:00:35,935
+重复收藏会提示，相关材料可确认合并，避免资料越存越散。
+Duplicate alerts and confirmed merges keep related material together as your collection grows.
 
 7
-00:00:50,486 --> 00:00:56,190
-打开管理页，刚刚收藏的论文已经在这里。
-卡片上的标签和记忆句，帮助你快速认出它。
+00:00:36,493 --> 00:00:42,301
+用一句话记住论文，配合笔记和价值评分，保留自己的判断。
+Save a one-line memory, reading notes and a rating to preserve your own perspective.
 
 8
-00:00:57,592 --> 00:01:05,610
-过几天，只记得它与智能体有关。
-在顶部输入这个概念，系统先匹配已有标签。
-描述模糊时，也可以让大模型帮助理解。
+00:00:42,852 --> 00:00:48,948
+未读、在读、已读和待重读独立管理，不再挤占概念标签。
+Track To read, Reading, Read and Revisit separately from your concept tags.
 
 9
-00:01:07,012 --> 00:01:14,690
-点击智能体标签，论文库缩小到相关的三篇。
-刚才保存的那篇，就在其中。
-搜索过程不会自动创建新标签。
+00:00:49,507 --> 00:00:56,947
+从记得的概念匹配已有标签，再找到对应论文；模糊描述也可交给大模型理解。
+Match a remembered concept to existing tags and their papers, with optional AI help for vague descriptions.
 
 10
-00:01:16,091 --> 00:01:22,422
-打开论文详情，当时留下的一句话和阅读笔记都在。
-找到论文之后，也能接着上次的思考继续读。
+00:00:57,499 --> 00:01:03,499
+还支持全文检索、多标签组合，以及阅读状态和评分筛选。
+Full-text search, combined tags, reading status and rating filters help narrow the results.
 
 11
-00:01:23,823 --> 00:01:31,405
-把这篇论文标记为待重读，再按阅读状态筛选。
-未读、在读、已读和待重读单独管理，不必再为进度建立标签。
+00:01:04,060 --> 00:01:10,012
+大模型根据你给的标签和关联论文，生成含义与适用范围。
+AI uses your tags and linked paper content to explain what each tag means and when it applies.
 
 12
-00:01:32,806 --> 00:01:40,261
-你来给标签，大模型结合关联论文的内容，补充含义与适用范围。
-别名和相似标签合并，帮助分类保持清晰。
+00:01:10,564 --> 00:01:17,932
+别名复用、冗余分析和合并审核，让分类清晰；标签数量不设上限。
+Aliases, redundancy checks and reviewed merge suggestions keep tags clear, with no limit on their number.
 
 13
-00:01:41,661 --> 00:01:49,009
-也可以通过本机桥接，复用已经登录的 Claude Code 或 Codex。
-分别选择模型和思考强度，让这些设置用于论文分析。
+00:01:18,489 --> 00:01:25,065
+摘要翻译、引用量和相似论文推荐，帮助理解内容与发现关联。
+Abstract translation, citation counts and similar-paper recommendations support reading and discovery.
 
 14
-00:01:51,162 --> 00:01:59,429
-如果使用其他服务，选择兼容 API，填写接口地址和模型名。
-基础收藏和本地检索，无需配置大模型也能使用。
+00:01:25,616 --> 00:01:32,384
+标签映射直观呈现论文关系，也支持按时间、评分和引用量整理。
+A tag-to-paper map reveals connections, while date, rating and citation sorting organize your view.
 
 15
-00:02:00,831 --> 00:02:07,681
-让下一次想起，成为一次找回。
-用你记住的概念，找回读过的论文。
-现在，就从收藏第一篇论文开始。
+00:01:32,943 --> 00:01:39,111
+通过包含和排除标签，建立研究主题包，自动聚合相关论文。
+Build topic packs with inclusion and exclusion tags to gather relevant papers automatically.
+
+16
+00:01:39,664 --> 00:01:45,640
+适合准备组会、整理相关工作，也适合持续跟进一个方向。
+Use them for reading groups, related-work reviews, or following a research direction over time.
+
+17
+00:01:46,199 --> 00:01:53,159
+本机桥接可复用 Claude Code 和 Codex 登录，独立选择模型与思考强度。
+A local bridge reuses Claude Code or Codex sign-in, with separate model and reasoning-effort choices.
+
+18
+00:01:53,709 --> 00:02:01,293
+也支持通用兼容 API，以及通义、智谱、Kimi 和 DeepSeek 等预设服务。
+You can also use compatible APIs and presets for Qwen, GLM, Kimi and DeepSeek.
+
+19
+00:02:01,847 --> 00:02:10,343
+无需注册，基础收藏与检索无需模型；支持中英文界面、深浅主题和快捷操作。
+No sign-up is needed. Basic capture and search work without a model, with bilingual UI, themes and shortcuts.
+
+20
+00:02:10,894 --> 00:02:17,302
+本地导入导出与每日自动备份，让阅读积累可以迁移和保存。
+Local import, export and daily automatic backups help you preserve and move your reading collection.
+
+21
+00:02:17,860 --> 00:02:24,100
+从收藏到理解，从概念到论文，让每一次阅读都能再次被找到。
+From capture to understanding, and from ideas back to papers, make every reading easier to revisit.
+
+22
+00:02:24,652 --> 00:02:27,316
+Paper Mind，现已开源。
+Paper Mind is open source. Start with your next paper.
