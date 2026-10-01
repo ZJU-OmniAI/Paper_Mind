@@ -1303,7 +1303,8 @@ fieldset {
   align-items: center;
 }
 
-.model-picker select {
+.model-picker select,
+.local-model-group select {
   flex: 1;
   min-width: 0;
   padding: 11px 12px;
@@ -2312,6 +2313,9 @@ button:disabled { cursor: default; opacity: .55; }
 .detail-memory select { width: auto; padding: 7px 12px; }
 .backend-panel { padding: 20px; margin: 18px 0; border: 1px solid var(--accent-border); background: var(--surface-3); border-radius: 12px; }
 .backend-panel h3 { margin-top: 0; font-size: 16px; }
+.local-model-group { margin: 16px 0 0; padding: 16px; border: 1px solid var(--accent-border); border-radius: 10px; min-width: 0; }
+.local-model-group legend { padding: 0 6px; font-weight: 600; }
+.local-model-group .model-hint { margin: 10px 0 0; }
 .backend-panel p, .bridge-steps { line-height: 1.8; font-size: 12px; overflow-wrap: anywhere; }
 .bridge-steps { padding-left: 20px; color: var(--muted); }
 .segmented { flex-wrap: wrap; }

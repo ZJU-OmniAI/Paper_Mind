@@ -141,6 +141,9 @@ try {
     await capture('reading-status', page.locator('#view-papers'));
     await page.locator('[data-view="settings"]').click();
     await page.locator('[name="provider"][value="codex"]').check();
+    await page.locator('#claudeModelSelect').selectOption('sonnet');
+    await page.locator('#claudeEffort').selectOption('medium');
+    await page.locator('#codexEffort').selectOption('high');
     await capture('local-models', page.locator('#view-settings'));
 
     // Additional feature views use the same collection after the walkthrough.

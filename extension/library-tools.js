@@ -1,5 +1,5 @@
 // Shared, dependency-free rules for capture, library search and storage.
-export const DEFAULT_TAG_POLICY = { maxTagsPerPaper: 6, maxTags: 80, autoDescribeTags: true };
+export const DEFAULT_TAG_POLICY = { autoDescribeTags: true };
 
 export const READING_STATUSES = ["unread", "reading", "read", "revisit"];
 export const normalizeReadingStatus = (value) => READING_STATUSES.includes(value) ? value : "unread";

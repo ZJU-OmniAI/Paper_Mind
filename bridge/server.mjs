@@ -1,4 +1,5 @@
 import http from 'node:http';
+import { getModels } from './models.mjs';
 import { randomBytes, timingSafeEqual } from 'node:crypto';
 import { mkdir, readFile, writeFile, chmod } from 'node:fs/promises';
 import os from 'node:os';
@@ -17,7 +18,7 @@ export async function loadToken(directory) {
   return token;
 }
 
-export function createBridge({ token, run = generate, inspect = health } = {}) {
+export function createBridge({ token, run = generate, inspect = health, list = getModels } = {}) {
   if (typeof token !== 'string' || token.length < 32) throw new Error('Bridge token must contain at least 32 characters');
   let active = 0;
   let running = 0;
@@ -43,6 +44,10 @@ export function createBridge({ token, run = generate, inspect = health } = {}) {
     if (given.length !== expected.length || !timingSafeEqual(given, expected)) return reply(401, { error: '连接码不正确，请复制启动终端里的连接码 / Incorrect bridge token' });
     if (req.method === 'GET' && req.url === '/health') {
       try { return reply(200, await inspect()); } catch { return reply(503, { error: 'CLI 检测失败 / CLI check failed' }); }
+    }
+    if (req.method === 'GET' && ['/models', '/models?refresh=1'].includes(req.url)) {
+      try { return reply(200, await list(req.url.includes('refresh=1'))); }
+      catch { return reply(503, { error: '模型目录读取失败 / Model catalog unavailable' }); }
     }
     if (req.method !== 'POST' || req.url !== '/v1/generate') return reply(404, { error: 'Not found' });
     if (!/^application\/json(?:;|$)/i.test(req.headers['content-type'] || '')) return reply(415, { error: 'Use application/json' });

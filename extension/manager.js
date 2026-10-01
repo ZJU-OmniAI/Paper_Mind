@@ -1,4 +1,5 @@
-import { normalizeReadingStatus, readingStatusLabel, conceptTagMatches, DEFAULT_TAG_POLICY, tagKey as canonicalTagKey, splitTags, suggestTags, paperSearchScore, matchesText, safeWebUrl } from "./library-tools.js";
+import { fallbackModels, modelEfforts } from "./local-models.js";
+import { normalizeReadingStatus, readingStatusLabel, conceptTagMatches, tagKey as canonicalTagKey, splitTags, suggestTags, paperSearchScore, matchesText, safeWebUrl } from "./library-tools.js";
 import { handleApi } from "./storage.js";
 import { renderWorkflowLabels } from "./workflow-ui.js";
 
@@ -745,10 +746,8 @@ function renderLibraryLabels() {
     tagHealthTitle: ["让标签保持精简", "A focused tag library"],
     describeTagsButton: ["补全 / 更新标签说明", "Update tag descriptions"],
     tagPolicyLegend: ["标签管理", "Tag management"],
-    maxTagsPerPaperLabel: ["每篇论文标签上限", "Tags per paper"],
-    maxTagsLabel: ["标签库总数上限", "Total tag limit"],
     autoDescribeTagsLabel: ["保存后自动用 LLM 生成或更新标签说明", "Automatically write tag descriptions with AI after saving"],
-    tagPolicyHint: ["优先复用已有标签与别名。上限只限制新增，不删除已有标签。自动说明会将关联论文的摘要、笔记和正文片段发送给你配置的模型。", "Reuse existing tags and aliases. Limits apply to additions; existing tags are kept. Descriptions send excerpts of linked papers and notes to your configured model."]
+    tagPolicyHint: ["优先复用已有标签与别名。标签数量不设上限。自动说明会将关联论文的摘要、笔记和正文片段发送给你配置的模型。", "Reuse existing tags and aliases. No limit on tag counts. Descriptions send excerpts of linked papers and notes to your configured model."]
   };
   for (const [id, text] of Object.entries(labels)) {
     const el = document.getElementById(id);
@@ -2116,8 +2115,6 @@ function renderSettings() {
   document.getElementById("bridgeToken").placeholder = cfg.hasBridgeToken ? ui("已保存，留空不修改", "Saved; leave blank to keep") : ui("粘贴桥接终端显示的连接码", "Paste the token printed by the bridge");
   document.getElementById("customKey").placeholder = cfg.hasCustomKey ? t("keySavedPlaceholder") : t("keyMissingPlaceholder");
   document.getElementById("customJsonMode").checked = cfg.customJsonMode === true;
-  document.getElementById("maxTagsPerPaper").value = cfg.maxTagsPerPaper || DEFAULT_TAG_POLICY.maxTagsPerPaper;
-  document.getElementById("maxTags").value = cfg.maxTags || DEFAULT_TAG_POLICY.maxTags;
   document.getElementById("autoDescribeTags").checked = cfg.autoDescribeTags !== false;
   document.querySelectorAll('input[name="provider"]').forEach((input) => {
     input.checked = input.value === (cfg.provider || "qwen");
@@ -2135,6 +2132,7 @@ function renderSettings() {
     els[`${provider}Key`].placeholder = cfg[view.hasKeyField] ? t("keySavedPlaceholder") : t("keyMissingPlaceholder");
   }
   renderModelPickers();
+  for (const provider of ["claude", "codex"]) renderLocalModelPicker(provider, cfg[provider + "Effort"] || "default");
   renderBackendPanels();
 }
 
@@ -3197,7 +3195,7 @@ function renderTagTree() {
   const missing = normal.filter((tag) => !tag.description || tag.descriptionStatus !== "ready").length;
   const errors = normal.filter((tag) => tag.descriptionError).length;
   const singles = normal.filter((tag) => tag.paperIds?.length === 1).length;
-  document.getElementById("tagHealthSummary").textContent = ui(`${normal.length} / ${state.config.maxTags || 80} 个标签 · ${missing} 个说明待更新${errors ? `（${errors} 个失败，可重试）` : ""} · ${singles} 个仅关联一篇论文`, `${normal.length} / ${state.config.maxTags || 80} tags · ${missing} descriptions pending · ${errors} failed · ${singles} used once`);
+  document.getElementById("tagHealthSummary").textContent = ui(`${normal.length} 个标签 · ${missing} 个说明待更新${errors ? `（${errors} 个失败，可重试）` : ""} · ${singles} 个仅关联一篇论文`, `${normal.length} tags · ${missing} descriptions pending · ${errors} failed · ${singles} used once`);
   const tagTotal = visibleTags.length;
   visibleTags = visibleTags.sort(compareTags).slice(0, state.tagDisplayLimit);
   let moreButton = document.getElementById("moreTagCards");
@@ -3592,8 +3590,6 @@ async function chooseDuplicateAction(payload) {
 function collectSettingsForm() {
   const payload = {
     ...collectExtraSettings(),
-    maxTagsPerPaper: Number(document.getElementById("maxTagsPerPaper").value),
-    maxTags: Number(document.getElementById("maxTags").value),
     autoDescribeTags: document.getElementById("autoDescribeTags").checked,
     provider: document.querySelector('input[name="provider"]:checked')?.value || "qwen"
   };
@@ -4861,6 +4857,7 @@ els.modelTestForm.addEventListener("submit", async (event) => {
       `Provider: ${meta.provider || "unknown"}`,
       `${state.language === "en" ? "Requested model" : "请求模型"}: ${meta.requestedModel || "unknown"}`,
       `${state.language === "en" ? "Response model" : "响应模型"}: ${meta.responseModel || (state.language === "en" ? "not returned" : "未返回")}`,
+      meta.effort ? `Effort: ${meta.effort}` : "",
       meta.thinking ? `Thinking: ${meta.thinking}` : "",
       meta.maxTokens ? `Max tokens: ${meta.maxTokens}` : "",
       `Endpoint: ${meta.endpoint || "unknown"}`,
@@ -5021,10 +5018,89 @@ document.getElementById('detailQuickStatus').addEventListener('change', async ev
 
 function collectExtraSettings() {
   const result = {};
-  for (const id of ['bridgeUrl', 'bridgeToken', 'claudeModel', 'codexModel', 'customModel', 'customBaseUrl', 'customKey']) result[id] = document.getElementById(id).value.trim();
+  for (const id of ['bridgeUrl', 'bridgeToken', 'claudeModel', 'codexModel', 'claudeEffort', 'codexEffort', 'customModel', 'customBaseUrl', 'customKey']) result[id] = document.getElementById(id).value.trim();
   for (const id of ['customJsonMode', 'clearCustomKey', 'clearBridgeToken']) result[id] = document.getElementById(id).checked;
   return result;
 }
+
+function renderLocalEffort(provider, selected, modelChanged = false) {
+  const model = document.getElementById(provider + 'Model').value || 'default';
+  const catalog = state.localModelCatalog?.[provider];
+  const levels = modelEfforts(provider, model, catalog);
+  const select = document.getElementById(provider + 'Effort');
+  let value = selected || select.value || 'default';
+  const unsupported = value !== 'default' && !levels.includes(value);
+  if (modelChanged && unsupported) value = 'default';
+  const labels = { none: ['不启用', 'None'], minimal: ['最少', 'Minimal'], low: ['低', 'Low'], medium: ['中', 'Medium'], high: ['高', 'High'], xhigh: ['更高', 'Extra high'], max: ['最大', 'Maximum'], ultra: ['超高', 'Ultra'] };
+  select.replaceChildren(new Option(ui('CLI 默认', 'CLI default'), 'default'));
+  for (const effort of levels) select.add(new Option(`${effort} · ${ui(...labels[effort])}`, effort));
+  if (unsupported && !modelChanged) select.add(new Option(value + ui(' · 当前目录不支持', ' · Not supported by this catalog'), value));
+  select.value = value;
+  const entry = catalog?.models?.find(item => item.id === model);
+  document.getElementById(provider + 'ModelHint').textContent = [
+    entry?.description || (catalog?.source === 'cli' ? ui('已读取本机目录', 'Local catalog loaded') : ui('可刷新本机目录，或填写模型 ID。', 'Refresh the local catalog or enter a model ID.')),
+    unsupported ? (modelChanged ? ui('新模型不支持原 effort，已恢复默认。', 'Previous effort is unsupported; reset to default.') : ui('请重新选择 effort，或刷新目录确认。', 'Choose another effort or refresh the catalog.')) : '',
+    entry?.efforts?.length === 0 ? ui('此模型未提供 effort 档位。', 'This model exposes no effort levels.') : ''
+  ].filter(Boolean).join(' ');
+}
+
+function renderLocalModelPicker(provider, selectedEffort) {
+  const input = document.getElementById(provider + 'Model');
+  const select = document.getElementById(provider + 'ModelSelect');
+  const customEmpty = select.value === '__custom__' && !input.value;
+  const value = input.value || 'default';
+  const models = state.localModelCatalog?.[provider]?.models || fallbackModels(provider);
+  select.replaceChildren(new Option(ui('CLI 默认', 'CLI default'), 'default'));
+  for (const model of models) if (model.id !== 'default') select.add(new Option(model.label || model.id, model.id));
+  select.add(new Option(ui('自定义模型 ID…', 'Custom model ID…'), '__custom__'));
+  const known = value === 'default' || models.some(model => model.id === value);
+  select.value = known && !customEmpty ? value : '__custom__';
+  input.hidden = select.value !== '__custom__';
+  renderLocalEffort(provider, selectedEffort);
+}
+
+function bridgeFormIdentity() {
+  return JSON.stringify(['bridgeUrl', 'bridgeToken'].map(id => document.getElementById(id).value).concat(document.getElementById('clearBridgeToken').checked));
+}
+
+async function refreshLocalModels() {
+  if (state.localCatalogLoading) return;
+  state.localCatalogLoading = true;
+  const identity = bridgeFormIdentity();
+  const output = document.getElementById('localCatalogStatus');
+  const done = setBusy(document.getElementById('refreshLocalModels'), ui('正在读取…', 'Loading…'));
+  output.textContent = ui('只读取模型目录，不发起生成请求…', 'Reading model metadata without generating…');
+  try {
+    const result = await api('/api/local-models', { method: 'POST', body: JSON.stringify(collectExtraSettings()) });
+    if (identity !== bridgeFormIdentity()) return;
+    state.localModelCatalog ||= {};
+    for (const provider of ['claude', 'codex']) {
+      // A failed refresh must never discard a working list or a custom selection.
+      if (result[provider]?.models?.length) state.localModelCatalog[provider] = result[provider];
+      renderLocalModelPicker(provider);
+    }
+    output.textContent = ['claude', 'codex'].map(provider => `${provider === 'claude' ? 'Claude Code' : 'Codex'}: ${result[provider]?.error || ui(`已读取 ${result[provider]?.models?.length || 0} 个模型`, `${result[provider]?.models?.length || 0} models loaded`)}`).join(' / ');
+  } catch (error) { if (identity === bridgeFormIdentity()) output.textContent = error.message; }
+  finally { done(); state.localCatalogLoading = false; }
+}
+
+for (const provider of ['claude', 'codex']) {
+  document.getElementById(provider + 'ModelSelect').addEventListener('change', event => {
+    const input = document.getElementById(provider + 'Model');
+    input.hidden = event.target.value !== '__custom__';
+    input.value = input.hidden ? event.target.value : '';
+    if (!input.hidden) input.focus();
+    renderLocalEffort(provider, null, true);
+  });
+  document.getElementById(provider + 'Model').addEventListener('change', () => renderLocalEffort(provider, null, true));
+}
+for (const id of ['bridgeUrl', 'bridgeToken', 'clearBridgeToken']) document.getElementById(id).addEventListener('input', () => {
+  state.localModelCatalog = {};
+  document.getElementById('localCatalogStatus').textContent = '';
+  for (const provider of ['claude', 'codex']) renderLocalModelPicker(provider);
+});
+document.getElementById('refreshLocalModels').addEventListener('click', refreshLocalModels);
+
 function renderBackendPanels() {
   const provider = document.querySelector('input[name="provider"]:checked')?.value;
   document.getElementById('refreshAllModels').hidden = ['claude', 'codex', 'custom'].includes(provider);
@@ -5044,6 +5120,7 @@ document.getElementById('checkBridge').addEventListener('click', async () => {
       const status = info.status === 'ready' ? ui('已登录，可以使用', 'Signed in and ready') : info.status === 'auth' ? ui('需要在终端登录', 'Sign in in your terminal') : ui('未检测到可用 CLI', 'CLI not available');
       return `${name === 'claude' ? 'Claude Code' : 'Codex'}: ${status}${info.version ? ' · ' + info.version : ''}`;
     }).join(' / ');
+    await refreshLocalModels();
   } catch (error) { output.textContent = error.message; }
   finally { done(); }
 });

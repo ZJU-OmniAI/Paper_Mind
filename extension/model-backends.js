@@ -1,9 +1,11 @@
+import { validatedEffort } from './local-models.js';
 // The extension never launches processes itself. Only this authenticated loopback
 // endpoint can dispatch the two supported local CLIs.
 export const isLocalProvider = (provider) => ["claude", "codex"].includes(provider);
 export const EXTRA_DEFAULTS = {
   bridgeUrl: "http://127.0.0.1:39321", bridgeToken: "",
   claudeModel: "default", codexModel: "default",
+  claudeEffort: "default", codexEffort: "default",
   customKey: "", customModel: "", customBaseUrl: "https://api.openai.com/v1",
   customJsonMode: false
 };
@@ -33,6 +35,10 @@ export function extraConfig(config, body) {
     next[field] ||= "default";
     if (!/^[a-zA-Z0-9][a-zA-Z0-9._:/-]{0,159}$/.test(next[field])) throw new Error("本机模型名称无效 / Invalid local model name");
   }
+  for (const provider of ["claude", "codex"]) {
+    const field = provider + "Effort";
+    next[field] = validatedEffort(provider, body[field] ?? next[field]);
+  }
   return next;
 }
 
@@ -49,6 +55,7 @@ export async function bridgeRequest(config, path, body) {
     throw new Error(error.name === "TimeoutError" ? "本机模型调用超时 / Local model timed out" : "无法连接本机服务，请在项目目录运行 npm run bridge / Start the local bridge");
   }
   const result = await response.json();
+  if (response.status === 404 && path.startsWith("/models")) throw new Error("请重启 npm run bridge 后刷新模型列表 / Restart npm run bridge to load models");
   if (!response.ok || result.error) throw new Error(result.error || `Bridge HTTP ${response.status}`);
   return result;
 }

@@ -1,4 +1,4 @@
-import { normalizeReadingStatus, tagKey, splitTags, suggestTags, DEFAULT_TAG_POLICY } from "./library-tools.js";
+import { normalizeReadingStatus, tagKey, splitTags, suggestTags } from "./library-tools.js";
 import { handleApi } from "./storage.js";
 import { renderWorkflowLabels } from "./workflow-ui.js";
 import { CLIP_MIN_TEXT_LENGTH, buildClipRecord, clipExcerpt, pageClipExtractor } from "./clipper.js";
@@ -373,8 +373,6 @@ function renderChips() {
 function addTag(name) {
   const incoming = splitTags(name).map((name) => state.tags.find((tag) => [tag.name, ...(tag.aliases || [])].some((value) => tagKey(value) === tagKey(name)))?.name || name);
   const next = [...new Map([...state.selectedTags, ...incoming].map((name) => [tagKey(name), name])).values()];
-  const limit = Math.max(state.config.maxTagsPerPaper || DEFAULT_TAG_POLICY.maxTagsPerPaper, state.existingPaper?.paper?.tagIds?.length || 0);
-  if (next.length > limit) { setMessage(state.language === "en" ? `Use up to ${limit} core tags per paper.` : `每篇最多 ${limit} 个核心标签，细节可写入笔记。`, "error"); return; }
   state.selectedTags = next;
   renderChips();
   els.tagInput.value = "";
@@ -387,8 +385,7 @@ function removeTag(name) {
 }
 
 function renderQuickTags() {
-  const limit = state.config.maxTagsPerPaper || DEFAULT_TAG_POLICY.maxTagsPerPaper;
-  document.getElementById("tagPolicyNote").textContent = state.language === "en" ? `${state.selectedTags.length} / ${limit} tags · reuse existing topics${state.config.autoDescribeTags !== false ? " · AI writes descriptions after saving" : ""}` : `${state.selectedTags.length} / ${limit} 个标签 · 优先复用已有概念${state.config.autoDescribeTags !== false ? " · 保存后 AI 编写说明" : ""}`;
+  document.getElementById("tagPolicyNote").textContent = state.language === "en" ? `${state.selectedTags.length} tags · reuse existing topics${state.config.autoDescribeTags !== false ? " · AI writes descriptions after saving" : ""}` : `${state.selectedTags.length} 个标签 · 优先复用已有概念${state.config.autoDescribeTags !== false ? " · 保存后 AI 编写说明" : ""}`;
 
   const selected = new Set(state.selectedTags.map(normalize));
   const top = state.tags

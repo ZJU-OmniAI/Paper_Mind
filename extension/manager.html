@@ -439,12 +439,8 @@
 
             <fieldset class="tag-policy-settings">
               <legend id="tagPolicyLegend">标签管理</legend>
-              <div class="settings-grid">
-                <label><span id="maxTagsPerPaperLabel">每篇论文标签上限</span><input id="maxTagsPerPaper" type="number" min="1" max="20" value="6" required /></label>
-                <label><span id="maxTagsLabel">标签库总数上限</span><input id="maxTags" type="number" min="1" max="500" value="80" required /></label>
-              </div>
               <label class="checkbox-label"><input id="autoDescribeTags" type="checkbox" checked /><span id="autoDescribeTagsLabel">保存后自动用 LLM 生成或更新标签说明</span></label>
-              <p class="muted" id="tagPolicyHint">优先复用已有标签与别名。数量上限只限制新增，不删除已有标签。自动说明会将关联论文的摘要、笔记和正文片段发送给你配置的模型。</p>
+              <p class="muted" id="tagPolicyHint">优先复用已有标签与别名。标签数量不设上限。自动说明会将关联论文的摘要、笔记和正文片段发送给你配置的模型。</p>
             </fieldset>
             <fieldset>
               <legend>默认模型</legend>
@@ -461,9 +457,17 @@
               <h3 data-zh="使用本机 Claude Code / Codex" data-en="Use local Claude Code / Codex"></h3>
               <ol class="bridge-steps"><li data-zh="在终端登录：claude auth login 或 codex login。" data-en="Sign in in your terminal: claude auth login or codex login."></li><li data-zh="在 Paper_Mind 项目目录运行 npm run bridge，保持终端开启。" data-en="Run npm run bridge in the Paper_Mind project and keep the terminal open."></li><li data-zh="复制终端中的连接码到下方，检测连接后保存设置。" data-en="Paste the token printed in the terminal, check the connection, then save."></li></ol>
               <div class="settings-grid"><label><span data-zh="桥接地址" data-en="Bridge URL"></span><input id="bridgeUrl" placeholder="http://127.0.0.1:39321" /></label><label><span data-zh="连接码" data-en="Connection token"></span><input id="bridgeToken" type="password" autocomplete="off" /></label>
-                <label><span>Claude Code <span data-zh="模型" data-en="model"></span></span><input id="claudeModel" placeholder="default / sonnet / opus" /></label><label><span>Codex <span data-zh="模型" data-en="model"></span></span><input id="codexModel" placeholder="default" /></label></div>
-              <p class="muted" data-zh="default 使用 CLI 的默认模型；也可填写当前账号可用的模型名。本机 CLI 仍会通过其配置的模型服务处理内容。" data-en="default uses the CLI default model; you may enter an available model ID. Local CLIs still send content to their configured model services."></p>
-              <div class="button-row"><button id="checkBridge" type="button" class="secondary-button" data-zh="检测本机连接" data-en="Check local connection"></button><label class="checkbox-label"><input id="clearBridgeToken" type="checkbox"/><span data-zh="清除连接码" data-en="Clear token"></span></label></div><p id="bridgeHealth" class="muted" role="status"></p>
+              </div>
+              <fieldset class="local-model-group"><legend>Claude Code</legend><div class="settings-grid">
+                <label><span data-zh="模型" data-en="Model"></span><select id="claudeModelSelect"></select><input id="claudeModel" class="model-custom-input" aria-label="Claude Code custom model" placeholder="Model ID" hidden /></label>
+                <label><span data-zh="思考强度 · effort" data-en="Reasoning effort"></span><select id="claudeEffort"></select></label>
+              </div><p id="claudeModelHint" class="model-hint muted"></p></fieldset>
+              <fieldset class="local-model-group"><legend>Codex</legend><div class="settings-grid">
+                <label><span data-zh="模型" data-en="Model"></span><select id="codexModelSelect"></select><input id="codexModel" class="model-custom-input" aria-label="Codex custom model" placeholder="Model ID" hidden /></label>
+                <label><span data-zh="思考强度 · effort" data-en="Reasoning effort"></span><select id="codexEffort"></select></label>
+              </div><p id="codexModelHint" class="model-hint muted"></p></fieldset>
+              <p class="muted" data-zh="默认由 CLI 决定模型和思考强度；effort 越高通常耗时越久。刷新可读取本机模型目录，实际可用性以测试结果为准。CLI 仍通过模型服务处理内容。" data-en="Default leaves model and effort to the CLI. Higher effort usually takes longer. Refresh to read the local catalog; test to verify access. CLIs still send content to model services."></p>
+              <div class="button-row"><button id="checkBridge" type="button" class="secondary-button" data-zh="检测本机连接" data-en="Check local connection"></button><button id="refreshLocalModels" type="button" class="secondary-button" data-zh="刷新模型列表" data-en="Refresh models"></button><label class="checkbox-label"><input id="clearBridgeToken" type="checkbox"/><span data-zh="清除连接码" data-en="Clear token"></span></label></div><p id="bridgeHealth" class="muted" role="status"></p><p id="localCatalogStatus" class="muted" role="status"></p>
             </section>
             <section id="customBackendSettings" class="backend-panel" hidden><h3 data-zh="OpenAI 兼容 Chat Completions API" data-en="OpenAI-compatible Chat Completions API"></h3><div class="settings-grid"><label><span>Base URL</span><input id="customBaseUrl" placeholder="https://api.example.com/v1" /></label><label><span data-zh="模型名称" data-en="Model ID"></span><input id="customModel" placeholder="填写服务商提供的模型 ID / Model ID" /></label><label><span data-zh="API Key（本地服务可留空）" data-en="API key (optional for local servers)"></span><input id="customKey" type="password" autocomplete="off" /></label><label class="checkbox-label"><input id="clearCustomKey" type="checkbox" /><span data-zh="清除 API Key" data-en="Clear API key"></span></label></div><label class="checkbox-label"><input id="customJsonMode" type="checkbox" /><span data-zh="发送 JSON mode 参数（服务商支持时开启）" data-en="Send JSON mode parameter (enable if supported)"></span></label><p class="muted" data-zh="填写 API 根地址，程序会追加 /chat/completions。可接其他厂商、Ollama 或 LM Studio 的兼容接口。" data-en="Enter the API base URL; /chat/completions is appended. Supports compatible provider, Ollama and LM Studio endpoints."></p></section>
             <div class="settings-grid" id="presetBackendSettings">

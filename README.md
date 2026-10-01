@@ -8,7 +8,7 @@
 
 <p>Organize papers with tags. Explore them with AI assistance. Lightweight capture, simple organization.</p>
 
-[![Version](https://img.shields.io/badge/version-1.5.0-0c7d72.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-1.5.1-0c7d72.svg)](CHANGELOG.md)
 [![Chrome Extension](https://img.shields.io/badge/Chrome-Manifest_V3-4285F4.svg)](extension/manifest.json)
 [![License](https://img.shields.io/badge/license-Apache_2.0-0c7d72.svg)](LICENSE)
 
@@ -20,7 +20,7 @@ Some time after reading a paper, its full title may escape us. What stays is oft
 
 **A library organized around those concepts lets you find a paper starting with the word you still remember.** That is the idea behind Paper_Mind: a lightweight paper management platform built around tags, with optional LLM assistance, delivered as a Chrome extension that fits into your reading. Save a paper, leave a note and choose a few core tags to turn a fleeting impression into something you can search, connect and return to.
 
-You choose the tags that describe your papers. An LLM can use those tags and content from linked papers to explain their meaning and scope, assist retrieval and suggest related reading. Reusing existing tags and limiting new ones keeps the collection manageable. **Keep organization simple, and let discovery begin with a concept.** Your library stays on your machine; basic capture and search work without a configured model.
+You choose the tags that describe your papers. An LLM can use those tags and content from linked papers to explain their meaning and scope, assist retrieval and suggest related reading. Reuse existing tags and merge synonymous concepts to keep the collection clear, with no cap on tag counts. **Keep organization simple, and let discovery begin with a concept.** Your library stays on your machine; basic capture and search work without a configured model.
 
 ![Paper library: search for RAG and select the evaluation tag to find two relevant papers in the sample collection](assets/screenshots/library-en.png)
 
@@ -118,7 +118,7 @@ A tag should tell you **what belongs in it, and what makes it different from the
 For example, a description can distinguish retrieval used to ground generated answers from standalone retrieval ranking. Read that distinction while choosing a tag, before adding another near-duplicate.
 
 - **Grounded in your reading.** The model uses your tag names, aliases and excerpts from linked papers' abstracts, notes and clipped content.
-- **A manageable vocabulary.** Defaults allow **6 tags per paper** and **80 across the library**, adjustable in Settings. Existing tags are retained.
+- **Tags as needed.** Neither papers nor the library have a tag-count limit. Name reuse, aliases and merge suggestions keep the vocabulary clear.
 - **Reuse before adding.** Search names, aliases and descriptions, with up to eight relevant suggestions. Normalized spelling variants reuse existing tags.
 - **Review semantic merges.** The model proposes synonyms; you decide what to merge. An identical set of linked papers is a review clue, not proof that two tags mean the same thing.
 - **Descriptions that can be maintained.** Background batches, caching and retries keep the process manageable. Changed source samples trigger updates; failed requests keep the previous description.
@@ -182,7 +182,7 @@ Following the approach used by LLM_in_Word, the optional local path is **extensi
 
    The bridge uses Node built-ins; project development dependencies are not required.
 3. In **Manager → Model settings → Claude Code / Codex**, paste the URL and token printed in the terminal. Click **Check local connection**.
-4. Use `default` or an available model ID. **Save settings**, then **Test model**. Keep the terminal open; press `Ctrl+C` to stop the service.
+4. Checking the connection loads the model catalog; use **Refresh models** to reload it. Choose a **model** and **reasoning effort** separately for Claude and Codex, or enter a custom model ID. Default leaves the choice to the CLI. **Save settings**, then **Test model**. Keep the terminal open; press `Ctrl+C` to stop the service.
 
 ![Local model settings guide users through CLI login, bridge startup and connection checks](assets/screenshots/local-models-en.png)
 

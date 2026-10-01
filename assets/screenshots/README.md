@@ -20,7 +20,7 @@ Feature overviews:
 - `library-{zh,en}.png`: keyword search combined with a tag filter.
 - `tags-{zh,en}.png`: tag descriptions, aliases and linked papers.
 - `reading-status-{zh,en}.png`: narrow the saved paper list by Reading status.
-- `local-models-{zh,en}.png`: local CLI setup, with no real token or model connection.
+- `local-models-{zh,en}.png`: local CLI setup with separate model and effort selectors, no real token or model connection. The illustrated choices are unsaved demo selections.
 - `topics-{zh,en}.png`: a saved topic pack's inclusion and exclusion rules.
 
 ## Reproduce

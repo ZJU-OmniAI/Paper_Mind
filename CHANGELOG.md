@@ -2,6 +2,13 @@
 
 Notable changes to Paper_Mind. Versions follow the `version` field in `extension/manifest.json`.
 
+## 1.5.1
+
+- Removed per-paper and library-wide tag-count limits from capture, storage and settings. Legacy caps no longer apply; tag reuse, aliases, descriptions and name validation remain available.
+- Added independent Claude Code / Codex model and reasoning-effort selectors. Authenticated metadata-only CLI catalog discovery supports pagination, bounded probes and concurrent request sharing. Custom model IDs and CLI defaults remain available.
+- Effort options follow advertised model capabilities. Settings and test overrides reach the actual CLI arguments; failed catalog refreshes preserve choices, and older bridges prompt a restart.
+- Updated bilingual documentation, screenshots and regression coverage for unlimited tags, capability discovery, effort forwarding and settings persistence.
+
 ## 1.5.0
 
 - Added a primary “remembered concept → existing tags → papers” workflow. Local names, aliases and descriptions match instantly; optional AI returns at most six validated, deduplicated tags with reasons. Choosing a tag clears stale literal paper queries. Searches never create tags, and stale AI replies cannot replace newer input.

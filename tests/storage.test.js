@@ -10,24 +10,28 @@ if (!globalThis.navigator) Object.defineProperty(globalThis, "navigator", { valu
 Object.defineProperty(globalThis.navigator,'locks',{value:{request(name, fn){const task=(locks.get(name)||Promise.resolve()).then(fn);locks.set(name,task.catch(()=>{}));return task;}}});
 globalThis.chrome={storage:{local:{async get(keys){return Object.fromEntries(keys.map(key=>[key,structuredClone(values[key])]));},async set(data){Object.assign(values,structuredClone(data));},async remove(keys){for(const key of Array.isArray(keys)?keys:[keys])delete values[key];}}},runtime:{sendMessage(message){messages.push(message);return Promise.resolve();}}};
 const api=(path,body,method='POST')=>handleApi(path,{method,body});
-async function reset(){ await api('/api/import',{papers:[],tags:[],topicPacks:[]}); await api('/api/settings',{provider:'qwen',maxTagsPerPaper:6,maxTags:80,autoDescribeTags:true,clearQwenKey:true}); messages.length=0; }
+async function reset(){ await api('/api/import',{papers:[],tags:[],topicPacks:[]}); await api('/api/settings',{provider:'qwen',autoDescribeTags:true,clearQwenKey:true}); messages.length=0; }
 async function add(title,manualTags=[],extra={}){return api('/api/papers',{title,manualTags,duplicateAction:'create',...extra});}
 const state=()=>handleApi('/api/state');
 function mockLLM(fn){globalThis.fetch=async (_url, options)=>({ok:true,json:async()=>({choices:[{message:{content:JSON.stringify(await fn(JSON.parse(options.body)))}}]})});}
 async function key(){await api('/api/settings',{qwenKey:'test-only-key'});}
 
-test('save reuses aliases/fullwidth names, avoids accidental fuzzy merging, enforces limits atomically',async()=>{
+test('tag counts are unlimited even with legacy settings; reuse and name validation remain atomic',async()=>{
   await reset();
+  values.paperTagConfig.maxTagsPerPaper=2; values.paperTagConfig.maxTags=2;
   await add('One',['ＲＡＧ','rag','训练']);
   await add('Two',['RAG']);
   let db=await state(); assert.equal(db.tags.filter(t=>!t.system).length,2);
   assert.equal(db.tags.find(t=>t.name.toLowerCase()==='rag').paperIds.length,2);
-  await assert.rejects(add('Overflow',['a','b','c','d','e','f','g']),/最多/);
-  assert.equal((await state()).papers.length,2);
-  await api('/api/settings',{maxTags:2});
-  await assert.rejects(add('Extra',['new']),/上限/);
-  await add('Reuse',['rag']);
-  assert.equal((await state()).papers.length,3);
+  await add('Many tags',Array.from({length:100},(_,i)=>'concept-'+i));
+  db=await state(); assert.equal(db.papers.find(p=>p.title==='Many tags').tagIds.length,100);
+  assert.equal(db.tags.filter(t=>!t.system).length,102);
+  await Promise.all([add('New A',['new-a']),add('New B',['new-b'])]);
+  await assert.rejects(add('Invalid',['x'.repeat(61)]),/60/);
+  assert.equal((await state()).papers.length,5);
+  await api('/api/settings',{maxTags:1,maxTagsPerPaper:1});
+  assert.equal(values.paperTagConfig.maxTags,undefined);
+  await add('Still allowed',['new-c']);
 });
 
 test('simultaneous saves retain both papers and canonicalize the same new tag',async()=>{
@@ -138,18 +142,21 @@ test('concept search accepts only existing non-system tags, deduplicates and lim
 
 test('local CLIs and compatible API share model workflows without exposing credentials', async () => {
   await reset();await add('Paper',['RAG'],{memory:'Ground in evidence'});
-  await api('/api/settings',{provider:'claude',bridgeToken:'test-bridge-secret',claudeModel:'sonnet'});
+  await api('/api/settings',{provider:'claude',bridgeToken:'test-bridge-secret',claudeModel:'sonnet',claudeEffort:'high'});
   globalThis.fetch=async (url,options)=>{
     assert.equal(url,'http://127.0.0.1:39321/v1/generate');
     assert.equal(options.headers.Authorization,'Bearer test-bridge-secret');
-    const body=JSON.parse(options.body);assert.equal(body.provider,'claude');assert.equal(body.model,'sonnet');
+    const body=JSON.parse(options.body);assert.equal(body.provider,'claude');assert.equal(body.model,'sonnet');assert.equal(body.effort,'high');
     const input=JSON.parse(body.messages[1].content);assert.equal(input.tags[0].papers[0].memory,'Ground in evidence');
     return {ok:true,json:async()=>({content:JSON.stringify({descriptions:[{tagId:input.tags[0].id,description:'通过检索外部文档提供事实依据，并减少语言模型在回答时产生的幻觉。'}]}),model:'sonnet'})};
   };
   assert.equal((await api('/api/tags/describe',{force:true})).generated,1);
-  await api('/api/settings',{provider:'codex',codexModel:'default'});
-  globalThis.fetch=async (_url,options)=>{assert.equal(JSON.parse(options.body).provider,'codex');return {ok:true,json:async()=>({content:'pong',model:'default'})};};
-  assert.equal((await api('/api/test-model',{provider:'codex',question:'ping'})).answer,'pong');
+  await api('/api/settings',{provider:'codex',codexModel:'default',codexEffort:'low'});
+  globalThis.fetch=async (_url,options)=>{const body=JSON.parse(options.body);assert.equal(body.provider,'codex');assert.equal(body.effort,'medium');return {ok:true,json:async()=>({content:'pong',model:'default'})};};
+  assert.equal((await api('/api/test-model',{provider:'codex',codexEffort:'medium',question:'ping'})).answer,'pong');
+  assert.equal((await state()).config.codexEffort,'low');
+  assert.equal((await state()).config.claudeEffort,'high');
+  await assert.rejects(api('/api/settings',{claudeEffort:'ultra'}),/effort/);
   await api('/api/settings',{provider:'custom',customModel:'local-model',customBaseUrl:'http://127.0.0.1:11434/v1',customJsonMode:false,customKey:'test-custom-secret'});
   globalThis.fetch=async (url,options)=>{assert.equal(url,'http://127.0.0.1:11434/v1/chat/completions');const body=JSON.parse(options.body);assert.equal(body.model,'local-model');assert.ok(!body.response_format);assert.ok(!Object.hasOwn(body,'temperature'));return {ok:true,json:async()=>({choices:[{message:{content:'pong'}}]})};};
   assert.equal((await api('/api/test-model',{provider:'custom',question:'ping'})).answer,'pong');

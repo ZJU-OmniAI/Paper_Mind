@@ -314,8 +314,6 @@ function sortByNewest(items) {
 function publicConfig(config) {
   return {
     provider: normalizeProvider(config.provider),
-    maxTagsPerPaper: config.maxTagsPerPaper,
-    maxTags: config.maxTags,
     autoDescribeTags: config.autoDescribeTags !== false,
     qwenModel: config.qwenModel,
     qwenBaseUrl: config.qwenBaseUrl,
@@ -331,6 +329,7 @@ function publicConfig(config) {
     hasDeepseekKey: Boolean(config.deepseekKey),
     bridgeUrl: config.bridgeUrl, hasBridgeToken: Boolean(config.bridgeToken),
     claudeModel: config.claudeModel, codexModel: config.codexModel,
+    claudeEffort: config.claudeEffort, codexEffort: config.codexEffort,
     customModel: config.customModel, customBaseUrl: config.customBaseUrl,
     customJsonMode: config.customJsonMode, hasCustomKey: Boolean(config.customKey),
     modelCatalog: publicModelCatalog(config)
@@ -643,17 +642,11 @@ function rebuildPaperTagLinks(store) {
   }
 }
 
-function setPaperTags(store, paper, tagNames, { preserveExisting = false } = {}) {
-  const policy = storePolicies.get(store) || DEFAULT_TAG_POLICY;
+function setPaperTags(store, paper, tagNames) {
   const incoming = splitManualTags(tagNames);
   const semantic = incoming.filter((name) => !isSystemTag(findExistingTag(store.tags, name)));
-  const canonical = new Set(semantic.map((name) => findExistingTag(store.tags, name)?.id || tagKey(name)));
-  const allowed = Math.max(policy.maxTagsPerPaper, (paper.tagIds || []).length);
-  if (!preserveExisting && canonical.size > allowed) throw new Error(`每篇论文最多 ${allowed} 个标签，请保留核心概念，细节可写入对话记录。`);
   const newNames = semantic.filter((name) => !findExistingTag(store.tags, name));
   if (newNames.some((name) => name.length > 60)) throw new Error("标签名称最多 60 个字符，请使用简短概念。 ");
-  const count = store.tags.filter((tag) => !isSystemTag(tag)).length;
-  if (newNames.length && count + newNames.length > policy.maxTags) throw new Error(`标签库上限为 ${policy.maxTags} 个，请复用已有标签、合并同义标签，或在设置中调整上限。`);
   ensureSystemTags(store);
   detachPaperFromAllTags(store, paper.id);
   paper.tagIds = [];
@@ -675,7 +668,7 @@ function tagNamesForPaper(store, paper) {
 }
 
 function mergePaperTags(store, paper, tagNames) {
-  setPaperTags(store, paper, uniq([...tagNamesForPaper(store, paper), ...splitManualTags(tagNames)]), { preserveExisting: true });
+  setPaperTags(store, paper, uniq([...tagNamesForPaper(store, paper), ...splitManualTags(tagNames)]));
 }
 
 function extractSourceUrl(input) {
@@ -1382,9 +1375,10 @@ async function callLLM(config, messages, { temperature = 0.2, json = true, retur
   const providerInfo = PROVIDERS[provider];
   if (isLocalProvider(provider)) {
     const model = config[providerInfo.modelField] || "default";
-    const result = await bridgeRequest(config, "/v1/generate", { provider, model, messages, json });
+    const effort = config[provider + "Effort"] || "default";
+    const result = await bridgeRequest(config, "/v1/generate", { provider, model, effort, messages, json });
     const content = json ? parseJsonContent(result.content) : result.content;
-    return returnMeta ? { content, meta: { provider, requestedModel: model, responseModel: result.model || "", endpoint: config.bridgeUrl, responseId: "" } } : content;
+    return returnMeta ? { content, meta: { provider, effort, requestedModel: model, responseModel: result.model || "", endpoint: config.bridgeUrl, responseId: "" } } : content;
   }
   const apiKey = config[providerInfo.keyField];
   const model = config[providerInfo.modelField];
@@ -1839,7 +1833,6 @@ async function migrateLegacyChromeStorageStore() {
 }
 
 const storeSnapshots = new WeakMap();
-const storePolicies = new WeakMap();
 const storeLock = (run) => navigator.locks.request("paper-mind-store-write", run);
 
 async function readAll() {
@@ -1848,7 +1841,6 @@ async function readAll() {
   const store = await readStoreFromIndexedDb();
   const config = { ...DEFAULT_CONFIG, ...(values[CONFIG_KEY] || {}) };
   storeSnapshots.set(store, clone(store));
-  storePolicies.set(store, config);
   return { store, config };
 }
 
@@ -1874,10 +1866,6 @@ async function writeStore(store) {
       const key = tagKey(tag.name);
       if (seen.has(key)) mergeTagGroup(next, { canonical: seen.get(key).name, tags: [tag.name], sourceIds: [tag.id] });
       else seen.set(key, tag);
-    }
-    const policy = storePolicies.get(store);
-    if (base && policy && next.tags.filter((tag) => !isSystemTag(tag)).length > Math.max(policy.maxTags, current.tags.filter((tag) => !isSystemTag(tag)).length)) {
-      throw new Error("标签数量已达到上限，请复用已有标签或调整设置。");
     }
     for (const tag of next.tags) {
       if (isSystemTag(tag)) continue;
@@ -2082,14 +2070,8 @@ export async function handleApi(path, options = {}) {
       if (body.clearZhipuKey) patched.zhipuKey = "";
       if (body.clearKimiKey) patched.kimiKey = "";
       if (body.clearDeepseekKey) patched.deepseekKey = "";
-      for (const field of ["maxTagsPerPaper", "maxTags"]) {
-        if (Object.hasOwn(body, field)) {
-          const max = field === "maxTags" ? 500 : 20;
-          const value = Number(body[field]);
-          if (!Number.isInteger(value) || value < 1 || value > max) throw new Error(`标签上限必须为 1–${max} 的整数`);
-          patched[field] = value;
-        }
-      }
+      delete patched.maxTagsPerPaper;
+      delete patched.maxTags;
       if (typeof body.autoDescribeTags === "boolean") patched.autoDescribeTags = body.autoDescribeTags;
       patched = extraConfig(patched, body);
       for (const info of Object.values(PROVIDERS)) validatedModelUrl(patched[info.baseUrlField]);
@@ -2111,6 +2093,10 @@ export async function handleApi(path, options = {}) {
     });
     await cacheModelCatalog(provider, catalog);
     return response(200, catalog);
+  }
+
+  if (method === "POST" && url.pathname === "/api/local-models") {
+    return response(200, await bridgeRequest(extraConfig(config, await parseBody(options)), "/models?refresh=1"));
   }
 
   if (method === "POST" && url.pathname === "/api/bridge-health") {
