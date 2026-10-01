@@ -8,7 +8,7 @@
 
 <p>Organize papers with tags. Explore them with AI assistance. Lightweight capture, simple organization.</p>
 
-[![Version](https://img.shields.io/badge/version-1.4.0-0c7d72.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-1.5.0-0c7d72.svg)](CHANGELOG.md)
 [![Chrome Extension](https://img.shields.io/badge/Chrome-Manifest_V3-4285F4.svg)](extension/manifest.json)
 [![License](https://img.shields.io/badge/license-Apache_2.0-0c7d72.svg)](LICENSE)
 
@@ -48,13 +48,13 @@ Search works across names, aliases and descriptions. **Reuse the existing tag** 
 
 <p align="center"><img src="assets/screenshots/step-02-tag-search-en.png" width="400" alt="Step 2: searching agent finds the existing Agents tag with a description of its scope"></p>
 
-### 03 · Add a reason to revisit it, then save
+### 03 · Remember it in one sentence and set its reading status
 
-Search for **evaluation** and select **Evaluation** as the second tag. Set the score to **4.5** and add a reading note about verifying evidence after tool use. Click **Save to Library** when ready.
+Also select **Evaluation**, set a **4.5** score, and write: “Check tool evidence before an agent answers questions about a paper.” Choose **Reading** as the status. Longer discussion points can stay in the notes. Then click **Save to library**.
 
-You can organize later: saving without tags places the paper in **Unsorted**.
+The memory sentence captures your own impression in up to 280 characters. Reading status has its own field, so “Read” and “To read” need not become topic tags. Saving without topic tags is also possible: the paper goes to Unsorted.
 
-<p align="center"><img src="assets/screenshots/step-03-ready-to-save-en.png" width="400" alt="Step 3: the same paper has Agents and Evaluation tags, a 4.5 score and a reading note, ready to save"></p>
+<p align="center"><img src="assets/screenshots/step-03-ready-to-save-en.png" width="400" alt="A memory sentence, Reading status, two topic tags and a 4.5 score before saving"></p>
 
 ### 04 · Confirm that the paper was saved
 
@@ -70,21 +70,23 @@ In **Paper Library**, sort by **Recently added**. The new paper appears first, w
 
 ![Step 5: the library contains nine papers, with Reading Papers with Evidence-Aware Agents first](assets/screenshots/step-05-library-en.png)
 
-### 06 · Forgot the title? Search the tags on the right
+### 06 · Forgot the title? Start with a remembered concept
 
-Imagine coming back a few days later and only remembering that the paper involved agents. Type **agent** into **Find tags or descriptions** on the right. Check the **Agents** description and its linked-paper count.
+In **What do you remember?**, type “agents that read papers”. Local matching immediately searches existing tag names, aliases and descriptions. Each candidate shows its description and paper count.
 
-Typing here narrows the **tag choices**. The paper list still contains all nine papers; clicking the tag in the next step applies the paper filter.
+For a looser memory, such as “answering with evidence and fewer hallucinations”, click **Match existing tags with AI**. The model also considers linked paper titles and memory sentences, returning up to six existing tags with reasons. **Searching never creates tags.** If the model is unavailable, local matches remain available.
 
-![Step 6: the right-hand tag search shows only Agents, while the paper list remains unfiltered](assets/screenshots/step-06-find-tag-en.png)
+This screenshot shows local matching before choosing a tag; all nine papers remain in the library.
 
-### 07 · Click Agents: nine papers become three
+![A remembered concept matches the existing Agents tag, with its description](assets/screenshots/step-06-find-tag-en.png)
 
-Click the **Agents** tag on the right. It appears among the active filters, and the library shows only the **three linked papers**, including the one you just saved.
+### 07 · Choose Agents: nine papers become three
 
-Too many results in your own collection? Change the right-hand tag search to **evaluation**, then select **Evaluation** with all-tag matching. You can also type a keyword in the paper search field on the left. **Clear filters** returns to the full library.
+Click **Agents → View papers** to see the **three** linked papers, including the one just saved. The selected tag appears in the filter row. The remembered sentence does not remain as a literal full-text constraint.
 
-![Step 7: selecting Agents adds an active filter and narrows nine papers to three, including the newly saved paper](assets/screenshots/step-07-tag-results-en.png)
+Choose additional tags and match all or any, then narrow by reading status or score. A separate full-text search remains available for remembered titles and exact keywords. **Clear filters** returns to the full library.
+
+![The Agents tag leads to three saved papers, including the original memory sentence](assets/screenshots/step-07-tag-results-en.png)
 
 ### 08 · Open the paper and recover your reading notes
 
@@ -153,11 +155,40 @@ Use packs for a reading group, related-work section or ongoing research directio
 | Topic packs and shared-tag paper matches | Content-based recommendations from your library |
 | JSON import/export and backup | Suggestions for merging synonymous tags |
 
-Supports **Qwen / DashScope, Zhipu GLM, Kimi Code and DeepSeek**, with configurable models and base URLs.
+Supports signed-in local **Claude Code and Codex**, **Qwen / DashScope, Zhipu GLM, Kimi Code and DeepSeek**, plus a **generic OpenAI-compatible API**. The selected backend powers concept matching, tag descriptions, translation and recommendations.
 
-Your library is stored on your machine, with no account required. **After configuring an API key, automatic tag descriptions, abstract translation and new-paper recommendations may send relevant text to your selected provider in the background.** You can disable automatic tag descriptions in Settings. Descriptions use excerpts from up to six linked papers; they do not imply the model has read an entire PDF. API keys are excluded from JSON exports and backups.
+Your library is stored on your machine, with no account required. **After connecting a local CLI or an API, automatic tag descriptions, abstract translation and new-paper recommendations may send relevant text to your selected model service in the background. A local CLI does not imply offline inference.** You can disable automatic tag descriptions in Settings. Descriptions use excerpts from up to six linked papers; they do not imply the model has read an entire PDF. API keys and bridge tokens are excluded from JSON exports and backups.
 
 Also included: English and Simplified Chinese interfaces, system-aware dark mode, citation lookup and a daily JSON backup scheduled for 4 PM. Chrome must be running; larger libraries should also use manual export. See the [feature guide](docs/features.zh-CN.md) and [privacy policy](PRIVACY.md) for details.
+
+## Reading progress belongs in its own field
+
+**To read → Reading → Read → Revisit** can be set during capture, updated directly in paper details, and filtered in the library. These states do not consume topic tags. Memory sentences are searchable and provide context for AI tag matching and descriptions.
+
+Legacy records receive an empty memory and “To read”; existing tags remain intact and are not interpreted as progress. Merging sources preserves the target paper's progress and keeps additional memories in its notes. JSON backups preserve both new fields.
+
+![Filter papers by Reading status and recognize them by their memory sentences](assets/screenshots/reading-status-en.png)
+
+## Connect Claude Code, Codex, or another model API
+
+Following the approach used by LLM_in_Word, the optional local path is **extension → loopback bridge → signed-in CLI**. Basic capture and local search remain independent of this service.
+
+1. Install Node.js (22 or newer recommended) and your preferred CLI; sign in using `claude auth login` or `codex login`.
+2. From the downloaded or cloned **Paper_Mind project root**, run:
+
+   ```bash
+   npm run bridge
+   ```
+
+   The bridge uses Node built-ins; project development dependencies are not required.
+3. In **Manager → Model settings → Claude Code / Codex**, paste the URL and token printed in the terminal. Click **Check local connection**.
+4. Use `default` or an available model ID. **Save settings**, then **Test model**. Keep the terminal open; press `Ctrl+C` to stop the service.
+
+![Local model settings guide users through CLI login, bridge startup and connection checks](assets/screenshots/local-models-en.png)
+
+The bridge binds only to `127.0.0.1`, validates a token and bounds concurrent calls. Its token is stored in `~/.paper-mind/bridge-token` and survives restarts. For an API, choose **Compatible API**, enter a base URL, model ID and key; local compatible servers may omit the key. JSON mode is off by default and can be enabled for providers that support it.
+
+Only Chat Completions-compatible APIs are supported; native Anthropic Messages / Responses APIs are not translated automatically. A successful CLI check confirms installation and login; actual calls still depend on model access, network and account limits. See [local model setup and troubleshooting](docs/local-models.md).
 
 ## Get started
 
@@ -170,7 +201,7 @@ Also included: English and Simplified Chinese interfaces, system-aware dark mode
 
 **Already installed?** Update your local files, click **↻ Reload** on the extension card and reopen the manager. No uninstall is needed.
 
-**Want AI descriptions?** Add an API key in **Manager → Model settings**, then update descriptions in the Tag Library.
+**Want AI descriptions?** Connect a local CLI or API in **Manager → Model settings**, save, then update descriptions in the Tag Library.
 
 **Want to view saved images?** Enable **Allow access to file URLs** in the extension's details.
 

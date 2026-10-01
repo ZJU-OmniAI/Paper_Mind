@@ -1,5 +1,6 @@
-import { DEFAULT_TAG_POLICY, tagKey as canonicalTagKey, splitTags, suggestTags, paperSearchScore, matchesText, safeWebUrl } from "./library-tools.js";
+import { normalizeReadingStatus, readingStatusLabel, conceptTagMatches, DEFAULT_TAG_POLICY, tagKey as canonicalTagKey, splitTags, suggestTags, paperSearchScore, matchesText, safeWebUrl } from "./library-tools.js";
 import { handleApi } from "./storage.js";
+import { renderWorkflowLabels } from "./workflow-ui.js";
 
 const VALUE_SCORE_LABELS = {
   zh: {
@@ -29,6 +30,7 @@ const state = {
   activePaperId: null,
   searchTagId: null,
   paperLlmSearch: null,
+  conceptSearch: null, conceptRequest: 0,
   libraryTagIds: [],
   libraryPage: 1,
   libraryTagLimit: 16,
@@ -376,7 +378,7 @@ const translations = {
     tagDetail: "标签详情",
     clickTag: "点击左侧标签",
     modelSettings: "模型设置",
-    apiKeyLocal: "API Key 仅保存在 Chrome 插件本地存储",
+    apiKeyLocal: "API Key 和连接码仅保存在本机",
     defaultModel: "默认模型",
     saveSettings: "保存设置",
     testModel: "测试模型",
@@ -399,7 +401,7 @@ const translations = {
     modelsRefreshFailed: (name, message) => `${name} 拉取失败：${message}`,
     modelsRefreshNoKey: (name) => `${name} 还没有 API Key，先填 Key 再拉取`,
     dataTransfer: "数据导入 / 导出",
-    dataTransferHint: "从本地 JSON 导入到 Chrome，或从 Chrome 导出本地备份。API Key 不会被导出。",
+    dataTransferHint: "从本地 JSON 导入到 Chrome，或从 Chrome 导出本地备份。API Key 和连接码不会被导出。",
     exportData: "从 Chrome 导出本地 JSON",
     importData: "本地 JSON 导入 Chrome",
     dataExported: (paperCount, tagCount) => `已从 Chrome 导出 ${paperCount} 篇论文、${tagCount} 个标签`,
@@ -632,7 +634,7 @@ const translations = {
     tagDetail: "Tag Detail",
     clickTag: "Click a tag on the left",
     modelSettings: "Model Settings",
-    apiKeyLocal: "API keys are stored locally in Chrome extension storage",
+    apiKeyLocal: "API keys and bridge tokens stay on this device",
     defaultModel: "Default Model",
     saveSettings: "Save Settings",
     testModel: "Test Model",
@@ -655,7 +657,7 @@ const translations = {
     modelsRefreshFailed: (name, message) => `${name} fetch failed: ${message}`,
     modelsRefreshNoKey: (name) => `${name} has no API key yet; add one before fetching`,
     dataTransfer: "Data Import / Export",
-    dataTransferHint: "Import a local JSON file into Chrome, or export a local JSON backup from Chrome. API keys are not exported.",
+    dataTransferHint: "Import a local JSON file into Chrome, or export a local JSON backup from Chrome. API keys and bridge tokens are not exported.",
     exportData: "Export Chrome to Local JSON",
     importData: "Import Local JSON to Chrome",
     dataExported: (paperCount, tagCount) => `Exported ${paperCount} papers and ${tagCount} tags from Chrome`,
@@ -731,13 +733,15 @@ const translations = {
 
 const ui = (zh, en) => state.language === "en" ? en : zh;
 function renderLibraryLabels() {
+  renderWorkflowLabels(state.language);
   const labels = {
     libraryEyebrow: ["从记忆中的概念出发", "START WITH WHAT YOU REMEMBER"],
     libraryHeading: ["通过脑海中的标签，找到你的论文", "Find your papers through the tags you remember"],
     libraryHint: ["从记得的关键词或概念开始，搜索并选择标签，找回读过的论文。", "Start with a keyword or concept you remember. Search and select tags to find papers you have read."],
     libraryAddPaper: ["＋ 添加论文", "+ Add paper"],
     clearLibraryFilters: ["清除筛选", "Clear filters"],
-    librarySearchHelp: ["多个关键词用空格分隔；英文短语可加双引号。⌘ / Ctrl K 快速搜索", 'Separate keywords with spaces; use quotes for phrases. ⌘ / Ctrl K to search'],
+    librarySearchHelp: ["空格分隔关键词，英文短语可加双引号。⌘ / Ctrl K 从概念开始", 'Separate keywords with spaces; quote phrases. ⌘ / Ctrl K to recall a concept'],
+    paperLibraryLlmSearchButton: ["AI 找论文", "AI paper search"],
     tagHealthTitle: ["让标签保持精简", "A focused tag library"],
     describeTagsButton: ["补全 / 更新标签说明", "Update tag descriptions"],
     tagPolicyLegend: ["标签管理", "Tag management"],
@@ -751,7 +755,8 @@ function renderLibraryLabels() {
     if (el && !el.disabled) el.textContent = ui(...text);
   }
   document.getElementById("libraryTagFilter").placeholder = ui("查找标签或标签说明", "Find tags or descriptions");
-  els.paperLibraryFilter.placeholder = ui("搜索标题、标签、说明与正文…", "Search titles, tags, descriptions and content…");
+  els.paperLibraryFilter.placeholder = ui("直接搜论文标题、记忆句或正文…", "Search paper titles, memory sentences or content…");
+  els.paperLibraryFilter.setAttribute("aria-label", ui("直接搜索论文", "Search papers directly"));
   document.getElementById("libraryMatchMode").options[0].textContent = ui("包含全部所选标签", "Match all selected tags");
   document.getElementById("libraryMatchMode").options[1].textContent = ui("包含任一所选标签", "Match any selected tag");
   document.getElementById("libraryMinScore").options[0].textContent = ui("全部评分", "Any score");
@@ -2080,6 +2085,12 @@ function autoRefreshModelCatalogs() {
 
 function renderModelStatus() {
   const cfg = state.config;
+  if (["claude", "codex", "custom"].includes(cfg.provider)) {
+    const name = cfg.provider === "claude" ? "Claude Code" : cfg.provider === "codex" ? "Codex" : ui("兼容 API", "Compatible API");
+    const configured = cfg.provider === "custom" ? !!cfg.customModel : cfg.hasBridgeToken;
+    els.modelStatus.textContent = configured ? name + " · " + (cfg[cfg.provider + "Model"] || "default") : name + ui(" · 待连接", " · Not connected");
+    return;
+  }
   const view = PROVIDER_VIEWS[cfg.provider] || PROVIDER_VIEWS.qwen;
   els.modelStatus.textContent = cfg[view.hasKeyField] ? t("modelConfigured", view.name, cfg[view.modelField]) : t("modelMissing", view.name);
 }
@@ -2101,6 +2112,10 @@ function renderTagCurationStatus() {
 
 function renderSettings() {
   const cfg = state.config;
+  for (const id of ["bridgeUrl", "claudeModel", "codexModel", "customModel", "customBaseUrl"]) document.getElementById(id).value = cfg[id] || "";
+  document.getElementById("bridgeToken").placeholder = cfg.hasBridgeToken ? ui("已保存，留空不修改", "Saved; leave blank to keep") : ui("粘贴桥接终端显示的连接码", "Paste the token printed by the bridge");
+  document.getElementById("customKey").placeholder = cfg.hasCustomKey ? t("keySavedPlaceholder") : t("keyMissingPlaceholder");
+  document.getElementById("customJsonMode").checked = cfg.customJsonMode === true;
   document.getElementById("maxTagsPerPaper").value = cfg.maxTagsPerPaper || DEFAULT_TAG_POLICY.maxTagsPerPaper;
   document.getElementById("maxTags").value = cfg.maxTags || DEFAULT_TAG_POLICY.maxTags;
   document.getElementById("autoDescribeTags").checked = cfg.autoDescribeTags !== false;
@@ -2120,6 +2135,7 @@ function renderSettings() {
     els[`${provider}Key`].placeholder = cfg[view.hasKeyField] ? t("keySavedPlaceholder") : t("keyMissingPlaceholder");
   }
   renderModelPickers();
+  renderBackendPanels();
 }
 
 function renderPapers(target = els.paperList, papers = state.papers) {
@@ -2136,6 +2152,7 @@ function renderPapers(target = els.paperList, papers = state.papers) {
         <article class="paper-card" data-open-paper-id="${escapeHtml(paper.id)}" role="button" tabindex="0" aria-label="${escapeHtml(paper.title)}">
           ${paperTitleHtml(paper)}
           ${paperCardMetaHtml(paper)}
+          ${paperMemoryHtml(paper)}
           <p>${escapeHtml(truncate(paper.abstract || t("noAbstract")))}</p>
           <div class="chip-row">
             ${tags.map((tag) => `<button type="button" class="tag-chip" data-library-tag-id="${escapeHtml(tag.id)}" title="${escapeHtml(tagDescriptionLabel(tag))}">${escapeHtml(tag.name)}</button>`).join("")}
@@ -2302,7 +2319,8 @@ function renderPaperLibrary() {
   const selected = state.libraryTagIds;
   const matchMode = document.getElementById("libraryMatchMode").value;
   const minScore = Number(document.getElementById("libraryMinScore").value);
-  const facetMatch = (paper) => (!minScore || Number(paper.valueScore) >= minScore) && (!selected.length || (matchMode === "all" ? selected.every((id) => paper.tagIds?.includes(id)) : selected.some((id) => paper.tagIds?.includes(id))));
+  const readingStatus = document.getElementById("libraryReadingStatus").value;
+  const facetMatch = (paper) => (!readingStatus || normalizeReadingStatus(paper.readingStatus) === readingStatus) && (!minScore || Number(paper.valueScore) >= minScore) && (!selected.length || (matchMode === "all" ? selected.every((id) => paper.tagIds?.includes(id)) : selected.some((id) => paper.tagIds?.includes(id))));
   const llm = state.paperLlmSearch;
   let matches = [];
   let papers;
@@ -2322,7 +2340,7 @@ function renderPaperLibrary() {
   const note = llm && !llm.llmUsed ? `<p class="search-notice">${escapeHtml(t("llmSearchFallback", llm.error))}</p>` : "";
   els.paperLibraryList.innerHTML = note + (papers.length ? (llm ? renderLlmPaperMatchesHtml(matches.slice((state.libraryPage - 1) * pageSize, state.libraryPage * pageSize)) : !query && els.paperLibrarySort.value === "similar" ? renderPaperClustersHtml(clusterPapersByTags(page)) : renderPaperCardsHtml(page, { includeTags: true })) : `<div class="library-empty"><span class="empty-symbol">⌕</span><h4>${ui(state.papers.length ? "没有找到匹配论文" : "从第一篇论文开始", state.papers.length ? "No matching papers" : "Start with your first paper")}</h4><p>${ui(state.papers.length ? "试试更短的关键词，或移除部分标签和评分筛选。" : "添加论文、摘要和核心标签，让研究积累变得有序。", state.papers.length ? "Try a shorter query or remove a filter." : "Save a paper, its abstract and a few useful tags.")}</p><button type="button" class="secondary-button" data-library-empty>${ui(state.papers.length ? "清除筛选" : "添加论文", state.papers.length ? "Clear filters" : "Add paper")}</button></div>`);
   document.getElementById("activeLibraryFilters").innerHTML = selected.map((id) => `<button class="tag-chip selected" type="button" data-library-tag-id="${escapeHtml(id)}" title="${escapeHtml(tagDescriptionLabel(tagById(id)))}">${escapeHtml(tagById(id).name)} ×</button>`).join("");
-  document.getElementById("clearLibraryFilters").hidden = !query && !selected.length && !minScore && !llm;
+  document.getElementById("clearLibraryFilters").hidden = !query && !selected.length && !minScore && !llm && !readingStatus && !document.getElementById("conceptQuery").value;
   document.getElementById("libraryPagination").innerHTML = pages > 1 ? `<button type="button" class="secondary-button small-button" data-library-page="${state.libraryPage - 1}" ${state.libraryPage === 1 ? "disabled" : ""}>${ui("上一页", "Previous")}</button><span>${state.libraryPage} / ${pages}</span><button type="button" class="secondary-button small-button" data-library-page="${state.libraryPage + 1}" ${state.libraryPage === pages ? "disabled" : ""}>${ui("下一页", "Next")}</button>` : "";
   document.querySelectorAll("[data-paper-library-mode]").forEach((button) => button.classList.toggle("active", button.dataset.paperLibraryMode === state.paperLibraryMode));
   els.paperLibraryListMode.classList.toggle("is-hidden", state.paperLibraryMode !== "list");
@@ -2335,6 +2353,7 @@ function renderPaperLibrary() {
   more.hidden = tags.length <= state.libraryTagLimit;
   more.textContent = ui(`显示更多（还有 ${Math.max(0, tags.length - state.libraryTagLimit)} 个）`, `Show more (${Math.max(0, tags.length - state.libraryTagLimit)} remaining)`);
   renderPaperMap();
+  renderConceptResults();
 }
 
 function renderPaperClustersHtml(clusters) {
@@ -3026,6 +3045,10 @@ function renderPaperDetail(paperId) {
   els.paperDetailConversation.innerHTML = renderMarkdown(paper.conversation);
   updateConversationCollapse();
   renderPaperLinks(paper);
+  document.getElementById("detailMemory").value = paper.memory || "";
+  document.getElementById("paperDetailMemory").textContent = paper.memory || ui("还没留下记忆句，点击编辑补上一句。", "Add a memory sentence using Edit.");
+  document.getElementById("detailReadingStatus").value = normalizeReadingStatus(paper.readingStatus);
+  document.getElementById("detailQuickStatus").value = normalizeReadingStatus(paper.readingStatus);
   els.paperDetailTitleInput.value = paper.title || "";
   els.paperDetailValueScore.value = String(paperValueScore(paper, 3));
   renderValueScore(els.paperDetailValueScore, els.paperDetailValueScoreText);
@@ -3385,6 +3408,10 @@ async function mergeTags(merge) {
   return Number(result.mergeCount || 0);
 }
 
+function paperMemoryHtml(paper) {
+  return '<div class="paper-memory-row"><span class="reading-badge status-' + normalizeReadingStatus(paper.readingStatus) + '">' + readingStatusLabel(paper.readingStatus, state.language) + '</span>' + (paper.memory ? '<p class="paper-memory">' + escapeHtml(paper.memory) + '</p>' : '') + '</div>';
+}
+
 function renderPaperCardsHtml(papers, { includeTags = false } = {}) {
   if (!papers.length) return `<div class="empty">${escapeHtml(t("noPapers"))}</div>`;
   return papers
@@ -3395,6 +3422,7 @@ function renderPaperCardsHtml(papers, { includeTags = false } = {}) {
           <article class="paper-card" data-open-paper-id="${escapeHtml(paper.id)}" role="button" tabindex="0" aria-label="${escapeHtml(paper.title)}">
             ${paperTitleHtml(paper)}
             ${paperCardMetaHtml(paper)}
+          ${paperMemoryHtml(paper)}
             <p>${escapeHtml(truncate(paper.abstract || t("noAbstract")))}</p>
             ${includeTags ? `<div class="chip-row">${tags.map((tag) => `<button type="button" class="tag-chip" data-library-tag-id="${escapeHtml(tag.id)}" title="${escapeHtml(tagDescriptionLabel(tag))}">${escapeHtml(tag.name)}</button>`).join("")}</div>` : ""}
             ${paperCardActions(paper)}
@@ -3442,13 +3470,16 @@ function clearLibraryFilters() {
   state.libraryTagIds = []; state.libraryPage = 1; state.paperLlmSearch = null; state.searchRequest++;
   els.paperLibraryFilter.value = "";
   document.getElementById("libraryMinScore").value = "0";
+  document.getElementById("libraryReadingStatus").value = "";
+  document.getElementById("conceptQuery").value = "";
+  state.conceptSearch = null; state.conceptRequest++;
   document.getElementById("libraryTagFilter").value = "";
   renderPaperLibrary();
 }
 
 document.getElementById("libraryAddPaper").addEventListener("click", () => { switchView("library"); document.getElementById("paperTitle").focus(); });
 document.getElementById("clearLibraryFilters").addEventListener("click", clearLibraryFilters);
-for (const id of ["libraryMatchMode", "libraryMinScore"]) document.getElementById(id).addEventListener("change", () => { state.libraryPage = 1; renderPaperLibrary(); });
+for (const id of ["libraryMatchMode", "libraryMinScore", "libraryReadingStatus"]) document.getElementById(id).addEventListener("change", () => { state.libraryPage = 1; renderPaperLibrary(); });
 document.getElementById("libraryTagFilter").addEventListener("input", () => { state.libraryTagLimit = 16; renderPaperLibrary(); });
 document.getElementById("showMoreLibraryTags").addEventListener("click", () => { state.libraryTagLimit += 16; renderPaperLibrary(); });
 document.body.addEventListener("click", (event) => {
@@ -3468,7 +3499,7 @@ document.body.addEventListener("click", (event) => {
 document.addEventListener("keydown", (event) => {
   if (event.isComposing) return;
   if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k" && !document.querySelector("dialog[open]")) {
-    event.preventDefault(); state.paperLibraryMode = "list"; switchView("papers"); renderPaperLibrary(); els.paperLibraryFilter.focus(); els.paperLibraryFilter.select(); return;
+    event.preventDefault(); state.paperLibraryMode = "list"; switchView("papers"); renderPaperLibrary(); document.getElementById("conceptQuery").focus(); document.getElementById("conceptQuery").select(); return;
   }
   const input = event.target.closest(".manual-tag-input");
   if (input) {
@@ -3539,6 +3570,8 @@ function collectPaperForm() {
     title: document.querySelector("#paperTitle").value.trim(),
     abstract: document.querySelector("#paperAbstract").value.trim(),
     conversation: document.querySelector("#paperConversation").value.trim(),
+    memory: document.getElementById("paperMemory").value.trim(),
+    readingStatus: document.getElementById("paperReadingStatus").value,
     valueScore: normalizeValueScore(els.paperValueScore.value),
     manualTags: collectManualTags()
   };
@@ -3558,6 +3591,7 @@ async function chooseDuplicateAction(payload) {
 
 function collectSettingsForm() {
   const payload = {
+    ...collectExtraSettings(),
     maxTagsPerPaper: Number(document.getElementById("maxTagsPerPaper").value),
     maxTags: Number(document.getElementById("maxTags").value),
     autoDescribeTags: document.getElementById("autoDescribeTags").checked,
@@ -3614,7 +3648,7 @@ document.body.addEventListener("focusin", (event) => {
   renderTagSuggestions(input);
   syncState({ force: true })
     .then(() => {
-      if (document.activeElement === input) renderTagSuggestions(input);
+      if (document.activeElement === input && input.getAttribute("aria-expanded") === "true") renderTagSuggestions(input);
     })
     .catch(() => {});
 });
@@ -3919,6 +3953,8 @@ els.paperDetailTagForm.addEventListener("submit", async (event) => {
         title,
         abstract: els.paperDetailAbstractInput.value.trim(),
         conversation: els.paperDetailConversationInput.value.trim(),
+        memory: document.getElementById("detailMemory").value.trim(),
+        readingStatus: document.getElementById("detailReadingStatus").value,
         valueScore: normalizeValueScore(els.paperDetailValueScore.value),
         manualTags
       })
@@ -4680,6 +4716,8 @@ els.settingsForm.addEventListener("submit", async (event) => {
       })
     });
     state.config = result.config;
+    for (const id of ["bridgeToken", "customKey"]) document.getElementById(id).value = "";
+    for (const id of ["clearBridgeToken", "clearCustomKey"]) document.getElementById(id).checked = false;
     els.qwenKey.value = "";
     els.zhipuKey.value = "";
     els.kimiKey.value = "";
@@ -4920,3 +4958,92 @@ loadState()
     chrome.runtime.sendMessage({ type: "auto-describe-tags" }).catch(() => {});
   })
   .catch((err) => toast(err.message));
+
+function renderConceptResults() {
+  const query = document.getElementById('conceptQuery').value.trim();
+  const result = state.conceptSearch?.query === query ? state.conceptSearch : null;
+  const matches = result ? result.matches : query ? conceptTagMatches(state.tags, query) : [...state.tags].filter(tag => !isSystemTag(tag)).sort(compareTags).slice(0, 6).map(tag => ({ tagId: tag.id }));
+  document.getElementById('conceptHint').textContent = result
+    ? (result.llmUsed ? ui('AI 找到了这些已有标签。选择一个或多个，查看对应论文。', 'AI matched these existing tags. Choose one or more to see their papers.') : ui('AI 暂不可用，以下是本地匹配：', 'AI unavailable; showing local matches: ') + result.error)
+    : query ? ui('先匹配标签名称、别名和说明；描述比较模糊时，可让 AI 理解概念。', 'Matching names, aliases and descriptions. Use AI for a loosely remembered concept.') : ui('从脑海中的一个概念开始，或直接选择常用标签。阅读进度单独筛选。', 'Start with a concept, or choose a frequently used tag. Filter reading progress separately.');
+  document.getElementById('conceptResults').innerHTML = matches.map(match => {
+    const tag = tagById(match.tagId);
+    if (!tag || isSystemTag(tag)) return '';
+    const selected = state.libraryTagIds.includes(tag.id);
+    return `<button type="button" class="concept-tag ${selected ? 'selected' : ''}" data-concept-tag-id="${escapeHtml(tag.id)}" aria-pressed="${selected}"><span class="concept-tag-title"><strong>${escapeHtml(tag.name)}</strong><span>${tag.paperIds?.length || 0} ${ui('篇', 'papers')}</span></span><small>${escapeHtml(tagDescriptionLabel(tag))}</small>${match.reason ? `<span class="concept-reason">${escapeHtml(match.reason)}</span>` : ''}<span class="concept-action">${selected ? ui('已选择 ✓', 'Selected ✓') : ui('查看论文 →', 'View papers →')}</span></button>`;
+  }).join('') || `<p class="concept-empty">${ui('还没有匹配的已有标签。换一个概念或试试 AI 匹配；检索不会创建新标签。', 'No existing tags matched. Try another concept or AI matching; searching never creates tags.')}</p>`;
+}
+
+document.getElementById('conceptQuery').addEventListener('input', () => {
+  state.conceptRequest++; state.conceptSearch = null;
+  renderConceptResults();
+  document.getElementById('clearLibraryFilters').hidden = false;
+});
+document.getElementById('conceptForm').addEventListener('submit', async event => {
+  event.preventDefault();
+  const query = document.getElementById('conceptQuery').value.trim();
+  if (!query) { document.getElementById('conceptQuery').focus(); return; }
+  const request = ++state.conceptRequest;
+  const button = document.getElementById('conceptSearchButton');
+  const done = setBusy(button, ui('正在理解概念…', 'Understanding…'));
+  document.getElementById('conceptResults').setAttribute('aria-busy', 'true');
+  try {
+    const result = await api('/api/search', { method: 'POST', body: JSON.stringify({ query }) });
+    if (request !== state.conceptRequest || query !== document.getElementById('conceptQuery').value.trim()) return;
+    state.conceptSearch = { query, ...result };
+    renderConceptResults();
+  } catch (error) { if (request === state.conceptRequest) toast(error.message); }
+  finally { done(); document.getElementById('conceptResults').setAttribute('aria-busy', 'false'); }
+});
+document.getElementById('conceptResults').addEventListener('click', event => {
+  const button = event.target.closest('[data-concept-tag-id]');
+  if (!button) return;
+  const id = button.dataset.conceptTagId;
+  state.libraryTagIds = state.libraryTagIds.includes(id) ? state.libraryTagIds.filter(value => value !== id) : [...state.libraryTagIds, id];
+  state.libraryPage = 1; state.paperLibraryMode = 'list';
+  // A remembered sentence is evidence for choosing tags, not a literal paper filter.
+  els.paperLibraryFilter.value = ''; state.paperLlmSearch = null; state.searchRequest++;
+  renderPaperLibrary();
+});
+document.getElementById('detailQuickStatus').addEventListener('change', async event => {
+  const select = event.target, paperId = state.activePaperId;
+  const oldStatus = normalizeReadingStatus(paperById(paperId)?.readingStatus);
+  select.disabled = true;
+  try {
+    const result = await api(`/api/papers/${encodeURIComponent(paperId)}`, { method: 'PUT', body: JSON.stringify({ readingStatus: select.value }) });
+    state.papers = result.papers; state.tags = result.tags;
+    if (state.activePaperId === paperId) renderPaperDetail(paperId);
+    renderPaperLibrary();
+    toast(ui('阅读状态已更新', 'Reading status updated'));
+  } catch (error) { select.value = oldStatus; toast(error.message); }
+  finally { select.disabled = false; }
+});
+
+function collectExtraSettings() {
+  const result = {};
+  for (const id of ['bridgeUrl', 'bridgeToken', 'claudeModel', 'codexModel', 'customModel', 'customBaseUrl', 'customKey']) result[id] = document.getElementById(id).value.trim();
+  for (const id of ['customJsonMode', 'clearCustomKey', 'clearBridgeToken']) result[id] = document.getElementById(id).checked;
+  return result;
+}
+function renderBackendPanels() {
+  const provider = document.querySelector('input[name="provider"]:checked')?.value;
+  document.getElementById('refreshAllModels').hidden = ['claude', 'codex', 'custom'].includes(provider);
+  document.getElementById('localBackendSettings').hidden = !['claude', 'codex'].includes(provider);
+  document.getElementById('customBackendSettings').hidden = provider !== 'custom';
+  document.getElementById('presetBackendSettings').hidden = ['claude', 'codex', 'custom'].includes(provider);
+  document.querySelector('.key-actions').hidden = ['claude', 'codex', 'custom'].includes(provider);
+}
+document.querySelectorAll('input[name="provider"]').forEach(input => input.addEventListener('change', renderBackendPanels));
+document.getElementById('checkBridge').addEventListener('click', async () => {
+  const done = setBusy(document.getElementById('checkBridge'), ui('正在检测…', 'Checking…'));
+  const output = document.getElementById('bridgeHealth');
+  output.textContent = '';
+  try {
+    const result = await api('/api/bridge-health', { method: 'POST', body: JSON.stringify(collectExtraSettings()) });
+    output.textContent = Object.entries(result.backends).map(([name, info]) => {
+      const status = info.status === 'ready' ? ui('已登录，可以使用', 'Signed in and ready') : info.status === 'auth' ? ui('需要在终端登录', 'Sign in in your terminal') : ui('未检测到可用 CLI', 'CLI not available');
+      return `${name === 'claude' ? 'Claude Code' : 'Codex'}: ${status}${info.version ? ' · ' + info.version : ''}`;
+    }).join(' / ');
+  } catch (error) { output.textContent = error.message; }
+  finally { done(); }
+});

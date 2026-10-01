@@ -1,8 +1,8 @@
 {
   "name": "paper-mind",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "private": true,
-  "description": "A tag-based library for the papers you collect: one-click capture, tags and topic packs, local and LLM search, recommendations from your own collection.",
+  "description": "Find saved papers through the concepts you remember: existing tags, one-line memories, reading progress, local CLI and API models.",
   "license": "Apache-2.0",
   "author": "Wenqi Zhang",
   "homepage": "https://github.com/ZJU-OmniAI/Paper_Mind",
@@ -25,7 +25,8 @@
   "scripts": {
     "package:extension": "node scripts/package-extension.mjs",
     "test": "node --test tests/*.test.js",
-    "test:ui": "playwright test"
+    "test:ui": "playwright test",
+    "bridge": "node bridge/server.mjs"
   },
   "engines": {
     "node": ">=18"

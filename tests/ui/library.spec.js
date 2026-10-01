@@ -7,9 +7,9 @@ async function setup(page, {count=30, configured=false}={}) {
     const names=['检索增强生成','评估','多模态','智能体','强化学习','扩散模型','长上下文','推理'];
     const tags=names.map((name,i)=>({id:`tag-${i}`,name,aliases:i===0?['RAG']:[],description:`${name}相关论文的研究方法、适用范围与实际评估。`,descriptionStatus:'ready',paperIds:[],createdAt:now,updatedAt:now}));
     const papers=Array.from({length:count},(_,i)=>({id:`paper-${i}`,title:i===0?'Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks':i===1?'Evaluating RAG: Faithfulness and Hallucination':`Research paper ${i+1}: ${names[i%names.length]}`,abstract:i<2?'Use retrieved knowledge to improve grounded generation and evaluate hallucination.':'研究论文摘要：探索模型的能力边界、方法设计与评估结果。',conversation:i===0?'讨论检索质量如何影响生成回答的准确性。':'',tagIds:i===0?['tag-0']:i===1?['tag-0','tag-1']:[`tag-${i%names.length}`],valueScore:i===0?5:3,citationCount:100+i,citationStatus:'ok',citationUpdatedAt:now,createdAt:now,updatedAt:now}));
-    const values={paperTagStore:{papers,tags,topicPacks:[]},paperTagConfig:{qwenKey:configured?'test-only-key':'',autoDescribeTags:false}};
+    const values=JSON.parse(localStorage.getItem('paper-mind-test-values') || 'null') || {paperTagStore:{papers,tags,topicPacks:[]},paperTagConfig:{qwenKey:configured?'test-only-key':'',autoDescribeTags:false}};
     const listeners=[];
-    window.chrome={storage:{local:{async get(keys){return Object.fromEntries(keys.map(key=>[key,structuredClone(values[key])]));},async set(data){Object.assign(values,structuredClone(data));},async remove(key){delete values[key];}}},runtime:{id:'test-extension',getURL:p=>`http://127.0.0.1:4178/${p}`,sendMessage:async()=>{},onMessage:{addListener:listener=>listeners.push(listener)},getContexts:async()=>[]},tabs:{query:async()=>[],create:async()=>{}},scripting:{executeScript:async()=>[]}};
+    window.chrome={storage:{local:{async get(keys){return Object.fromEntries(keys.map(key=>[key,structuredClone(values[key])]));},async set(data){Object.assign(values,structuredClone(data));localStorage.setItem('paper-mind-test-values',JSON.stringify(values));},async remove(key){delete values[key];localStorage.setItem('paper-mind-test-values',JSON.stringify(values));}}},runtime:{id:'test-extension',getURL:p=>`http://127.0.0.1:4178/${p}`,sendMessage:async()=>{},onMessage:{addListener:listener=>listeners.push(listener)},getContexts:async()=>[]},tabs:{query:async()=>[],create:async()=>{}},scripting:{executeScript:async()=>[]}};
     window.__emitMessage=message=>listeners.forEach(listener=>listener(message));
   },{count,configured});
   await page.route('https://**/*',route=>route.fulfill({status:200,contentType:'application/json',body:'{}'}));
@@ -147,5 +147,86 @@ test('dark mode and populated narrow layouts retain readable titles and fit view
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
   await page.locator('[data-view="tags"]').click();
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+  expect(errors).toEqual([]);
+});
+
+test('remembered concept leads to existing tags then papers, without keeping a stale literal filter',async({page})=>{
+  const errors=await setup(page,{configured:true});
+  await page.route('**/chat/completions',route=>route.fulfill({json:{choices:[{message:{content:JSON.stringify({matches:[{tagId:'tag-0',reason:'用外部知识为生成提供事实依据',confidence:.9},{tagId:'invented',reason:'Must not appear'},{tagId:'tag-0',reason:'Duplicate'}]})}}]}}));
+  await page.locator('#paperLibraryFilter').fill('impossible-literal');
+  await page.locator('#conceptQuery').fill('记得那篇让回答有证据的论文');
+  await page.locator('#conceptSearchButton').click();
+  await expect(page.locator('#conceptResults [data-concept-tag-id]')).toHaveCount(1);
+  await expect(page.locator('#conceptResults')).toContainText('事实依据');
+  await page.locator('[data-concept-tag-id="tag-0"]').click();
+  await expect(page.locator('#paperLibraryFilter')).toHaveValue('');
+  await expect(page.locator('#paperLibraryList .paper-card')).toHaveCount(5);
+  await expect(page.locator('#activeLibraryFilters')).toContainText('检索增强生成');
+  await expect(page.locator('#tagCount')).toHaveText('9');
+  await page.locator('#clearLibraryFilters').click();
+  await expect(page.locator('#conceptQuery')).toHaveValue('');
+  await expect(page.locator('#paperLibraryList .paper-card')).toHaveCount(24);
+  expect(errors).toEqual([]);
+});
+
+test('concept search ignores stale model responses and offers local matches when unavailable',async({page})=>{
+  const errors=await setup(page,{configured:true});
+  let release,started;const ready=new Promise(r=>started=r),gate=new Promise(r=>release=r);
+  await page.route('**/chat/completions',async route=>{started();await gate;await route.fulfill({json:{choices:[{message:{content:JSON.stringify({matches:[{tagId:'tag-0',reason:'Old'}]})}}]}});});
+  await page.locator('#conceptQuery').fill('Old query');await page.locator('#conceptSearchButton').click();await ready;
+  await page.locator('#conceptQuery').fill('完全没有这个概念');release();
+  await expect(page.locator('#conceptSearchButton')).toBeEnabled();
+  await expect(page.locator('#conceptResults [data-concept-tag-id]')).toHaveCount(0);
+  await page.route('**/chat/completions',route=>route.fulfill({status:503,json:{error:{message:'Temporary outage'}}}));
+  await page.locator('#conceptQuery').fill('RAG');await page.locator('#conceptSearchButton').click();
+  await expect(page.locator('#conceptHint')).toContainText('本地匹配');
+  await expect(page.locator('#conceptResults [data-concept-tag-id="tag-0"]')).toBeVisible();
+  expect(errors).toEqual([]);
+});
+
+test('capture memory and reading status survive save, detail editing, filtering and reload',async({page})=>{
+  const errors=await setup(page,{count:0});
+  await page.goto('/popup.html');
+  await page.locator('#titleInput').fill('A paper worth remembering');
+  await page.locator('#captureMemory').fill('证据检查让智能体少编造');
+  await page.locator('#captureReadingStatus').selectOption('reading');
+  await page.locator('#tagInput').fill('智能体');await page.locator('#tagInput').press('Enter');
+  await page.locator('#saveButton').click();
+  await expect(page.locator('#message')).toHaveClass(/success/);
+  await page.goto('/manager.html');
+  const card=page.locator('#paperLibraryList .paper-card');
+  await expect(card).toContainText('证据检查让智能体少编造');await expect(card).toContainText('在读');
+  await page.locator('#libraryReadingStatus').selectOption('read');await expect(card).toHaveCount(0);
+  await page.locator('#libraryReadingStatus').selectOption('reading');await card.click();
+  await expect(page.locator('#paperDetailMemory')).toHaveText('证据检查让智能体少编造');
+  await page.locator('#detailQuickStatus').selectOption('read');
+  await expect(page.locator('#toast')).toContainText('阅读状态已更新');
+  await page.locator('#editPaperDetailButton').click();
+  await page.locator('#detailMemory').fill('把事实核验加入每一步');await page.locator('#detailReadingStatus').selectOption('revisit');
+  await page.locator('#paperDetailTagForm button[type="submit"]').click();
+  await expect(page.locator('#paperDetailMemory')).toHaveText('把事实核验加入每一步');
+  await page.goto('/manager.html');
+  await page.locator('#paperLibraryFilter').fill('事实核验');await expect(card).toHaveCount(1);await expect(card).toContainText('待重读');
+  await expect(page.locator('#paperLibraryTagList')).not.toContainText('待重读');
+  await page.locator('#languageSelect').selectOption('en');await expect(card).toContainText('Revisit');
+  expect(errors).toEqual([]);
+});
+
+test('backend settings connect local CLI and compatible API, mask credentials and retain model selections',async({page})=>{
+  const errors=await setup(page);
+  await page.locator('[data-view="settings"]').click();
+  await page.locator('[name="provider"][value="codex"]').check();
+  await expect(page.locator('#localBackendSettings')).toBeVisible();await expect(page.locator('#presetBackendSettings')).toBeHidden();
+  await page.locator('#bridgeToken').fill('synthetic-bridge-token');
+  await page.route('http://127.0.0.1:39321/health',route=>route.fulfill({json:{ok:true,backends:{claude:{status:'auth'},codex:{status:'ready',version:'test-cli'}}}}));
+  await page.locator('#checkBridge').click();await expect(page.locator('#bridgeHealth')).toContainText('可以使用');
+  await page.locator('#settingsForm button[type="submit"]').click();await expect(page.locator('#toast')).toContainText('保存');await expect(page.locator('#bridgeToken')).toHaveValue('');
+  await page.reload();await page.locator('[data-view="settings"]').click();await expect(page.locator('[name="provider"][value="codex"]')).toBeChecked();
+  await expect(page.locator('#bridgeToken')).toHaveAttribute('placeholder',/已保存/);
+  await page.locator('[name="provider"][value="custom"]').check();await expect(page.locator('#customBackendSettings')).toBeVisible();
+  await page.locator('#customBaseUrl').fill('http://127.0.0.1:11434/v1');await page.locator('#customModel').fill('test-local-model');
+  await page.locator('#settingsForm button[type="submit"]').click();await expect(page.locator('#toast')).toContainText('保存');
+  await page.reload();await page.locator('[data-view="settings"]').click();await expect(page.locator('#customModel')).toHaveValue('test-local-model');
+  await page.locator('#languageSelect').selectOption('en');await expect(page.locator('#customBackendSettings')).toContainText('optional for local servers');
   expect(errors).toEqual([]);
 });

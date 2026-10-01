@@ -39,3 +39,14 @@ test('description fingerprint tracks meaningful source content, not citation cou
   assert.equal(original,contextFingerprint(descriptionContext(tags[0],[{...paper,citationCount:88}])));
   assert.notEqual(original,contextFingerprint(descriptionContext(tags[0],[{...paper,abstract:'New evidence'}])));
 });
+
+test('memory participates in search and concept suggestions never invent or return system tags', async () => {
+  const {conceptTagMatches,normalizeMemory,normalizeReadingStatus}=await import('../extension/library-tools.js');
+  const tags=[{id:'rag',name:'检索增强生成',aliases:['RAG'],description:'根据外部证据回答问题'}, {id:'system-unsorted',name:'待归类',system:true}];
+  assert.equal(conceptTagMatches(tags,'我记得是 RAG 减少幻觉')[0].tagId,'rag');
+  assert.equal(conceptTagMatches(tags,'外部证据')[0].tagId,'rag');
+  assert.deepEqual(conceptTagMatches(tags,'完全未知的概念'),[]);
+  assert.deepEqual(conceptTagMatches(tags,'待归类'),[]);
+  assert.ok(paperSearchScore({title:'Paper',memory:'evidence prevents hallucinations'},[], 'evidence hallucinations')>0);
+  assert.equal(normalizeMemory('a'.repeat(500)).length,280);assert.equal(normalizeReadingStatus('invented'),'unread');
+});

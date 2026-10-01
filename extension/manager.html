@@ -69,6 +69,7 @@
                 <input id="paperTitle" name="title" autocomplete="off" placeholder="输入论文标题" required />
               </label>
 
+<div class="memory-fields"><label><span data-zh="一句话记住它" data-en="Remember it in one sentence"></span><textarea id="paperMemory" name="memory" rows="2" maxlength="280" data-placeholder-zh="例如：用检索到的证据，让智能体读论文时少编造。" data-placeholder-en="E.g. Ground paper-reading agents in retrieved evidence." placeholder="例如：用检索到的证据，让智能体读论文时少编造。"></textarea></label><label><span data-zh="阅读状态" data-en="Reading status"></span><select id="paperReadingStatus" name="readingStatus" data-reading-status><option value="unread">未读</option><option value="reading">在读</option><option value="read">已读</option><option value="revisit">待重读</option></select></label></div>
               <label class="value-score-field">
                 <div class="score-label-row">
                   <span id="paperValueScoreLabel">价值评分</span>
@@ -141,6 +142,11 @@
             <button id="refreshCitationsButton" class="secondary-button small-button" type="button">刷新全部引用量</button>
           </div>
 
+          <section class="panel concept-panel" aria-labelledby="conceptHeading">
+            <div class="concept-heading"><div><p class="eyebrow" data-zh="01 想起概念 · 02 选择标签 · 03 找回论文" data-en="01 RECALL A CONCEPT · 02 CHOOSE A TAG · 03 FIND YOUR PAPER"></p><h3 id="conceptHeading" data-zh="你还记得什么？" data-en="What do you remember?"></h3></div><span class="concept-mark" aria-hidden="true">⌕</span></div>
+            <form id="conceptForm" class="concept-search"><label class="sr-only" for="conceptQuery" data-zh="脑海中的概念" data-en="A concept you remember"></label><input id="conceptQuery" type="search" maxlength="1000" autocomplete="off" data-placeholder-zh="例如：让模型根据证据回答，少一些幻觉" data-placeholder-en="E.g. answering with evidence and fewer hallucinations" /><button type="submit" class="primary-button" id="conceptSearchButton" data-zh="AI 匹配已有标签" data-en="Match existing tags with AI"></button></form>
+            <p id="conceptHint" class="muted" role="status"></p><div id="conceptResults" class="concept-results" aria-live="polite"></div>
+          </section>
           <div class="two-column paper-library-layout" id="paperLibraryListMode">
             <section class="panel">
               <div class="panel-head">
@@ -150,6 +156,7 @@
               </div>
               <div class="library-filters">
                 <select id="libraryMatchMode" aria-label="标签匹配方式"><option value="all">包含全部所选标签</option><option value="any">包含任一所选标签</option></select>
+                <select id="libraryReadingStatus" data-reading-status data-all-status aria-label="阅读状态"></select>
                 <select id="libraryMinScore" aria-label="最低价值评分"><option value="0">全部评分</option><option value="3">评分 ≥ 3</option><option value="4">评分 ≥ 4</option><option value="5">评分 = 5</option></select>
                 <button type="button" class="text-button" id="clearLibraryFilters">清除筛选</button>
               </div>
@@ -210,7 +217,7 @@
                 </div>
               </div>
 
-              <div class="paper-detail-read-view" id="paperDetailReadView">
+              <div class="paper-detail-read-view" id="paperDetailReadView"><div class="detail-memory"><h4 data-zh="一句话记住它" data-en="Remember it in one sentence"></h4><p id="paperDetailMemory"></p><label><span data-zh="阅读状态" data-en="Reading status"></span><select id="detailQuickStatus" data-reading-status></select></label></div>
                 <div class="detail-block">
                   <h4 id="paperDetailLinksHeading">外部资料</h4>
                   <div class="link-list" id="paperDetailLinks"></div>
@@ -251,6 +258,7 @@
                   <input id="paperDetailTitleInput" autocomplete="off" required />
                 </label>
 
+<div class="memory-fields"><label><span data-zh="一句话记住它" data-en="Remember it in one sentence"></span><textarea id="detailMemory" name="memory" rows="2" maxlength="280" data-placeholder-zh="例如：用检索到的证据，让智能体读论文时少编造。" data-placeholder-en="E.g. Ground paper-reading agents in retrieved evidence." placeholder="例如：用检索到的证据，让智能体读论文时少编造。"></textarea></label><label><span data-zh="阅读状态" data-en="Reading status"></span><select id="detailReadingStatus" name="readingStatus" data-reading-status><option value="unread">未读</option><option value="reading">在读</option><option value="read">已读</option><option value="revisit">待重读</option></select></label></div>
                 <label class="value-score-field">
                   <div class="score-label-row">
                     <span id="paperDetailValueScoreLabel">价值评分</span>
@@ -441,6 +449,7 @@
             <fieldset>
               <legend>默认模型</legend>
               <div class="segmented">
+                <label><input type="radio" name="provider" value="claude" /> Claude Code</label><label><input type="radio" name="provider" value="codex" /> Codex</label><label><input type="radio" name="provider" value="custom" /> <span data-zh="兼容 API" data-en="Compatible API"></span></label>
                 <label><input type="radio" name="provider" value="qwen" checked /> Qwen/百炼</label>
                 <label><input type="radio" name="provider" value="zhipu" /> 智谱 GLM</label>
                 <label><input type="radio" name="provider" value="kimi" /> Kimi Code</label>
@@ -448,7 +457,16 @@
               </div>
             </fieldset>
 
-            <div class="settings-grid">
+            <section id="localBackendSettings" class="backend-panel" hidden>
+              <h3 data-zh="使用本机 Claude Code / Codex" data-en="Use local Claude Code / Codex"></h3>
+              <ol class="bridge-steps"><li data-zh="在终端登录：claude auth login 或 codex login。" data-en="Sign in in your terminal: claude auth login or codex login."></li><li data-zh="在 Paper_Mind 项目目录运行 npm run bridge，保持终端开启。" data-en="Run npm run bridge in the Paper_Mind project and keep the terminal open."></li><li data-zh="复制终端中的连接码到下方，检测连接后保存设置。" data-en="Paste the token printed in the terminal, check the connection, then save."></li></ol>
+              <div class="settings-grid"><label><span data-zh="桥接地址" data-en="Bridge URL"></span><input id="bridgeUrl" placeholder="http://127.0.0.1:39321" /></label><label><span data-zh="连接码" data-en="Connection token"></span><input id="bridgeToken" type="password" autocomplete="off" /></label>
+                <label><span>Claude Code <span data-zh="模型" data-en="model"></span></span><input id="claudeModel" placeholder="default / sonnet / opus" /></label><label><span>Codex <span data-zh="模型" data-en="model"></span></span><input id="codexModel" placeholder="default" /></label></div>
+              <p class="muted" data-zh="default 使用 CLI 的默认模型；也可填写当前账号可用的模型名。本机 CLI 仍会通过其配置的模型服务处理内容。" data-en="default uses the CLI default model; you may enter an available model ID. Local CLIs still send content to their configured model services."></p>
+              <div class="button-row"><button id="checkBridge" type="button" class="secondary-button" data-zh="检测本机连接" data-en="Check local connection"></button><label class="checkbox-label"><input id="clearBridgeToken" type="checkbox"/><span data-zh="清除连接码" data-en="Clear token"></span></label></div><p id="bridgeHealth" class="muted" role="status"></p>
+            </section>
+            <section id="customBackendSettings" class="backend-panel" hidden><h3 data-zh="OpenAI 兼容 Chat Completions API" data-en="OpenAI-compatible Chat Completions API"></h3><div class="settings-grid"><label><span>Base URL</span><input id="customBaseUrl" placeholder="https://api.example.com/v1" /></label><label><span data-zh="模型名称" data-en="Model ID"></span><input id="customModel" placeholder="填写服务商提供的模型 ID / Model ID" /></label><label><span data-zh="API Key（本地服务可留空）" data-en="API key (optional for local servers)"></span><input id="customKey" type="password" autocomplete="off" /></label><label class="checkbox-label"><input id="clearCustomKey" type="checkbox" /><span data-zh="清除 API Key" data-en="Clear API key"></span></label></div><label class="checkbox-label"><input id="customJsonMode" type="checkbox" /><span data-zh="发送 JSON mode 参数（服务商支持时开启）" data-en="Send JSON mode parameter (enable if supported)"></span></label><p class="muted" data-zh="填写 API 根地址，程序会追加 /chat/completions。可接其他厂商、Ollama 或 LM Studio 的兼容接口。" data-en="Enter the API base URL; /chat/completions is appended. Supports compatible provider, Ollama and LM Studio endpoints."></p></section>
+            <div class="settings-grid" id="presetBackendSettings">
               <label>
                 <span>Qwen API Key</span>
                 <input id="qwenKey" type="password" autocomplete="off" placeholder="留空表示不修改" />

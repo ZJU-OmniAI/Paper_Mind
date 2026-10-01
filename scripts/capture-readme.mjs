@@ -90,6 +90,9 @@ try {
     await page.locator('#tagSuggestions .tag-suggestion:not(.create)').click();
     await expect(page.locator('#tagBox .chip')).toHaveCount(2);
     await page.locator('#valueScoreInput').fill('4.5');
+    const memory = language === 'zh' ? '先验证工具返回的证据，再让智能体回答论文问题。' : 'Check tool evidence before an agent answers questions about a paper.';
+    await page.locator('#captureMemory').fill(memory);
+    await page.locator('#captureReadingStatus').selectOption('reading');
     await page.locator('#conversationInput').fill(`${await page.locator('#conversationInput').inputValue()}\n\n${note}`);
     await capture('step-03-ready-to-save', page.locator('.popup'));
     await page.locator('#saveButton').click();
@@ -104,6 +107,8 @@ try {
     }, title);
     expect(saved.tagIds.slice().sort()).toEqual(['agent', 'eval']);
     expect(saved.valueScore).toBe(4.5);
+    expect(saved.memory).toBe(memory);
+    expect(saved.readingStatus).toBe('reading');
     expect(saved.conversation).toContain(note);
 
     await page.locator('#openManagerButton').click();
@@ -114,19 +119,29 @@ try {
     const savedCard = page.locator(`#paperLibraryList [data-open-paper-id="${saved.id}"]`);
     await expect(page.locator('#paperLibraryList .paper-card').first()).toContainText(title);
     await capture('step-05-library');
-    await page.locator('#libraryTagFilter').fill('agent');
-    await expect(page.locator('#paperLibraryTagList [data-library-tag-id]')).toHaveCount(1);
+    await page.locator('#conceptQuery').fill(language === 'zh' ? '我记得与智能体有关' : 'agents that read papers');
+    await expect(page.locator('#conceptResults [data-concept-tag-id]')).toHaveCount(1);
     await expect(page.locator('#paperLibraryList .paper-card')).toHaveCount(9);
     await capture('step-06-find-tag');
-    await page.locator('#paperLibraryTagList [data-library-tag-id="agent"]').click();
+    await page.locator('#conceptResults [data-concept-tag-id="agent"]').click();
     await expect(page.locator('#paperLibraryList .paper-card')).toHaveCount(3);
     await expect(savedCard).toBeVisible();
     await capture('step-07-tag-results', page.locator('#view-papers'));
     await savedCard.click();
     await expect(page.locator('#paperDetailTitle')).toHaveText(title);
     await expect(page.locator('#paperDetailConversation')).toContainText(note);
+    await expect(page.locator('#paperDetailMemory')).toHaveText(memory);
+    await expect(page.locator('#detailQuickStatus')).toHaveValue('reading');
     await expect(page.locator('#paperDetailTags')).toContainText(language === 'zh' ? '智能体' : 'Agents');
     await capture('step-08-paper-detail', page.locator('#view-paper-detail .paper-detail-page'));
+
+    await page.locator('[data-view="papers"]').click();
+    await page.locator('#libraryReadingStatus').selectOption('reading');
+    await expect(page.locator('#paperLibraryList .paper-card')).toHaveCount(1);
+    await capture('reading-status', page.locator('#view-papers'));
+    await page.locator('[data-view="settings"]').click();
+    await page.locator('[name="provider"][value="codex"]').check();
+    await capture('local-models', page.locator('#view-settings'));
 
     // Additional feature views use the same collection after the walkthrough.
     await page.goto(`${origin}/manager.html`);
@@ -144,7 +159,7 @@ try {
     await page.locator('#view-topics .topics-layout').screenshot({ path: path.join(output, `topics-${language}.png`), animations: 'disabled' });
     if (errors.length) throw new Error(errors.join('\n'));
     await context.close();
-    console.log(`Captured ${language}: 8 workflow steps + library, tags, topics. Verified saved paper, tags, score, notes and 9 → 3 filtering.`);
+    console.log(`Captured ${language}: 8 workflow steps + 5 feature views. Verified memory, reading status, tags, score, notes and 9 → 3 → 1 filtering.`);
   }
 } finally {
   await browser?.close();

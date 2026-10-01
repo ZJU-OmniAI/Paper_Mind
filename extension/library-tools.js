@@ -1,6 +1,29 @@
 // Shared, dependency-free rules for capture, library search and storage.
 export const DEFAULT_TAG_POLICY = { maxTagsPerPaper: 6, maxTags: 80, autoDescribeTags: true };
 
+export const READING_STATUSES = ["unread", "reading", "read", "revisit"];
+export const normalizeReadingStatus = (value) => READING_STATUSES.includes(value) ? value : "unread";
+export const normalizeMemory = (value) => String(value ?? "").replace(/\s+/g, " ").trim().slice(0, 280);
+export function readingStatusLabel(value, language = "zh") {
+  const labels = language === "en" ? ["To read", "Reading", "Read", "Revisit"] : ["未读", "在读", "已读", "待重读"];
+  return labels[READING_STATUSES.indexOf(normalizeReadingStatus(value))];
+}
+
+// Suggestions never create tags. Match concepts against the vocabulary the user
+// already chose, including aliases and generated descriptions.
+export function conceptTagMatches(tags, query, limit = 6) {
+  const q = searchText(query);
+  if (!q) return [];
+  return tags.filter((tag) => !tag.system && tag.id !== "system-unsorted").map((tag) => {
+    const names = [tag.name, ...(tag.aliases || [])].map(searchText).filter(Boolean);
+    const exact = names.includes(q);
+    const contained = names.some((name) => q.includes(name) || name.includes(q));
+    const description = matchesText(tag.description || "", q);
+    return { tagId: tag.id, tagName: tag.name, confidence: exact ? 1 : contained ? 0.8 : 0.5,
+      score: exact ? 100 : contained ? 60 : description ? 20 : 0 };
+  }).filter((match) => match.score).sort((a, b) => b.score - a.score || a.tagName.localeCompare(b.tagName)).slice(0, limit);
+}
+
 export function normalizeTagName(value) {
   return String(value ?? "").normalize("NFKC").replace(/^\s*#+/, "").trim().replace(/\s+/g, " ");
 }
@@ -33,6 +56,7 @@ export function paperSearchScore(paper, tags, query) {
   const linked = tags.filter((tag) => paper.tagIds?.includes(tag.id));
   const fields = [
     [paper.title, 8],
+    [paper.memory, 7],
     [linked.flatMap((tag) => [tag.name, ...(tag.aliases || [])]).join(" "), 5],
     [[paper.abstract, paper.abstractZh, paper.sourceUrl, ...(paper.links || []).flatMap((link) => [link.title, link.url])].join(" "), 3],
     [[paper.conversation, ...(paper.clips || (paper.clip ? [paper.clip] : [])).map((clip) => clip.markdown), ...linked.map((tag) => tag.description)].join(" "), 1]
@@ -76,9 +100,10 @@ export function descriptionContext(tag, papers) {
   return {
     id: tag.id, name: tag.name, aliases: tag.aliases || [],
     papers: papers.filter((paper) => paper.tagIds?.includes(tag.id))
-      .sort((a, b) => String(b.updatedAt || "").localeCompare(String(a.updatedAt || "")) || a.id.localeCompare(b.id))
+      .sort((a, b) => String(b.contentUpdatedAt || b.updatedAt || "").localeCompare(String(a.contentUpdatedAt || a.updatedAt || "")) || a.id.localeCompare(b.id))
       .slice(0, 6).map((paper) => ({
         id: paper.id, title: paper.title,
+        memory: normalizeMemory(paper.memory),
         abstract: String(paper.abstract || "").slice(0, 2400),
         notes: String(paper.conversation || "").slice(0, 1200),
         content: (paper.clips || []).map((clip) => clip.markdown).join("\n").slice(0, 3600)

@@ -2,6 +2,15 @@
 
 Notable changes to Paper_Mind. Versions follow the `version` field in `extension/manifest.json`.
 
+## 1.5.0
+
+- Added a primary “remembered concept → existing tags → papers” workflow. Local names, aliases and descriptions match instantly; optional AI returns at most six validated, deduplicated tags with reasons. Choosing a tag clears stale literal paper queries. Searches never create tags, and stale AI replies cannot replace newer input.
+- Added a 280-character personal memory sentence to capture, manual entry, details, cards, full-text search and model context. Reading status (To read, Reading, Read, Revisit) is a separate editable/filterable field. Both survive backups and imports; legacy records receive safe defaults without changing tags.
+- Paper merges preserve the target reading progress and move additional memories into notes. Existing-paper capture can explicitly update the personal fields.
+- Added an optional authenticated loopback bridge for signed-in Claude Code and Codex. It uses fixed CLI commands, stdin prompts, bounded context/output/concurrency, cancellation and temporary working directories. Added generic Chat Completions-compatible API settings alongside existing providers. Secrets stay out of public state and exported backups.
+- Added local connection/login diagnostics and bilingual setup instructions. Codex avoids inheriting user-configured tools; local CLI invocation still uses model services and account limits.
+- Fixed a late tag-list refresh reopening the combobox after selection. Added workflow, migration, backend, bridge security and browser regression coverage. Updated bilingual walkthroughs and screenshots.
+
 ## 1.4.0
 
 - The paper library is now the default view, with multi-keyword search across titles, tag aliases/descriptions, abstracts, translations, notes, links and full clipped text; quoted phrases, tag intersection/union, score filters, pagination and a search shortcut.

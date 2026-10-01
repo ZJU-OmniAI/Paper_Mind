@@ -1,5 +1,6 @@
-import { tagKey, splitTags, suggestTags, DEFAULT_TAG_POLICY } from "./library-tools.js";
+import { normalizeReadingStatus, tagKey, splitTags, suggestTags, DEFAULT_TAG_POLICY } from "./library-tools.js";
 import { handleApi } from "./storage.js";
+import { renderWorkflowLabels } from "./workflow-ui.js";
 import { CLIP_MIN_TEXT_LENGTH, buildClipRecord, clipExcerpt, pageClipExtractor } from "./clipper.js";
 
 const isMac = (navigator.userAgentData?.platform || navigator.userAgent).toUpperCase().includes("MAC");
@@ -255,6 +256,7 @@ function setMessage(text, type = "") {
 }
 
 function applyLanguage() {
+  renderWorkflowLabels(state.language);
   document.documentElement.lang = state.language === "en" ? "en" : "zh-CN";
   els.languageSelect.value = state.language;
   els.popupTitle.textContent = t("title");
@@ -333,6 +335,8 @@ async function detectExistingPaper() {
     }
   }
   if (state.existingPaper?.paper && !state.forceCreate) {
+    document.getElementById("captureMemory").value = state.existingPaper.paper.memory || "";
+    document.getElementById("captureReadingStatus").value = normalizeReadingStatus(state.existingPaper.paper.readingStatus);
     els.valueScore.value = String(normalizeValueScore(state.existingPaper.paper.valueScore, 3));
     renderValueScore();
   }
@@ -661,6 +665,9 @@ function collectPayload() {
     title: els.title.value.replace(/\s+/g, " ").trim(),
     abstract: els.abstract.value.trim(),
     conversation: els.conversation.value.trim(),
+    memory: document.getElementById("captureMemory").value.trim(),
+    readingStatus: document.getElementById("captureReadingStatus").value,
+    replacePersonalFields: Boolean(state.existingPaper && !state.forceCreate && !isMergingIntoPaper()),
     sourceUrl: state.currentTab?.url || "",
     valueScore: normalizeValueScore(els.valueScore.value),
     manualTags: [...state.selectedTags],
@@ -748,6 +755,8 @@ async function submitPaper(duplicateAction = "") {
 // 当前选中的 LLM 是否已配好 key，配好了保存后台会自动生成相似推荐
 function llmConfigured() {
   const config = state.config || {};
+  if (["claude", "codex"].includes(config.provider)) return Boolean(config.hasBridgeToken);
+  if (config.provider === "custom") return Boolean(config.customModel);
   const keyFlags = { qwen: "hasQwenKey", zhipu: "hasZhipuKey", kimi: "hasKimiKey", deepseek: "hasDeepseekKey" };
   return Boolean(config[keyFlags[config.provider]]);
 }
