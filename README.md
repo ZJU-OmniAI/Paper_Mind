@@ -12,7 +12,7 @@
 [![Chrome Extension](https://img.shields.io/badge/Chrome-Manifest_V3-4285F4.svg)](extension/manifest.json)
 [![License](https://img.shields.io/badge/license-Apache_2.0-0c7d72.svg)](LICENSE)
 
-**English** · [中文](README_zh.md) · [Screenshot walkthrough](#one-paper-from-saving-to-finding) · [Install](#get-started) · [Full feature guide](docs/features.zh-CN.md)
+**English** · [中文](README_zh.md) · [Feature video](#watch-the-feature-tour) · [Screenshot walkthrough](#one-paper-from-saving-to-finding) · [Install](#get-started) · [Full feature guide](docs/features.zh-CN.md)
 
 </div>
 
@@ -21,6 +21,14 @@ Some time after reading a paper, its full title may escape us. What stays is oft
 **A library organized around those concepts lets you find a paper starting with the word you still remember.** That is the idea behind Paper_Mind: a lightweight paper management platform built around tags, with optional LLM assistance, delivered as a Chrome extension that fits into your reading. Save a paper, leave a note and choose a few core tags to turn a fleeting impression into something you can search, connect and return to.
 
 You choose the tags that describe your papers. An LLM can use those tags and content from linked papers to explain their meaning and scope, assist retrieval and suggest related reading. Reuse existing tags and merge synonymous concepts to keep the collection clear, with no cap on tag counts. **Keep organization simple, and let discovery begin with a concept.** Your library stays on your machine; basic capture and search work without a configured model.
+
+## Watch the feature tour
+
+[![Watch Paper_Mind: from a remembered concept to a saved paper](assets/videos/paper-mind-intro-poster.png)](assets/videos/paper-mind-intro-zh.mp4)
+
+**[▶ Watch / download the video](assets/videos/paper-mind-intro-zh.mp4)** · 2:09 · 1080p · Mandarin narration and Chinese captions · [Production notes and subtitles](assets/videos/README.md)
+
+Follow one paper from capture and a one-line memory to concept → existing tag → saved paper. The tour also covers reading progress, tag descriptions, and model/effort settings. Recorded in the actual interface with isolated demo data; no live model calls.
 
 ![Paper library: search for RAG and select the evaluation tag to find two relevant papers in the sample collection](assets/screenshots/library-en.png)
 

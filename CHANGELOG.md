@@ -4,6 +4,7 @@ Notable changes to Paper_Mind. Versions follow the `version` field in `extension
 
 ## 1.5.1
 
+- Added a narrated 1080p Chinese feature video, cover, captions and transcript to both READMEs, with reproducible recording scripts that exercise the actual UI against isolated demo data.
 - Removed per-paper and library-wide tag-count limits from capture, storage and settings. Legacy caps no longer apply; tag reuse, aliases, descriptions and name validation remain available.
 - Added independent Claude Code / Codex model and reasoning-effort selectors. Authenticated metadata-only CLI catalog discovery supports pagination, bounded probes and concurrent request sharing. Custom model IDs and CLI defaults remain available.
 - Effort options follow advertised model capabilities. Settings and test overrides reach the actual CLI arguments; failed catalog refreshes preserve choices, and older bridges prompt a restart.

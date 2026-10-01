@@ -12,7 +12,7 @@
 [![Chrome Extension](https://img.shields.io/badge/Chrome-Manifest_V3-4285F4.svg)](extension/manifest.json)
 [![License](https://img.shields.io/badge/license-Apache_2.0-0c7d72.svg)](LICENSE)
 
-[English](README.md) · **中文** · [跟着截图用一遍](#从保存到找回跟着一篇论文走一遍) · [安装扩展](#几步开始使用) · [完整功能](docs/features.zh-CN.md)
+[English](README.md) · **中文** · [功能视频](#看一段功能介绍) · [跟着截图用一遍](#从保存到找回跟着一篇论文走一遍) · [安装扩展](#几步开始使用) · [完整功能](docs/features.zh-CN.md)
 
 </div>
 
@@ -21,6 +21,14 @@
 **如果论文库也能按照这些概念来组织，找回一篇论文，就可以从你还记得的那个词开始。** 这正是 Paper_Mind 的设计出发点：一个基于标签系统、支持大模型辅助的轻量化论文管理平台，以 Chrome 扩展的形式融入阅读过程。保存论文、留下笔记、选几个核心标签，让脑海中的印象变成可以搜索、关联和回看的阅读积累。
 
 你决定用哪些标签描述论文，大模型则根据你给出的标签和关联论文的内容，补充标签的含义与适用范围，辅助检索和发现相关论文。通过复用已有标签、合并同义概念，让分类保持清晰；标签数量不设上限。**轻量、简洁，让整理顺手发生，让查找从一个概念开始。** 论文库保存在本机，基础收藏与查找无需配置模型。
+
+## 看一段功能介绍
+
+[![观看 Paper_Mind 功能介绍：通过脑海中的标签找到论文](assets/videos/paper-mind-intro-poster.png)](assets/videos/paper-mind-intro-zh.mp4)
+
+**[▶ 观看 / 下载视频](assets/videos/paper-mind-intro-zh.mp4)** · 2 分 9 秒 · 1080p · 中文配音与字幕 · [制作说明与字幕文件](assets/videos/README.md)
+
+跟随同一篇论文，看完“收藏 → 一句话记住它 → 概念匹配标签 → 找回论文”，以及阅读状态、标签说明、模型与 effort 设置。使用实际界面和隔离演示数据，未发起在线模型调用。
 
 ![论文库：搜索 RAG 并选择评估标签，从示例收藏中找到两篇相关论文](assets/screenshots/library-zh.png)
 
