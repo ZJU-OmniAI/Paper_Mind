@@ -5,7 +5,7 @@
     "rate": "-8%",
     "pitch": "-4Hz"
   },
-  "duration": 154.4,
+  "duration": 172.18,
   "resolution": "1920x1080",
   "subtitles": [
     "zh",
@@ -17,44 +17,48 @@
       "start": 0.002
     },
     {
+      "id": "recall",
+      "start": 14.282
+    },
+    {
       "id": "capture",
-      "start": 11.184
+      "start": 29.816
     },
     {
       "id": "materials",
-      "start": 24.798
+      "start": 43.449
     },
     {
       "id": "memory",
-      "start": 38.04
+      "start": 56.7
     },
     {
       "id": "search",
-      "start": 50.762
+      "start": 69.423
     },
     {
       "id": "tags",
-      "start": 66.027
+      "start": 83.806
     },
     {
       "id": "discovery",
-      "start": 81.465
+      "start": 99.24
     },
     {
       "id": "topics",
-      "start": 97.048
+      "start": 114.822
     },
     {
       "id": "models",
-      "start": 110.637
+      "start": 128.411
     },
     {
       "id": "data",
-      "start": 125.692
+      "start": 143.467
     },
     {
       "id": "outro",
-      "start": 141.627
+      "start": 159.412
     }
   ]
 }

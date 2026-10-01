@@ -92,6 +92,7 @@ try {
     const openPaper = async id => {await library();await click(app.locator(`#paperLibraryList [data-open-paper-id="${id}"]`));};
     const actions = {
       intro:[async()=>{},async()=>{}],
+      recall:[async()=>{},async()=>{}],
       capture:[async()=>{await focus(app.locator('#titleInput'));},async()=>{
         await click(app.locator('#saveButton'));
         await expect(app.locator('#message')).toHaveClass(/success/);
@@ -108,7 +109,7 @@ try {
         await app.locator('#libraryReadingStatus').selectOption('revisit');await expect(app.locator('#paperLibraryList .paper-card')).toHaveCount(1);await focus(app.locator('.library-filters'));
       }],
       search:[async()=>{
-        await library();await app.locator('#conceptQuery').fill(en?'agents that read papers':'我记得与智能体有关');
+        await library();await app.locator('#conceptQuery').fill(en?'tools':'工具');
         await expect(app.locator('#conceptResults [data-concept-tag-id]')).toHaveCount(1);await focus(app.locator('.concept-search'));
       },async()=>{
         await click(app.locator('#conceptResults [data-concept-tag-id="agent"]'));
@@ -159,6 +160,10 @@ try {
           const box=el.getBoundingClientRect();return box.bottom<=innerHeight && Array.from(el.children).every(c=>{const r=c.getBoundingClientRect();return r.left>=20&&r.right<=innerWidth-20&&r.top>=box.top&&r.bottom<=box.bottom;});
         });
         expect(fits,'Bilingual subtitles fit inside the frame').toBe(true);
+        if(['memory','recall'].includes(scene.mode)) {
+          const visualFits=await page.locator(scene.mode==='memory'?'#memoryStage':'#recallStage').evaluate(el=>[el,...el.querySelectorAll('*')].every(c=>{const r=c.getBoundingClientRect();return r.left>=30&&r.right<=innerWidth-30&&r.bottom<=885;}));
+          expect(visualFits,'Opening illustration fits above the bilingual subtitles').toBe(true);
+        }
         await page.screenshot({path:path.join(qa,`${String(i).padStart(2,'0')}-${scene.id}-${j}.png`)});
         await pause(checkOnly?80:Math.max(250,(beat.duration+0.55)*1000-((Date.now()-started)-start*1000)));
         timeline.push({...beat,scene:scene.id,section:scene.section,title:scene.title,start,end:(Date.now()-started)/1000});
@@ -207,17 +212,20 @@ async function makePoster(language,duration) {
   await context.route('**/*',route=>route.request().url().startsWith(origin+'/')?route.continue():route.abort());
   const page=await context.newPage();await page.goto(origin+'/__demo');
   await page.evaluate(({scene,language,duration})=>{
-    const en=language==='en';window.cue(scene,0,1,language);
+    const en=language==='en';window.cue(scene,0,1,language);document.body.dataset.visual='papers';
     document.getElementById('section').textContent=en?'ENGLISH NARRATION · 中文 / EN SUBTITLES':'中文磁性男声 · 中文 / EN 双语字幕';
     document.getElementById('coverButton').textContent=en?'▶  Watch the overview':'▶　观看功能全景';
     document.getElementById('coverButton').style.display='block';document.getElementById('coverButton').style.left='50%';document.getElementById('coverButton').style.transform='translateX(-50%)';
     document.getElementById('marker').style.display='none';
     window.subtitles({zh:'收藏与剪藏 · 概念检索 · 标签管理 · 研究整理 · 模型与数据',en:'Capture · Find · Organize · Read · Research · Connect'},language);
     document.getElementById('note').textContent=`${Math.floor(duration/60)}:${String(Math.round(duration%60)).padStart(2,'0')} · 1080p · Paper_Mind`;
-  },{scene:story[0],language,duration});
+  },{scene:story.find(s=>s.id==='recall'),language,duration});
   await page.evaluate(()=>document.fonts.ready);
   const file=path.join(output,`paper-mind-intro-poster-${language}.png`);
-  await page.screenshot({path:file});await context.close();
+  await page.screenshot({path:file});
+  await page.evaluate(({scene,language})=>{window.cue(scene,0,1,language);document.body.dataset.visual='papers';document.getElementById('coverButton').style.display='none';},{scene:story.find(s=>s.id==='recall'),language});
+  await page.screenshot({path:path.join(root,`assets/screenshots/concept-recall-${language}.png`),clip:{x:65,y:105,width:1790,height:740}});
+  await context.close();
   if(!en)await copyFile(file,path.join(output,'paper-mind-intro-poster.png'));
 }
 async function exportText({language,voice,duration,timeline}) {

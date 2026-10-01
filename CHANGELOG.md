@@ -4,6 +4,7 @@ Notable changes to Paper_Mind. Versions follow the `version` field in `extension
 
 ## 1.5.1
 
+- Reframed both READMEs and video openings around forgotten titles and method details, using illustrated rough-memory → existing-tag → saved-paper flows. The real search demo now starts with the broad clue “tools” / “工具”.
 - Added two 1080p feature-overview videos with Mandarin and English neural male narration, simultaneous Chinese/English captions, bilingual SRTs, covers and timestamped transcripts. Both READMEs link to both editions; reproducible recording scripts exercise the actual UI against isolated demo data.
 - Removed per-paper and library-wide tag-count limits from capture, storage and settings. Legacy caps no longer apply; tag reuse, aliases, descriptions and name validation remain available.
 - Added independent Claude Code / Codex model and reasoning-effort selectors. Authenticated metadata-only CLI catalog discovery supports pagination, bounded probes and concurrent request sharing. Custom model IDs and CLI defaults remain available.
