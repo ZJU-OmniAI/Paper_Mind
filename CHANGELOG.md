@@ -4,7 +4,7 @@ Notable changes to Paper_Mind. Versions follow the `version` field in `extension
 
 ## 1.6.0
 
-- Prepared bilingual Chrome Web Store descriptions, ten localized screenshots, promotional artwork, privacy disclosures, synthetic reviewer fixtures and a validated materials bundle. Added a model-settings notice covering optional text processing and save-triggered translation / recommendations.
+- Added a model-settings notice covering optional text processing and save-triggered translation / recommendations.
 - Added context-aware tag refinements with exact remaining-paper counts. Suggestions respect text/AI results, reading status and ratings; match-any mode explains how to switch to intersection filtering.
 - Search cards now foreground the saved memory sentence and show escaped, highlighted evidence from titles, tags, notes, clipped content and publication details.
 - Added editable authors, publication year and venue to capture, manual entry and paper details. Academic page metadata is extracted automatically; optional Semantic Scholar / Crossref lookup fills missing fields with identifier or unambiguous exact-title matches.

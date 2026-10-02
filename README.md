@@ -168,7 +168,6 @@ Some pages lack complete academic metadata. Edit the fields manually, or use **F
 | [Changelog](CHANGELOG.md) | Changes by version |
 | [Contributing](CONTRIBUTING.md) | Code layout, development conventions and validation |
 | [Videos and assets](assets/videos/README.md) | Transcripts, subtitles and production notes |
-| [Chrome Web Store kit](docs/store-listing.md) | Listing copy, localized screenshots, privacy disclosures and reviewer instructions |
 
 ## Development
 

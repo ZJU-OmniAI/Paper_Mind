@@ -7,3 +7,13 @@ backups/
 *.log
 test-results/
 playwright-report/
+
+# Local Chrome Web Store submission materials and build scripts.
+/assets/store/
+/docs/store/
+/docs/store-listing.md
+/docs/publishing.md
+/scripts/capture-store.mjs
+/scripts/package-store.mjs
+/scripts/render-store-art.mjs
+/scripts/store/
