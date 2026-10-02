@@ -6,7 +6,7 @@
     "message": "Paper_Mind"
   },
   "extDescription": {
-    "message": "从 Chrome 当前页面保存论文和网页剪藏（正文+图片）、备注和标签，数据保存在插件本地。"
+    "message": "用脑海中的概念和标签找回读过的论文。一篇论文、多重标签、一句话记忆；本地管理，AI 可选。"
   },
   "actionTitle": {
     "message": "保存到 Paper_Mind（论文 / 网页剪藏）"

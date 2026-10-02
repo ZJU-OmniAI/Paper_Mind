@@ -1,0 +1,493 @@
+{
+  "exportedAt": "2026-10-02T20:51:30.717Z",
+  "format": "paper-mind-store",
+  "version": 3,
+  "storage": "indexeddb",
+  "store": {
+    "papers": [
+      {
+        "id": "paper_murfum3k_zagk0q",
+        "authors": [
+          "Alex Chen",
+          "Morgan Lee"
+        ],
+        "year": "2026",
+        "venue": "研究方法研讨会（示例）",
+        "title": "Reading Papers with Evidence-Aware Agents",
+        "abstract": "探索研究型智能体如何收集证据、比较观点，并将每一步结论关联到可追溯的来源。",
+        "conversation": "来源页面：https://example.org/research/evidence-aware-agents\n\n选中文本：\n值得关注：工具调用之后，如何验证收集到的证据？",
+        "sourceUrl": "https://example.org/research/evidence-aware-agents",
+        "memory": "先验证工具返回的证据，再让智能体回答论文问题。",
+        "readingStatus": "reading",
+        "valueScore": 4.5,
+        "tagIds": [
+          "agent",
+          "eval"
+        ],
+        "createdAt": "2026-10-02T20:51:29.504Z",
+        "updatedAt": "2026-10-02T20:51:29.505Z",
+        "contentUpdatedAt": "2026-10-02T20:51:29.505Z",
+        "citationCount": null,
+        "citationSource": "",
+        "citationStatus": "error",
+        "citationUpdatedAt": "2026-10-02T20:51:29.519Z",
+        "citationExternalId": "",
+        "citationError": "Semantic Scholar 网络请求失败：Failed to fetch",
+        "links": [],
+        "abstractZh": ""
+      },
+      {
+        "id": "paper-0",
+        "title": "Grounded Answers with Retrieval-Augmented Generation",
+        "abstract": "Compare retrieval strategies through answer faithfulness, separating retrieval quality from generation reliability.",
+        "conversation": "阅读笔记：关注适用场景、评估设计和下一步可验证的问题。",
+        "tagIds": [
+          "rag",
+          "eval"
+        ],
+        "valueScore": 4.5,
+        "citationCount": null,
+        "citationStatus": "notfound",
+        "citationUpdatedAt": "2026-10-02T20:51:28.941Z",
+        "createdAt": "2026-09-09T08:00:00.000Z",
+        "updatedAt": "2026-09-09T08:00:00.000Z",
+        "abstractZh": "比较不同检索策略对回答事实一致性的影响，将检索质量与生成可信度分开评估。（示例译文）",
+        "abstractZhModel": "Demo translation",
+        "memory": "检索质量与回答可信度，需要分开评估。",
+        "links": [
+          {
+            "id": "demo-resource",
+            "title": "补充实验与阅读记录",
+            "url": "https://example.org/research/grounded-answers/notes",
+            "createdAt": "2026-09-09T08:00:00.000Z",
+            "previewImage": ""
+          }
+        ],
+        "clips": [
+          {
+            "id": "demo-reading",
+            "title": "方法解读：证据如何支撑回答",
+            "sourceUrl": "https://example.org/commentary/evidence",
+            "order": 0,
+            "markdown": "## 方法概览\n\n将检索过程与生成过程分开评估，观察证据是否能够支撑回答。\n\n- 检查来源的相关性\n- 比较结论的一致性\n- 记录值得继续验证的问题",
+            "siteName": "Demo reading notes",
+            "author": "",
+            "publishedAt": "",
+            "cover": "",
+            "contentSelector": "",
+            "textLength": 69,
+            "imageCount": 0,
+            "clippedAt": "2026-10-02T20:51:28.992Z",
+            "assetStatus": "skipped",
+            "assetSavedCount": 0,
+            "assetUpdatedAt": "",
+            "assetError": "",
+            "assetDir": "",
+            "assets": []
+          },
+          {
+            "id": "demo-discussion",
+            "title": "组会讨论：适用范围与局限",
+            "sourceUrl": "https://example.org/discussion/evidence",
+            "order": 1,
+            "markdown": "## 讨论要点\n\n关注冲突证据、任务边界，以及下一次实验需要控制的变量。",
+            "siteName": "Demo reading group",
+            "author": "",
+            "publishedAt": "",
+            "cover": "",
+            "contentSelector": "",
+            "textLength": 32,
+            "imageCount": 0,
+            "clippedAt": "2026-10-02T20:51:28.992Z",
+            "assetStatus": "skipped",
+            "assetSavedCount": 0,
+            "assetUpdatedAt": "",
+            "assetError": "",
+            "assetDir": "",
+            "assets": []
+          }
+        ],
+        "authors": [],
+        "year": "",
+        "venue": "",
+        "readingStatus": "unread",
+        "contentUpdatedAt": "2026-09-09T08:00:00.000Z",
+        "citationSource": "",
+        "citationExternalId": "",
+        "citationError": ""
+      },
+      {
+        "id": "paper-1",
+        "title": "When Retrieved Evidence Disagrees",
+        "abstract": "Study how models handle conflicting retrieved evidence, express uncertainty and produce traceable answers.",
+        "conversation": "阅读笔记：关注适用场景、评估设计和下一步可验证的问题。",
+        "tagIds": [
+          "rag",
+          "eval"
+        ],
+        "valueScore": 4,
+        "citationCount": null,
+        "citationStatus": "notfound",
+        "citationUpdatedAt": "2026-10-02T20:51:28.941Z",
+        "createdAt": "2026-09-09T08:00:00.000Z",
+        "updatedAt": "2026-09-09T08:00:00.000Z",
+        "abstractZh": "研究模型如何处理相互冲突的检索证据、表达不确定性，并给出可追溯的回答。（示例译文）",
+        "abstractZhModel": "Demo translation",
+        "memory": "",
+        "authors": [],
+        "year": "",
+        "venue": "",
+        "readingStatus": "unread",
+        "contentUpdatedAt": "2026-09-09T08:00:00.000Z",
+        "citationSource": "",
+        "citationExternalId": "",
+        "citationError": "",
+        "links": []
+      },
+      {
+        "id": "paper-2",
+        "title": "Tool Selection for Research Agents",
+        "abstract": "将检索、阅读与归纳拆解为工具步骤，评估研究任务中的规划质量和执行反馈。",
+        "conversation": "阅读笔记：关注适用场景、评估设计和下一步可验证的问题。",
+        "tagIds": [
+          "agent",
+          "eval"
+        ],
+        "valueScore": 4,
+        "citationCount": null,
+        "citationStatus": "notfound",
+        "citationUpdatedAt": "2026-10-02T20:51:28.941Z",
+        "createdAt": "2026-09-09T08:00:00.000Z",
+        "updatedAt": "2026-09-09T08:00:00.000Z",
+        "memory": "",
+        "authors": [],
+        "year": "",
+        "venue": "",
+        "readingStatus": "unread",
+        "contentUpdatedAt": "2026-09-09T08:00:00.000Z",
+        "citationSource": "",
+        "citationExternalId": "",
+        "citationError": "",
+        "links": [],
+        "abstractZh": ""
+      },
+      {
+        "id": "paper-3",
+        "title": "Visual Evidence in Scientific Question Answering",
+        "abstract": "结合论文图表与文本段落回答研究问题，分析视觉证据能否补充仅靠文字检索得到的信息。",
+        "conversation": "阅读笔记：关注适用场景、评估设计和下一步可验证的问题。",
+        "tagIds": [
+          "multi"
+        ],
+        "valueScore": 3.5,
+        "citationCount": null,
+        "citationStatus": "notfound",
+        "citationUpdatedAt": "2026-10-02T20:51:28.941Z",
+        "createdAt": "2026-09-09T08:00:00.000Z",
+        "updatedAt": "2026-09-09T08:00:00.000Z",
+        "memory": "",
+        "authors": [],
+        "year": "",
+        "venue": "",
+        "readingStatus": "unread",
+        "contentUpdatedAt": "2026-09-09T08:00:00.000Z",
+        "citationSource": "",
+        "citationExternalId": "",
+        "citationError": "",
+        "links": [],
+        "abstractZh": ""
+      },
+      {
+        "id": "paper-4",
+        "title": "Finding Evidence in Long Documents",
+        "abstract": "探索长文档中关键信息的定位与引用方式，比较完整上下文和分段检索的效果。",
+        "conversation": "阅读笔记：关注适用场景、评估设计和下一步可验证的问题。",
+        "tagIds": [
+          "long"
+        ],
+        "valueScore": 4,
+        "citationCount": null,
+        "citationStatus": "notfound",
+        "citationUpdatedAt": "2026-10-02T20:51:28.941Z",
+        "createdAt": "2026-09-09T08:00:00.000Z",
+        "updatedAt": "2026-09-09T08:00:00.000Z",
+        "memory": "",
+        "authors": [],
+        "year": "",
+        "venue": "",
+        "readingStatus": "unread",
+        "contentUpdatedAt": "2026-09-09T08:00:00.000Z",
+        "citationSource": "",
+        "citationExternalId": "",
+        "citationError": "",
+        "links": [],
+        "abstractZh": ""
+      },
+      {
+        "id": "paper-5",
+        "title": "Adapting Language Models on a Small Budget",
+        "abstract": "用少量可训练参数适配领域任务，记录效果、资源开销与可复现的训练设置。",
+        "conversation": "阅读笔记：关注适用场景、评估设计和下一步可验证的问题。",
+        "tagIds": [
+          "efficient"
+        ],
+        "valueScore": 3.5,
+        "citationCount": null,
+        "citationStatus": "notfound",
+        "citationUpdatedAt": "2026-10-02T20:51:28.941Z",
+        "createdAt": "2026-09-09T08:00:00.000Z",
+        "updatedAt": "2026-09-09T08:00:00.000Z",
+        "memory": "",
+        "authors": [],
+        "year": "",
+        "venue": "",
+        "readingStatus": "unread",
+        "contentUpdatedAt": "2026-09-09T08:00:00.000Z",
+        "citationSource": "",
+        "citationExternalId": "",
+        "citationError": "",
+        "links": [],
+        "abstractZh": ""
+      },
+      {
+        "id": "paper-6",
+        "title": "A Reading Note Worth Revisiting",
+        "abstract": "先保留一个值得继续追问的问题，下一次整理时再确定它属于哪个研究方向。",
+        "conversation": "阅读笔记：关注适用场景、评估设计和下一步可验证的问题。",
+        "tagIds": [
+          "system-unsorted"
+        ],
+        "valueScore": 3,
+        "citationCount": null,
+        "citationStatus": "notfound",
+        "citationUpdatedAt": "2026-10-02T20:51:28.941Z",
+        "createdAt": "2026-09-09T08:00:00.000Z",
+        "updatedAt": "2026-09-09T08:00:00.000Z",
+        "memory": "",
+        "authors": [],
+        "year": "",
+        "venue": "",
+        "readingStatus": "unread",
+        "contentUpdatedAt": "2026-09-09T08:00:00.000Z",
+        "citationSource": "",
+        "citationExternalId": "",
+        "citationError": "",
+        "links": [],
+        "abstractZh": ""
+      },
+      {
+        "id": "paper-7",
+        "title": "Planning with Feedback from Tools",
+        "abstract": "把工具执行结果反馈给模型，分析多步任务中的失败恢复与计划修正。",
+        "conversation": "阅读笔记：关注适用场景、评估设计和下一步可验证的问题。",
+        "tagIds": [
+          "agent"
+        ],
+        "valueScore": 4,
+        "citationCount": null,
+        "citationStatus": "notfound",
+        "citationUpdatedAt": "2026-10-02T20:51:28.941Z",
+        "createdAt": "2026-09-09T08:00:00.000Z",
+        "updatedAt": "2026-09-09T08:00:00.000Z",
+        "memory": "",
+        "authors": [],
+        "year": "",
+        "venue": "",
+        "readingStatus": "unread",
+        "contentUpdatedAt": "2026-09-09T08:00:00.000Z",
+        "citationSource": "",
+        "citationExternalId": "",
+        "citationError": "",
+        "links": [],
+        "abstractZh": ""
+      }
+    ],
+    "tags": [
+      {
+        "id": "agent",
+        "name": "智能体优化",
+        "aliases": [
+          "agent",
+          "tool use",
+          "agent optimization",
+          "智能体优化"
+        ],
+        "description": "关注智能体的规划、工具使用和执行反馈如何改进，适用于任务分解、工具选择、证据检查和计划修正。",
+        "descriptionStatus": "stale",
+        "descriptionProvider": "Preview",
+        "descriptionModel": "示例说明",
+        "descriptionUpdatedAt": "2026-09-09T08:00:00.000Z",
+        "paperIds": [
+          "paper_murfum3k_zagk0q",
+          "paper-2",
+          "paper-7"
+        ],
+        "createdAt": "2026-09-09T08:00:00.000Z",
+        "updatedAt": "2026-10-02T20:51:29.505Z",
+        "sources": [
+          "manual"
+        ],
+        "descriptionError": ""
+      },
+      {
+        "id": "efficient",
+        "name": "高效训练",
+        "aliases": [
+          "PEFT",
+          "LoRA"
+        ],
+        "description": "在计算或参数预算有限时适配模型，关注参数高效微调、低秩适配和训练资源利用。",
+        "descriptionStatus": "stale",
+        "descriptionProvider": "Preview",
+        "descriptionModel": "示例说明",
+        "descriptionUpdatedAt": "2026-09-09T08:00:00.000Z",
+        "paperIds": [
+          "paper-5"
+        ],
+        "createdAt": "2026-09-09T08:00:00.000Z",
+        "updatedAt": "2026-09-09T08:00:00.000Z",
+        "descriptionError": ""
+      },
+      {
+        "id": "eval",
+        "name": "评估与可靠性",
+        "aliases": [
+          "evaluation",
+          "faithfulness"
+        ],
+        "description": "关注模型输出是否正确、可验证、值得信赖。包括事实一致性、幻觉检测与评估方法；区别于单纯提升任务得分的训练技术。",
+        "descriptionStatus": "stale",
+        "descriptionProvider": "Preview",
+        "descriptionModel": "示例说明",
+        "descriptionUpdatedAt": "2026-09-09T08:00:00.000Z",
+        "paperIds": [
+          "paper_murfum3k_zagk0q",
+          "paper-0",
+          "paper-1",
+          "paper-2"
+        ],
+        "createdAt": "2026-09-09T08:00:00.000Z",
+        "updatedAt": "2026-10-02T20:51:29.505Z",
+        "sources": [
+          "manual"
+        ],
+        "descriptionError": ""
+      },
+      {
+        "id": "long",
+        "name": "长上下文",
+        "aliases": [
+          "long context"
+        ],
+        "description": "关注模型如何利用长文档中的信息，涉及上下文窗口、信息定位、跨段落推理与长文档问答。",
+        "descriptionStatus": "stale",
+        "descriptionProvider": "Preview",
+        "descriptionModel": "示例说明",
+        "descriptionUpdatedAt": "2026-09-09T08:00:00.000Z",
+        "paperIds": [
+          "paper-4"
+        ],
+        "createdAt": "2026-09-09T08:00:00.000Z",
+        "updatedAt": "2026-09-09T08:00:00.000Z",
+        "descriptionError": ""
+      },
+      {
+        "id": "multi",
+        "name": "多模态",
+        "aliases": [
+          "multimodal"
+        ],
+        "description": "研究文本、图像等不同模态之间的理解和信息融合，用于跨模态表示、视觉问答与图文检索。",
+        "descriptionStatus": "stale",
+        "descriptionProvider": "Preview",
+        "descriptionModel": "示例说明",
+        "descriptionUpdatedAt": "2026-09-09T08:00:00.000Z",
+        "paperIds": [
+          "paper-3"
+        ],
+        "createdAt": "2026-09-09T08:00:00.000Z",
+        "updatedAt": "2026-09-09T08:00:00.000Z",
+        "descriptionError": ""
+      },
+      {
+        "id": "rag",
+        "name": "检索增强生成",
+        "aliases": [
+          "RAG"
+        ],
+        "description": "研究如何将外部知识引入语言模型的生成过程。适用于检索、知识整合与回答溯源；纯检索排序或模型预训练不单独归入此标签。",
+        "descriptionStatus": "stale",
+        "descriptionProvider": "Preview",
+        "descriptionModel": "示例说明",
+        "descriptionUpdatedAt": "2026-09-09T08:00:00.000Z",
+        "paperIds": [
+          "paper-0",
+          "paper-1"
+        ],
+        "createdAt": "2026-09-09T08:00:00.000Z",
+        "updatedAt": "2026-09-09T08:00:00.000Z",
+        "descriptionError": ""
+      },
+      {
+        "id": "system-unsorted",
+        "name": "待归类",
+        "description": "添加论文时暂时不选标签，会先进入这里，之后可再整理。",
+        "aliases": [
+          "Unsorted"
+        ],
+        "parentIds": [],
+        "childIds": [],
+        "relatedIds": [],
+        "paperIds": [
+          "paper-6"
+        ],
+        "sources": [
+          "system"
+        ],
+        "system": true,
+        "sortOrder": 999999,
+        "createdAt": "2026-10-02T20:51:28.992Z",
+        "updatedAt": "2026-10-02T20:51:28.992Z"
+      }
+    ],
+    "topicPacks": [
+      {
+        "id": "pack-agent",
+        "name": "能完成任务的智能体",
+        "description": "围绕工具调用与执行反馈积累可复用的方法。",
+        "includeTagIds": [
+          "agent"
+        ],
+        "excludeTagIds": [],
+        "matchMode": "any",
+        "createdAt": "2026-09-09T08:00:00.000Z",
+        "updatedAt": "2026-09-09T08:00:00.000Z"
+      },
+      {
+        "id": "pack-rag",
+        "name": "更可信的 RAG",
+        "description": "同时关注检索增强生成与可靠性评估，整理下一次组会要讨论的方法。",
+        "includeTagIds": [
+          "rag",
+          "eval"
+        ],
+        "excludeTagIds": [
+          "agent"
+        ],
+        "matchMode": "all",
+        "createdAt": "2026-09-09T08:00:00.000Z",
+        "updatedAt": "2026-09-09T08:00:00.000Z"
+      }
+    ],
+    "meta": {
+      "tagCuration": {
+        "status": "stale",
+        "updatedAt": "",
+        "provider": "",
+        "model": "",
+        "tagCount": 0,
+        "mergeCount": 0
+      }
+    }
+  }
+}

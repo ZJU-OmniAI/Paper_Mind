@@ -440,6 +440,8 @@
               <span class="muted">API Key 仅保存在 Chrome 插件本地存储</span>
             </div>
 
+            <p class="muted" id="modelProcessingNotice" data-zh="配置并保存模型后，相关查询、标签和论文文字会发送给你选择的后端；保存论文也可能自动触发摘要翻译和库内推荐。下方开关只控制自动标签说明。本机 CLI 不等于离线推理。基础收藏和检索无需配置模型。" data-en="After you configure and save a model, relevant queries, tags and paper text are sent to your chosen backend. Saving a paper may also trigger abstract translation and library recommendations. The switch below controls only automatic tag descriptions. A local CLI does not guarantee offline inference. Core capture and search do not require a model."></p>
+
             <fieldset class="tag-policy-settings">
               <legend id="tagPolicyLegend">标签管理</legend>
               <label class="checkbox-label"><input id="autoDescribeTags" type="checkbox" checked /><span id="autoDescribeTagsLabel">保存后自动用 LLM 生成或更新标签说明</span></label>

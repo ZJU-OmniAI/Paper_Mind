@@ -24,6 +24,8 @@
   "type": "module",
   "scripts": {
     "package:extension": "node scripts/package-extension.mjs",
+    "package:store": "node scripts/package-store.mjs",
+    "store:assets": "node scripts/capture-store.mjs && node scripts/render-store-art.mjs",
     "test": "node --test tests/*.test.js",
     "test:ui": "playwright test",
     "bridge": "node bridge/server.mjs",

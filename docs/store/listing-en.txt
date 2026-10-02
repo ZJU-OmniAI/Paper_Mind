@@ -1,0 +1,45 @@
+You remember reading a paper. Perhaps it was about agent optimization, an OPD algorithm, or work from a certain team. The title and implementation details have faded, but a few concepts remain.
+
+Paper_Mind turns those concepts into a way back: remembered concepts → existing tags → papers you saved.
+
+SAVE A MEMORY. FIND THE PAPER AGAIN.
+
+1. Describe each paper with several tags
+Open the extension on a paper page, check its title, authors, year and venue, and add tags for its research area, method or team. Reuse existing tags and aliases, then write one sentence in your own words to remember it. You can also clip page text, images and notes.
+
+2. Start with the idea you still remember
+Search existing tag names, aliases and descriptions. When the wording is vague, an optional model can help match it to tags already in your library. Select a tag to see its papers. Searching does not create a new tag for every question.
+
+3. Add another clue to narrow the results
+After selecting a tag, see suggestions for further filtering and how many papers would remain. Combine tags, then read the memory sentence directly in each result to recognize the paper you meant.
+
+KEEP YOUR LIBRARY CLEAR
+
+• Meaningful tags: optionally generate descriptions from your labels, aliases and linked paper excerpts.
+• Tag organization: reuse aliases, analyze redundant tags and review AI merge suggestions before applying them. No fixed tag-count limit.
+• Reading progress: manage To read, Reading and Read separately from concept tags.
+• Publication details: read page metadata or query Semantic Scholar / Crossref to fill missing authors, year and venue. Review and edit the results before saving.
+• Topic packs: organize a research direction with included and excluded tags.
+• Backups: import and export JSON, with scheduled daily backups. Import replaces the current library.
+• A Chinese and English interface.
+
+AI IS OPTIONAL
+
+Core capture, tag filtering, text search and reading progress work without a model or a Paper_Mind account.
+
+For AI features, connect your own Claude Code, Codex or Chat Completions-compatible API. Settings are also available for Qwen, Zhipu GLM, Kimi Code and DeepSeek. Local CLI connections support model and reasoning-effort choices. They require a separately installed and signed-in CLI plus the project's running bridge process. API connections do not require the bridge. Access and charges depend on your selected model service.
+
+HOW DATA IS HANDLED
+
+Your library is stored locally in the extension within your Chrome profile. Paper_Mind has no remote library service or analytics. Metadata lookups send paper identifiers or titles to the relevant scholarly services; clipping and previews may contact source websites.
+
+When a model is enabled, the relevant queries, tags and paper text are sent to your chosen backend. Saving a paper may also trigger abstract translation, related-paper recommendations and automatic tag descriptions. Automatic tag descriptions can be disabled in settings. A local CLI connection does not guarantee offline inference. API keys and bridge tokens stay in local settings and are excluded from library JSON backups.
+
+Open-source project, installation and model setup:
+https://github.com/ZJU-OmniAI/Paper_Mind
+
+Support:
+https://github.com/ZJU-OmniAI/Paper_Mind/issues
+
+Privacy policy:
+https://github.com/ZJU-OmniAI/Paper_Mind/blob/main/PRIVACY.md

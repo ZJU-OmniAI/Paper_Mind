@@ -1,0 +1,35 @@
+{
+  "preparedForVersion": "1.6.0",
+  "name": "Paper_Mind",
+  "defaultLocale": "zh_CN",
+  "categorySuggestion": "Productivity — Tools",
+  "homepageUrl": "https://github.com/ZJU-OmniAI/Paper_Mind",
+  "supportUrl": "https://github.com/ZJU-OmniAI/Paper_Mind/issues",
+  "privacyPolicyUrl": "https://github.com/ZJU-OmniAI/Paper_Mind/blob/main/PRIVACY.md",
+  "singlePurpose": "Help users save and retrieve their personal research-paper library through remembered concepts, existing tags and notes. Page clipping, publication metadata, reading progress and optional AI support that same paper-library workflow.",
+  "remoteCode": {
+    "answer": "No",
+    "explanation": "All extension JavaScript, HTML and CSS is bundled in the uploaded Manifest V3 package. Network responses provide content, metadata or model text/JSON, not executable extension code. Responses are parsed as data. The optional, separately installed local bridge invokes supported installed CLI programs with fixed operations; it does not download or inject executable code into the extension."
+  },
+  "locales": {
+    "zh_CN": {
+      "shortDescription": "用脑海中的概念和标签找回读过的论文。一篇论文、多重标签、一句话记忆；本地管理，AI 可选。",
+      "descriptionFile": "docs/store/listing-zh-CN.txt",
+      "screenshots": ["01-capture-zh.png", "02-recall-zh.png", "03-refine-zh.png", "04-tags-zh.png", "05-models-zh.png"]
+    },
+    "en": {
+      "shortDescription": "Find saved papers through the concepts you remember. Multiple tags, one-line memories, local library and optional AI.",
+      "descriptionFile": "docs/store/listing-en.txt",
+      "screenshots": ["01-capture-en.png", "02-recall-en.png", "03-refine-en.png", "04-tags-en.png", "05-models-en.png"]
+    }
+  },
+  "icon": "assets/store/icon-128.png",
+  "smallPromoTile": "assets/store/promo-small.png",
+  "marqueePromoTile": "assets/store/promo-marquee.png",
+  "ownerFieldsToComplete": [
+    "Developer identity, verified account contact email and any required business/trader declarations",
+    "Distribution countries/regions and public or unlisted visibility",
+    "Optional localized YouTube video URLs after the owner uploads the existing videos",
+    "Final privacy certifications in the developer dashboard"
+  ]
+}

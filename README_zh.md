@@ -168,6 +168,7 @@ git clone https://github.com/ZJU-OmniAI/Paper_Mind.git
 | [版本记录](CHANGELOG.md) | 各版本变更 |
 | [贡献指南](CONTRIBUTING.md) | 代码结构、开发约定与验证方法 |
 | [视频与素材](assets/videos/README.md) | 文字稿、字幕和演示素材制作说明 |
+| [Chrome 商店提交材料](docs/store-listing.md) | 中英文文案、截图、隐私表单和审核测试步骤 |
 
 ## 开发与贡献
 

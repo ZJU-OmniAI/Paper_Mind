@@ -1,8 +1,12 @@
 # Privacy Policy
 
+Last updated: 2026-10-03 · [简体中文](PRIVACY_zh.md)
+
 Paper_Mind stores paper titles, authors, publication years, venues, abstracts, personal memory sentences, reading status, notes, clips, tags and topic packs in the extension's local IndexedDB database. Model settings, optional API keys and the optional bridge connection token are stored in `chrome.storage.local`. The extension does not require a Paper_Mind account, operate a remote library service, collect analytics or sell data.
 
 The extension may create a daily JSON backup at 4 PM local time through Chrome's downloads API. Backups include library records and reading progress, but exclude model API keys and bridge tokens. They are saved to the user's configured Chrome downloads location.
+
+Saved content may include names (such as paper authors), source-page URLs, personal notes and conversation excerpts that the user chooses to keep. Paper_Mind does not continuously record browsing history, monitor keystrokes or read other tabs in the background. Local storage is not a claim of application-level encryption; protect the Chrome profile, downloaded backups and computer as you would other personal files.
 
 Clipboard text is read only when the user clicks “Paste clipboard”. Opening the popup does not read the clipboard. Pasted text is stored only if the paper is saved.
 
@@ -27,3 +31,17 @@ The bridge starts only when the user runs `npm run bridge`. It listens on `127.0
 Prompts are sent to child processes over stdin. Requests run in temporary directories and their temporary answer files are removed on completion or failure. Claude uses no-session-persistence with tools, MCP and hooks disabled. Codex uses ephemeral execution, a read-only sandbox and disabled shell, apps, web search and subagents; its user configuration is not inherited. The bridge does not log prompts or responses. These controls do not override the CLI/model vendor's own service retention, diagnostics or account policies.
 
 Use of information received from Google APIs will adhere to the Chrome Web Store User Data Policy, including the Limited Use requirements.
+
+## Retention and user control
+
+Library records remain in the current Chrome profile until removed or replaced by the user, or until the extension's local data is cleared. Users can edit or delete papers and tags, export the library from Settings, and remove the extension to remove its extension-managed local data. Importing a library replaces the current library; export a backup first. Chrome profile copies and filesystem backups must be managed separately.
+
+Removing records or uninstalling the extension does not delete JSON backups, downloaded clip images or the optional bridge token file from disk. Users can remove those files themselves. JSON backups contain library text and image paths, not model credentials or copies of downloaded image bytes.
+
+Users choose whether to configure a model, which backend to use and whether to enable automatic tag descriptions. Disabling automatic tag descriptions does not disable other model operations such as translation or recommendations. To stop model processing, remove the configured credentials / connection or stop the local bridge, and do not invoke model operations. API keys can also be revoked with the provider. Settings can be removed by clearing the extension's data or uninstalling it.
+
+External requests necessarily expose normal connection information, such as an IP address, to the destination. Metadata services, source websites and selected model providers apply their own retention and privacy policies. Paper_Mind cannot delete data already processed by those services. The project does not run a central copy of a user's library, collect advertising profiles, sell user data or use it for unrelated advertising or credit decisions.
+
+## Contact and policy changes
+
+The Paper_Mind project maintainers can be contacted through [GitHub Issues](https://github.com/ZJU-OmniAI/Paper_Mind/issues). Issues are public: do not include API keys, bridge tokens, private papers or other sensitive content. Once a store listing is published, its verified support contact may also be used. Changes to this policy are published in this repository with an updated date.

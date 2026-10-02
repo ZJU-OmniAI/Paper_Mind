@@ -6,7 +6,7 @@
     "message": "Paper_Mind"
   },
   "extDescription": {
-    "message": "Save papers and full web clips (text + images), notes, and tags from Chrome. Data stays in local extension storage."
+    "message": "Find saved papers through the concepts you remember. Multiple tags, one-line memories, local library and optional AI."
   },
   "actionTitle": {
     "message": "Save to Paper_Mind (paper / web clip)"
