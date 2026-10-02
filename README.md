@@ -18,12 +18,19 @@
 
 ## Watch the feature tour
 
-**See Paper_Mind in action in about 2½ minutes.** Save a paper with several tags, combine the clues you remember, and recognize it by your own memory sentence. Click either cover to watch.
+**See Paper_Mind in action in about 2½ minutes.** Save a paper with several tags, combine the clues you remember, and recognize it by your own memory sentence. Play either edition right here in the README.
 
-| English narration | 中文配音 |
-| --- | --- |
-| [![Watch the English overview](assets/videos/paper-mind-intro-poster-en.png)](assets/videos/paper-mind-intro-en.mp4) | [![观看中文功能全景](assets/videos/paper-mind-intro-poster-zh.png)](assets/videos/paper-mind-intro-zh.mp4) |
-| [▶ Watch / download](assets/videos/paper-mind-intro-en.mp4) · [Bilingual SRT](assets/videos/paper-mind-intro-en.srt) | [▶ 观看 / 下载](assets/videos/paper-mind-intro-zh.mp4) · [双语 SRT](assets/videos/paper-mind-intro-zh.srt) |
+**English narration · 2:34**
+
+https://github.com/user-attachments/assets/046375e1-bd08-4663-93ac-0858b0aeb835
+
+[Download MP4](assets/videos/paper-mind-intro-en.mp4) · [Bilingual SRT](assets/videos/paper-mind-intro-en.srt)
+
+**中文配音 · 2:37**
+
+https://github.com/user-attachments/assets/3b7d2957-d1b1-41b9-b210-005e53877e07
+
+[下载 MP4](assets/videos/paper-mind-intro-zh.mp4) · [双语 SRT](assets/videos/paper-mind-intro-zh.srt)
 
 **English 2:34 / Mandarin 2:37 · 1080p · Warm neural male narration · Chinese and English subtitles visible together in both editions.** [Transcripts and production notes](assets/videos/README.md)
 

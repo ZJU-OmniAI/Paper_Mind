@@ -1,9 +1,16 @@
 # Paper_Mind · 多个标签，一篇论文 / Several tags, one paper
 
-| 中文配音 · Mandarin narration | English narration · 英文配音 |
-| --- | --- |
-| [![中文功能全景](paper-mind-intro-poster-zh.png)](paper-mind-intro-zh.mp4) | [![English feature overview](paper-mind-intro-poster-en.png)](paper-mind-intro-en.mp4) |
-| [观看 / 下载 MP4](paper-mind-intro-zh.mp4) · [双语 SRT](paper-mind-intro-zh.srt) · [文字稿与章节](transcript.zh-CN.md) | [Watch / download MP4](paper-mind-intro-en.mp4) · [Bilingual SRT](paper-mind-intro-en.srt) · [Transcript and chapters](transcript.en.md) |
+**中文配音 · 2:37**
+
+https://github.com/user-attachments/assets/3b7d2957-d1b1-41b9-b210-005e53877e07
+
+[下载 MP4](paper-mind-intro-zh.mp4) · [双语 SRT](paper-mind-intro-zh.srt) · [文字稿与章节](transcript.zh-CN.md)
+
+**English narration · 2:34**
+
+https://github.com/user-attachments/assets/046375e1-bd08-4663-93ac-0858b0aeb835
+
+[Download MP4](paper-mind-intro-en.mp4) · [Bilingual SRT](paper-mind-intro-en.srt) · [Transcript and chapters](transcript.en.md)
 
 中文版 2:37，英文版 2:34，1920 × 1080。**两版均将完整的中英双语字幕直接显示在画面中**，无需另外开启字幕。主字幕对应配音语言，下一行为译文；SRT 也包含两种语言。英文版使用英文产品界面。
 
@@ -85,4 +92,4 @@ PW_CHANNEL=chrome DEMO_ENCODE_ONLY=1 npm run demo:video
 - 逐镜头帧定位与时间轴：[timing.mjs](../../scripts/demo/timing.mjs)
 - 成片参数与章节起点：[中文 metadata](production-zh.json) · [English metadata](production-en.json)
 
-成片、封面、SRT 与文字稿输出到本目录；README 使用的中英流程图由同一录制脚本生成到 `assets/screenshots/concept-recall-{zh,en}.png`。音轨、逐镜头检查截图、原始录屏和完整时间轴位于被 Git 忽略的 `dist/demo-v3/`。MP4 使用 H.264 / AAC、1080p 和 faststart；可在 GitHub 文件页预览或下载。production JSON 包含每个镜头的画面、旁白起止时间及原始录像帧位置。
+成片、封面、SRT 与文字稿输出到本目录；README 使用的中英流程图由同一录制脚本生成到 `assets/screenshots/concept-recall-{zh,en}.png`。音轨、逐镜头检查截图、原始录屏和完整时间轴位于被 Git 忽略的 `dist/demo-v3/`。MP4 使用 H.264 / AAC、1080p 和 faststart；主页通过 GitHub 视频附件直接内嵌播放，仓库中的 MP4 保留用于下载。重新生成成片后，需要重新上传视频附件，并同步更新两份主页 README 与本页中的附件地址；仅替换仓库 MP4 不会更新已上传的附件。production JSON 包含每个镜头的画面、旁白起止时间及原始录像帧位置。

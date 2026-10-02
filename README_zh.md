@@ -18,12 +18,19 @@
 
 ## 看一段功能介绍
 
-**两分半，看懂怎样从模糊印象找回论文。** 收藏时用多个标签描述它，查找时组合线索缩小范围，最后凭当时记下的那句话认出它。点击下方封面观看。
+**两分半，看懂怎样从模糊印象找回论文。** 收藏时用多个标签描述它，查找时组合线索缩小范围，最后凭当时记下的那句话认出它。直接在下方播放器中观看，无需跳转页面。
 
-| 中文配音 | English narration |
-| --- | --- |
-| [![观看中文功能全景](assets/videos/paper-mind-intro-poster-zh.png)](assets/videos/paper-mind-intro-zh.mp4) | [![Watch the English overview](assets/videos/paper-mind-intro-poster-en.png)](assets/videos/paper-mind-intro-en.mp4) |
-| [▶ 观看 / 下载](assets/videos/paper-mind-intro-zh.mp4) · [双语 SRT](assets/videos/paper-mind-intro-zh.srt) | [▶ Watch / download](assets/videos/paper-mind-intro-en.mp4) · [Bilingual SRT](assets/videos/paper-mind-intro-en.srt) |
+**中文配音 · 2:37**
+
+https://github.com/user-attachments/assets/3b7d2957-d1b1-41b9-b210-005e53877e07
+
+[下载 MP4](assets/videos/paper-mind-intro-zh.mp4) · [双语 SRT](assets/videos/paper-mind-intro-zh.srt)
+
+**English narration · 2:34**
+
+https://github.com/user-attachments/assets/046375e1-bd08-4663-93ac-0858b0aeb835
+
+[Download MP4](assets/videos/paper-mind-intro-en.mp4) · [Bilingual SRT](assets/videos/paper-mind-intro-en.srt)
 
 **中文版 2:37 / 英文版 2:34 · 1080p · 沉稳温暖的神经网络男声 · 两版均同时显示中英文字幕。** [文字稿与制作说明](assets/videos/README.md)
 
