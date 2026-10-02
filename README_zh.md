@@ -30,12 +30,14 @@
 
 ## 看一段功能介绍
 
+用约两分钟看一次完整的找回：收藏时保留作者、年份与出处，从脑海中的概念出发，沿着标签提示逐步缩小范围，最后用当时记下的那句话认出论文。
+
 | 中文配音 | English narration |
 | --- | --- |
 | [![观看中文功能全景](assets/videos/paper-mind-intro-poster-zh.png)](assets/videos/paper-mind-intro-zh.mp4) | [![Watch the English overview](assets/videos/paper-mind-intro-poster-en.png)](assets/videos/paper-mind-intro-en.mp4) |
 | [▶ 观看 / 下载](assets/videos/paper-mind-intro-zh.mp4) · [双语 SRT](assets/videos/paper-mind-intro-zh.srt) | [▶ Watch / download](assets/videos/paper-mind-intro-en.mp4) · [Bilingual SRT](assets/videos/paper-mind-intro-en.srt) |
 
-**中文版 3:07 / 英文版 3:13 · 1080p · 沉稳温暖的神经网络男声 · 两版均同时显示中英文字幕。** [文字稿与制作说明](assets/videos/README.md)
+**中文版 2:02 / 英文版 2:05 · 1080p · 沉稳温暖的神经网络男声 · 两版均同时显示中英文字幕。** [文字稿与制作说明](assets/videos/README.md)
 
 从“好像是智能体优化、似乎关于 OPD、可能来自某个团队”的记忆场景出发，先解释怎样找回，再回到今天怎样收藏、留下线索。随后沿着保存资料、记下理解、日后检索、继续阅读与研究整理，介绍标签说明、主题包、模型与 effort、数据备份等功能。功能演示使用实际界面和隔离示例库，AI 内容为预置示例；具体操作可继续看下方图文教程。
 

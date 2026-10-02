@@ -49,12 +49,15 @@ body[data-mode=recall] #coverButton{top:842px;padding:10px 27px;font-size:20px}
 body[data-language=en] .memory-notes .thought{font-size:27px}
 body[data-language=en] .recall-column h2{font-size:24px}
 body[data-language=en] .recall-column.impressions .recall-item{font-size:22px}
+#result{position:absolute;right:65px;top:133px;padding:10px 19px;border:1px solid #aad7c5;border-radius:30px;background:#e3f3eb;color:#087b66;font-size:23px;font-weight:650;letter-spacing:.2px}
+#result:empty{display:none}body[data-mode=manager] #title{max-width:1370px}
+body:is([data-mode=memory],[data-mode=recall],[data-mode=outro]) :is(#ring,#cursor){display:none}
 </style>
 <body data-mode="title"><header><div class="brand"><img src="/assets/logo.png">Paper_Mind</div><div class="badge" id="badge">功能全景 · 实际界面</div></header>
-<div id="section"></div><h1 id="title"></h1><div id="kicker"></div><div id="flow"><span>脑海中的概念</span><b>→</b><span>已有标签</span><b>→</b><span>你的论文</span></div><div id="chips"></div><div id="minor"><strong>轻量收藏 · 简洁管理</strong><br>标签有说明，阅读进度独立管理。<br>按需要添加标签，数量不设上限。</div>
+<div id="section"></div><h1 id="title"></h1><div id="result"></div><div id="kicker"></div><div id="flow"><span>脑海中的概念</span><b>→</b><span>已有标签</span><b>→</b><span>你的论文</span></div><div id="chips"></div><div id="minor"><strong>轻量收藏 · 简洁管理</strong><br>标签有说明，阅读进度独立管理。<br>按需要添加标签，数量不设上限。</div>
 <div id="viewer"><div id="browserbar"><i></i><i></i><i></i><span id="address">Paper_Mind · 本地论文库</span></div><iframe id="app" src="/popup.html"></iframe></div>
 <div id="memoryStage"></div><div id="recallStage"></div>
-<div id="captionWrap"><div id="caption"></div><div id="captionSecondary"></div><div id="note"></div></div><div id="progress"></div><div id="stamp">PAPER_MIND 1.5.1</div><div id="repo">github.com/ZJU-OmniAI/Paper_Mind</div><div id="coverButton">▶　观看功能介绍</div>
+<div id="captionWrap"><div id="caption"></div><div id="captionSecondary"></div><div id="note"></div></div><div id="progress"></div><div id="stamp">PAPER_MIND 1.6.0</div><div id="repo">github.com/ZJU-OmniAI/Paper_Mind</div><div id="coverButton">▶　观看功能介绍</div>
 <div id="cursor"><svg viewBox="0 0 29 38"><path d="M3 2 L25 23 L15 24 L20 34 L14 37 L9 26 L2 32 Z" fill="#183c33" stroke="white" stroke-width="2"/></svg></div><div id="ring"></div><div id="marker"></div>
 <script>
 const element=(tag,text,className)=>{const el=document.createElement(tag);el.textContent=text;el.className=className||'';return el;};
@@ -94,6 +97,7 @@ window.cue = (scene, index, total, language='zh') => {
   document.body.dataset.mode=scene.mode; document.body.dataset.language=language;document.body.dataset.visual='';
   if(['memory','recall'].includes(scene.mode))window.drawRecall(language);
   for(const field of ['section','title','kicker'])document.getElementById(field).textContent=scene[field]?.[i]||'';
+  document.getElementById('result').textContent='';
   document.getElementById('caption').textContent='';document.getElementById('captionSecondary').textContent='';
   document.getElementById('note').textContent=en?'Demo library · AI examples are prewritten · No live model calls':'示例论文库 · AI 内容为预置演示 · 未调用在线模型';
   if(['memory','recall'].includes(scene.mode))document.getElementById('note').textContent=en?'Concept illustration · Match existing tags · Search your own collection':'流程示意 · 匹配已有标签 · 查找自己的收藏';
@@ -103,8 +107,9 @@ window.cue = (scene, index, total, language='zh') => {
   const flow=en?['Remembered ideas','Existing tags','Your papers']:['脑海中的概念','已有标签','你的论文'];
   document.querySelectorAll('#flow span').forEach((el,index)=>el.textContent=flow[index]);
   document.getElementById('progress').style.width=`${index/total*100}%`; document.getElementById('ring').style.opacity=0; document.getElementById('cursor').style.opacity=0;
+  for(const id of ['title','viewer'])document.getElementById(id).animate([{opacity:.35,transform:'translateY(7px)'},{opacity:1,transform:'translateY(0)'}],{duration:320,easing:'ease-out'});
 };
-window.subtitles=(beat,language)=>{document.getElementById('caption').textContent=beat[language];document.getElementById('captionSecondary').textContent=beat[language==='zh'?'en':'zh'];document.body.dataset.visual=beat.visual||'';if(beat.visual==='save')window.drawJourney(language);};
+window.subtitles=(beat,language)=>{document.getElementById('caption').textContent=beat[language];document.getElementById('captionSecondary').textContent=beat[language==='zh'?'en':'zh'];document.body.dataset.visual=beat.visual||'';if(beat.headline)document.getElementById('title').textContent=beat.headline[language==='en'?1:0];document.getElementById('result').textContent=beat.result?.[language==='en'?1:0]||'';if(beat.visual==='save')window.drawJourney(language);};
 window.point=(x,y)=>{const el=document.getElementById('cursor');el.style.opacity=1;el.style.transform=`translate(${x}px,${y}px)`;};
 window.highlight=rect=>{const el=document.getElementById('ring');Object.assign(el.style,{left:rect.x-5+'px',top:rect.y-5+'px',width:rect.width+10+'px',height:rect.height+10+'px',opacity:1});};
 </script></body></html>

@@ -9,6 +9,7 @@ Notable changes to Paper_Mind. Versions follow the `version` field in `extension
 - Added editable authors, publication year and venue to capture, manual entry and paper details. Academic page metadata is extracted automatically; optional Semantic Scholar / Crossref lookup fills missing fields with identifier or unambiguous exact-title matches.
 - Bibliographic facts participate in local and AI paper search and round-trip through backups. Duplicate saves preserve existing facts; attaching commentary does not replace paper authors. Delayed lookups do not overwrite edits or changed forms.
 - Updated bilingual documentation and screenshots. Existing libraries receive empty optional publication fields; no tag-count limits were introduced.
+- Recut both narrated videos into a two-minute tour, showing publication details, guided 3 → 2 → 1 narrowing and highlighted memory sentences; refreshed bilingual subtitles, covers and transcripts.
 
 ## 1.5.1
 

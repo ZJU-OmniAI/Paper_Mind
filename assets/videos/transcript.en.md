@@ -2,124 +2,86 @@
 
 ## 00:00 · A familiar moment after reading
 
-Some time after reading a paper, you may forget its title and how the method actually works.
+You read the paper, but the title and method have faded. Just a few impressions remain.
 
-读过的论文，过一阵子，标题和方法怎么实现的，往往都记不清了。
+读过的论文，标题和方法都模糊了。脑海里，只剩几个印象。
 
-What stays might be: something about agent optimization, perhaps the OPD algorithm, or maybe a paper from a particular team.
+Something about agent optimization. Perhaps the OPD algorithm. Maybe a paper from a particular team.
 
-脑海里留下的，可能是：好像是智能体的优化，似乎关于 OPD 算法，或者可能是某个团队出品。
+好像是智能体的优化，似乎关于 OPD 算法，可能是某个团队出品。
 
-## 00:14 · Why we built Paper_Mind
+## 00:13 · Meet Paper_Mind
 
-That is why we built Paper Mind: a lightweight browser extension that organizes papers around tags.
+Paper Mind connects what you remember to existing tags, and back to your saved papers.
 
-因此，我们开发了 Paper Mind，一个基于标签的轻量论文管理插件。
+Paper Mind，让模糊印象连上已有标签，回到你收藏的论文。
 
-A research direction, algorithm, or team can be a clue. Match it to existing tags, then return to your papers, with optional AI help.
+To find it again tomorrow, keep the clues when you save it today.
 
-方向、算法或团队，都可以成为查找线索。先匹配已有标签，再回到论文；描述模糊时，可以让大模型辅助。
+为了下次找回，今天收藏时，就把线索一起留下。
 
-To find a paper through those memories later, start by keeping the clues when you save it today.
+## 00:24 · 01 · Save the paper and its clues
 
-想在以后凭这些印象找回论文，就从今天收藏时，留下线索开始。
+Save a paper or web page, with authors, year and venue. Look up missing details when needed.
 
-## 00:38 · 01 · Capture and collect
+打开插件，保存论文或网页。作者、年份和出处一起留下，空缺也能补查。
 
-When you read a paper, open the extension to capture its details, or enter them manually, keeping sources and notes.
+Add one sentence about why it matters to you. Keep the article, images and notes alongside it.
 
-读到论文，打开插件，自动提取信息；也支持手动录入，保留来源和笔记。
+再写一句话，记住为什么关注它。正文、图片和笔记，也能一起保存。
 
-Clip blogs and commentary too, preserving article text and saving images locally.
+## 00:39 · 02 · Later, all you remember is an idea
 
-博客和解读文章也能剪藏，正文与图片一并留存。
+Later, all you remember is agent optimization. Start with that idea and find an existing tag.
 
-## 00:53 · 02 · Connected materials
+以后只记得智能体优化，就从这个概念，找到已有标签。
 
-As you read more about that paper, keep commentary and external resources together in the same record.
+Choose a tag, then follow suggestions to narrow the results. See how many papers each clue will leave.
 
-围绕这篇论文读到的解读文章和外部资料，也能放进同一条记录。
+标签选好，还能继续缩小范围。每加一个线索，都知道还剩几篇。
 
-Duplicate alerts and confirmed merges keep related material together as your collection grows.
+Then you see your own words: that is the one. Your memory sentence, notes and saved text reveal why it matches.
 
-重复收藏会提示，相关材料可确认合并，避免资料越存越散。
+看到当时记下的那句话：对，就是这篇。记忆句、笔记和正文，都能成为找回的证据。
 
-## 01:08 · 03 · Memory and reading progress
+## 01:03 · 03 · Keep your reading organized
 
-With the material saved, add a one-line memory, notes and a rating to preserve what you understood at the time.
+Keep commentary and resources with the paper. Duplicate alerts keep things tidy, while reading progress stays separate from tags.
 
-资料存好，再用一句话记住它；配合笔记和评分，保留当时的理解。
+同一篇论文的解读和资料放在一起。重复收藏会提醒，阅读进度单独管理。
 
-Track To read, Reading, Read and Revisit separately from your concept tags.
+## 01:12 · 04 · Tags with meaning
 
-未读、在读、已读和待重读独立管理，不再挤占概念标签。
+AI explains your tags using the linked papers. Aliases, redundancy checks and reviewed merges keep concepts clear.
 
-## 01:22 · 04 · From concepts to papers
+大模型结合标签和论文补上说明。别名复用、冗余检查和合并，让概念更清楚。
 
-Later, when all you remember is agent optimization, follow existing tags to narrow the search and find those papers again.
+## 01:21 · 05 · Find it, then keep exploring
 
-等到下次，只记得“智能体优化”，就从已有标签缩小范围，找回相关论文。
+Keep exploring with abstract translations, citation counts, similar papers and a map of connections.
 
-Full-text search, combined tags, reading status and rating filters help narrow the results.
+找回之后，用摘要翻译、引用量、相似论文和标签映射，继续阅读。
 
-还支持全文检索、多标签组合，以及阅读状态和评分筛选。
+## 01:29 · 06 · Build a research direction
 
-## 01:37 · 05 · Tags with meaning
+Turn related papers into topic packs that update automatically, ready for your next reading group or research project.
 
-To make those tags more useful, AI can use your labels and linked papers to explain their meaning and scope.
+再把相关论文组成自动更新的主题包，为组会或下一次研究做准备。
 
-为了让这些标签更好用，大模型可结合你给的标签和论文，补充含义与适用范围。
+## 01:37 · 07 · Use the models you prefer
 
-Aliases, redundancy checks and reviewed merge suggestions keep tags clear, with no limit on their number.
+Connect local Claude Code or Codex through a bridge, or use a compatible API. Choose your model and reasoning effort.
 
-别名复用、冗余分析和合并审核，让分类清晰；标签数量不设上限。
+接入本机 Claude Code、Codex，或你常用的模型 API，按需选择模型和思考强度。
 
-## 01:53 · 06 · Reading and discovery
+## 01:46 · 08 · Lightweight, with local control
 
-Once you have found the paper, abstract translation, citation counts and similar papers help you keep reading and exploring.
+Basic capture and search need no model. Bilingual UI, themes, import, export and automatic backups help you keep your collection.
 
-找回之后，还能借助摘要翻译、引用量和相似论文，继续阅读与发现。
+基础收藏与查找无需模型。双语、主题切换、导入导出和自动备份，让积累留得住。
 
-A tag-to-paper map reveals connections, while date, rating and citation sorting organize your view.
+## 01:56 · Paper_Mind
 
-标签映射直观呈现论文关系，也支持按时间、评分和引用量整理。
+Paper Mind. Find your papers through the ideas you remember. Open source, lightweight, and ready for your next paper.
 
-## 02:10 · 07 · Research topic packs
-
-As related papers accumulate, inclusion and exclusion tags turn them into topic packs that update automatically.
-
-当相关论文积累起来，用包含和排除标签，组成自动更新的研究主题包。
-
-Use them for reading groups, related-work reviews, or following a research direction over time.
-
-适合准备组会、整理相关工作，也适合持续跟进一个方向。
-
-## 02:25 · 08 · Flexible model backends
-
-These AI features can use Claude Code or Codex through a local bridge, reusing sign-in with your choice of model and reasoning effort.
-
-这些 AI 能力可通过本机桥接接入 Claude Code 或 Codex，复用登录，自选模型与思考强度。
-
-You can also use compatible APIs and presets for Qwen, GLM, Kimi and DeepSeek.
-
-也支持通用兼容 API，以及通义、智谱、Kimi 和 DeepSeek 等预设服务。
-
-## 02:42 · 09 · Lightweight, with local control
-
-For everyday use, no sign-up is needed. Basic capture and search work without a model, with bilingual UI, themes and shortcuts.
-
-日常使用无需注册，基础收藏与检索无需模型，还支持双语界面、深浅主题和快捷操作。
-
-Local import, export and daily automatic backups help you preserve and move your reading collection.
-
-本地导入导出与每日自动备份，让阅读积累可以迁移和保存。
-
-## 02:59 · Paper_Mind
-
-The understanding you keep today becomes the clue that brings you back to a paper when only a vague impression remains.
-
-这样，今天留下的理解，就能成为日后从模糊印象找回论文的线索。
-
-Paper Mind is open source. Start with your next paper.
-
-Paper Mind，现已开源。
+Paper Mind，通过脑海中的标签，找到你的论文。开源，轻量，从下一篇开始。
