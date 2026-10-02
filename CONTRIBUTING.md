@@ -4,7 +4,7 @@ Thanks for taking a look. Issues and pull requests are both welcome.
 
 ## Development setup
 
-There is no build step and no server. The extension is plain ES modules loaded directly by Chrome.
+The extension is plain ES modules loaded directly by Chrome, with no build step or server required for core workflows. The optional local CLI backend uses the Node.js bridge in `bridge/`; see the [model guide](docs/local-models.md#english-quick-start).
 
 1. Clone the repo.
 2. Open `chrome://extensions`, enable **Developer mode**, click **Load unpacked**, select the `extension/` folder.
@@ -26,6 +26,20 @@ Build the distributable ZIP with:
 npm run package:extension   # writes dist/Paper_Mind-extension.zip
 ```
 
+## Validation
+
+Install development dependencies with `npm ci`, then run checks relevant to the change:
+
+```bash
+npm test                         # logic, storage and background tasks
+npx playwright install chromium
+npm run test:ui                  # browser interaction checks
+```
+
+With Chrome already installed, use `PW_CHANNEL=chrome npm run test:ui`. Tests use isolated data and mocked model replies. Also describe manual checks for changes to capture, clipping or browser integration.
+
+Documentation changes should keep both root READMEs consistent, retain one video in the page's language, and verify relative links and heading anchors. Detailed screenshot walkthroughs live in `docs/walkthrough.en.md` and `docs/walkthrough.zh-CN.md`.
+
 ## Code layout
 
 ```
@@ -44,8 +58,8 @@ extension/
 
 ## Things to keep in mind
 
-- **Local-first is the point.** Nothing should be uploaded anywhere without the user explicitly triggering it. Any new network call needs a clear reason and a mention in `PRIVACY.md`.
-- **API keys never leave local storage.** They must not appear in exports, backups, or logs.
+- **Keep library storage local.** Optional model operations can send relevant text to the selected backend, including documented background processing after configuration. New network calls need a clear purpose, appropriate user controls and a mention in `PRIVACY.md`.
+- **Protect credentials.** API keys are only for authenticating requests to the configured service. API keys and bridge tokens must not appear in exports, backups, or logs.
 - **Don't rename the IndexedDB database** (`paperTagLibrary`) or bump `DB_VERSION` without a migration — that is somebody's whole library.
 - **Both locales.** New user-facing strings go into `_locales/en` and `_locales/zh_CN`, or into the bilingual string tables in `manager.js`.
 - **Don't break existing clips.** Image paths already written to disk are permanent; changing the folder scheme needs a fallback for older records.
@@ -53,7 +67,7 @@ extension/
 ## Pull requests
 
 - One focused change per PR.
-- Say what you tested manually — which pages you clipped, which flows you clicked through. There is no automated test suite yet.
+- Describe the relevant automated and manual validation: which checks passed, which pages you clipped, and which flows you clicked through.
 - Commit messages in the conventional style (`feat:`, `fix:`, `docs:`, `chore:`) are appreciated.
 
 ## Reporting bugs

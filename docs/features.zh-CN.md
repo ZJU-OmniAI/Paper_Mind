@@ -1,6 +1,6 @@
 # Paper_Mind 功能说明
 
-这是完整的功能文档。安装步骤见 [README_zh.md](../README_zh.md#几步开始使用)：打开 `chrome://extensions` → 开发者模式 → 加载已解压的扩展程序 → 选择仓库里的 `extension/` 目录。
+这是完整的功能文档。安装步骤见 [快速开始](../README_zh.md#快速开始)，首次使用可跟随 [收藏到找回的图文教程](walkthrough.zh-CN.md)：打开 `chrome://extensions` → 开发者模式 → 加载已解压的扩展程序 → 选择仓库里的 `extension/` 目录。
 
 基础收藏、管理与本地检索不需要启动服务。只有选择本机 Claude Code / Codex 时，需要运行可选的 `npm run bridge`；直接使用模型 API 不需要桥接。
 
