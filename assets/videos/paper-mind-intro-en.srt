@@ -1,79 +1,114 @@
 1
-00:00:00,182 --> 00:00:05,798
+00:00:00,160 --> 00:00:05,776
 You read the paper, but the title and method have faded. Just a few impressions remain.
 读过的论文，标题和方法都模糊了。脑海里，只剩几个印象。
 
 2
-00:00:06,349 --> 00:00:13,285
+00:00:06,280 --> 00:00:13,216
 Something about agent optimization. Perhaps the OPD algorithm. Maybe a paper from a particular team.
 好像是智能体的优化，似乎关于 OPD 算法，可能是某个团队出品。
 
 3
-00:00:13,841 --> 00:00:19,649
-Paper Mind connects what you remember to existing tags, and back to your saved papers.
-Paper Mind，让模糊印象连上已有标签，回到你收藏的论文。
+00:00:13,720 --> 00:00:21,616
+Paper Mind describes one paper with several tags. Its research direction, method and team are all clues.
+Paper Mind 用多个标签描述同一篇论文。研究方向、方法、团队，都是线索。
 
 4
-00:00:20,201 --> 00:00:24,209
-To find it again tomorrow, keep the clues when you save it today.
-为了下次找回，今天收藏时，就把线索一起留下。
+00:00:22,120 --> 00:00:29,056
+For example, agent optimization, OPD and a team label can all belong to this one paper.
+比如，智能体优化、OPD、某个团队，三个标签可以同时属于这一篇论文。
 
 5
-00:00:24,765 --> 00:00:31,965
-Save a paper or web page, with authors, year and venue. Look up missing details when needed.
-打开插件，保存论文或网页。作者、年份和出处一起留下，空缺也能补查。
+00:00:29,560 --> 00:00:36,184
+When saving a paper, keep its authors, year and venue. Missing details can be looked up.
+所以，收藏时先保留作者、年份和出处，缺失的信息还能补查。
 
 6
-00:00:32,515 --> 00:00:38,803
-Add one sentence about why it matters to you. Keep the article, images and notes alongside it.
-再写一句话，记住为什么关注它。正文、图片和笔记，也能一起保存。
+00:00:36,680 --> 00:00:43,328
+Give this paper several tags. This example is about both agent optimization and evaluation.
+再给同一篇论文选上多个标签。这里既是智能体优化，也关注评估与可靠性。
 
 7
-00:00:39,357 --> 00:00:46,389
-Later, all you remember is agent optimization. Start with that idea and find an existing tag.
-以后只记得智能体优化，就从这个概念，找到已有标签。
+00:00:43,840 --> 00:00:47,056
+Add one sentence about why this paper mattered to you.
+再用一句话，留下你当时关注它的理由。
 
 8
-00:00:46,940 --> 00:00:54,308
-Choose a tag, then follow suggestions to narrow the results. See how many papers each clue will leave.
-标签选好，还能继续缩小范围。每加一个线索，都知道还剩几篇。
+00:00:47,560 --> 00:00:54,088
+Later, start with the idea you remember: agent optimization. It leads to an existing tag.
+下次只记得智能体优化，就从这个概念找到已有标签。
 
 9
-00:00:54,860 --> 00:01:02,780
-Then you see your own words: that is the one. Your memory sentence, notes and saved text reveal why it matches.
-看到当时记下的那句话：对，就是这篇。记忆句、笔记和正文，都能成为找回的证据。
+00:00:54,600 --> 00:01:01,008
+That tag finds three related papers. Suggestions show which clue can narrow them further.
+选中这个标签，先找到三篇相关论文。系统会提示还能怎样缩小范围。
 
 10
-00:01:03,334 --> 00:01:11,974
-Keep commentary and resources with the paper. Duplicate alerts keep things tidy, while reading progress stays separate from tags.
-同一篇论文的解读和资料放在一起。重复收藏会提醒，阅读进度单独管理。
+00:01:01,520 --> 00:01:06,824
+Add evaluation. Only papers with both tags remain: two papers.
+再选评估与可靠性，只看同时包含两个标签的论文，就剩两篇。
 
 11
-00:01:12,534 --> 00:01:20,790
-AI explains your tags using the linked papers. Aliases, redundancy checks and reviewed merges keep concepts clear.
-大模型结合标签和论文补上说明。别名复用、冗余检查和合并，让概念更清楚。
+00:01:07,320 --> 00:01:13,824
+Search a remembered phrase. Your own sentence and matching notes make it clear: that is the one.
+再搜一点记得的内容，看到当时那句话和命中笔记：对，就是这篇。
 
 12
-00:01:21,345 --> 00:01:28,857
-Keep exploring with abstract translations, citation counts, similar papers and a map of connections.
-找回之后，用摘要翻译、引用量、相似论文和标签映射，继续阅读。
+00:01:14,320 --> 00:01:20,224
+Keep commentary, saved article text and notes with the same paper, ready to revisit.
+相关解读、剪藏正文和笔记，放在同一篇论文里，方便回看。
 
 13
-00:01:29,415 --> 00:01:37,359
-Turn related papers into topic packs that update automatically, ready for your next reading group or research project.
-再把相关论文组成自动更新的主题包，为组会或下一次研究做准备。
+00:01:20,720 --> 00:01:26,768
+Track To read, Reading, Read and Revisit separately from your concept tags.
+未读、在读、已读和待重读单独管理，不占用概念标签。
 
 14
-00:01:37,913 --> 00:01:46,241
-Connect local Claude Code or Codex through a bridge, or use a compatible API. Choose your model and reasoning effort.
-接入本机 Claude Code、Codex，或你常用的模型 API，按需选择模型和思考强度。
+00:01:27,280 --> 00:01:33,112
+AI uses your tags and linked papers to explain each tag’s meaning and scope.
+大模型根据你选的标签和关联论文生成说明，解释它的含义与适用范围。
 
 15
-00:01:46,795 --> 00:01:56,467
-Basic capture and search need no model. Bilingual UI, themes, import, export and automatic backups help you keep your collection.
-基础收藏与查找无需模型。双语、主题切换、导入导出和自动备份，让积累留得住。
+00:01:33,600 --> 00:01:38,352
+Translate the abstract to return quickly to the paper’s main ideas.
+摘要翻译，让你更快回到论文的核心内容。
 
 16
-00:01:57,023 --> 00:02:05,063
+00:01:38,840 --> 00:01:44,120
+Related papers are connected through shared tags, so you can keep following the idea.
+相似论文按共享标签关联，帮你顺着线索继续阅读。
+
+17
+00:01:44,640 --> 00:01:51,432
+The map shows both sides: one tag can link many papers, and one paper can have several tags.
+标签映射还能看到：一个标签关联多篇论文，一篇论文也有多个标签。
+
+18
+00:01:51,920 --> 00:01:59,720
+Topic packs use inclusion and exclusion tags to collect relevant papers automatically for your next reading group.
+用包含和排除标签组成主题包，自动汇集相关论文，为下一次组会做准备。
+
+19
+00:02:00,200 --> 00:02:06,440
+Connect Claude Code or Codex through a local bridge, choosing your model and reasoning effort.
+通过本机桥接接入 Claude Code 或 Codex，自选模型与思考强度。
+
+20
+00:02:06,960 --> 00:02:10,680
+Or connect a compatible model API you already use.
+也可以接入你常用的兼容模型 API。
+
+21
+00:02:11,160 --> 00:02:18,792
+No sign-up. Basic capture and search need no model, with bilingual UI and light or dark themes.
+无需注册，基础收藏与查找无需模型，还支持双语和深浅主题。
+
+22
+00:02:19,280 --> 00:02:25,304
+Your library stays on your device, with import, export and automatic backups.
+论文库留在本地，支持导入导出和自动备份。
+
+23
+00:02:25,800 --> 00:02:33,840
 Paper Mind. Find your papers through the ideas you remember. Open source, lightweight, and ready for your next paper.
 Paper Mind，通过脑海中的标签，找到你的论文。开源，轻量，从下一篇开始。

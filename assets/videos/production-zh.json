@@ -5,56 +5,290 @@
     "rate": "-8%",
     "pitch": "-5Hz"
   },
-  "duration": 122.21,
+  "duration": 156.6,
   "resolution": "1920x1080",
   "subtitles": [
     "zh",
     "en"
   ],
+  "sync": "ready-frame-cuts",
+  "frameRate": 25,
   "scenes": [
     {
       "id": "intro",
-      "start": 0.002
+      "start": 0
     },
     {
       "id": "recall",
-      "start": 13.635
+      "start": 13.52
     },
     {
       "id": "capture",
-      "start": 25.401
+      "start": 29.72
     },
     {
       "id": "search",
-      "start": 41.916
+      "start": 49.8
     },
     {
       "id": "organize",
-      "start": 63.948
+      "start": 77.84
     },
     {
       "id": "tags",
-      "start": 72.278
+      "start": 91.32
     },
     {
       "id": "discovery",
-      "start": 81.326
+      "start": 98.88
     },
     {
       "id": "topics",
-      "start": 88.646
+      "start": 116.84
     },
     {
       "id": "models",
-      "start": 95.851
+      "start": 124.84
     },
     {
       "id": "data",
-      "start": 104.614
+      "start": 136.2
     },
     {
       "id": "outro",
-      "start": 113.976
+      "start": 148.44
+    }
+  ],
+  "shots": [
+    {
+      "scene": "intro",
+      "beat": 0,
+      "start": 0,
+      "end": 6.76,
+      "speechStart": 0.16,
+      "speechEnd": 6.424,
+      "sourceStartFrame": 32,
+      "frames": 169
+    },
+    {
+      "scene": "intro",
+      "beat": 1,
+      "start": 6.76,
+      "end": 13.52,
+      "speechStart": 6.92,
+      "speechEnd": 13.184000000000001,
+      "sourceStartFrame": 229,
+      "frames": 169
+    },
+    {
+      "scene": "recall",
+      "beat": 0,
+      "start": 13.52,
+      "end": 22,
+      "speechStart": 13.68,
+      "speechEnd": 21.672,
+      "sourceStartFrame": 423,
+      "frames": 212
+    },
+    {
+      "scene": "recall",
+      "beat": 1,
+      "start": 22,
+      "end": 29.72,
+      "speechStart": 22.16,
+      "speechEnd": 29.36,
+      "sourceStartFrame": 662,
+      "frames": 193
+    },
+    {
+      "scene": "capture",
+      "beat": 0,
+      "start": 29.72,
+      "end": 36.8,
+      "speechStart": 29.88,
+      "speechEnd": 36.455999999999996,
+      "sourceStartFrame": 902,
+      "frames": 177
+    },
+    {
+      "scene": "capture",
+      "beat": 1,
+      "start": 36.8,
+      "end": 45.2,
+      "speechStart": 36.959999999999994,
+      "speechEnd": 44.879999999999995,
+      "sourceStartFrame": 1134,
+      "frames": 210
+    },
+    {
+      "scene": "capture",
+      "beat": 2,
+      "start": 45.2,
+      "end": 49.8,
+      "speechStart": 45.36,
+      "speechEnd": 49.44,
+      "sourceStartFrame": 1398,
+      "frames": 115
+    },
+    {
+      "scene": "search",
+      "beat": 0,
+      "start": 49.8,
+      "end": 55.76,
+      "speechStart": 49.959999999999994,
+      "speechEnd": 55.431999999999995,
+      "sourceStartFrame": 1584,
+      "frames": 149
+    },
+    {
+      "scene": "search",
+      "beat": 1,
+      "start": 55.76,
+      "end": 63.64,
+      "speechStart": 55.919999999999995,
+      "speechEnd": 63.288,
+      "sourceStartFrame": 1794,
+      "frames": 197
+    },
+    {
+      "scene": "search",
+      "beat": 2,
+      "start": 63.64,
+      "end": 70.56,
+      "speechStart": 63.8,
+      "speechEnd": 70.232,
+      "sourceStartFrame": 2047,
+      "frames": 173
+    },
+    {
+      "scene": "search",
+      "beat": 3,
+      "start": 70.56,
+      "end": 77.84,
+      "speechStart": 70.72,
+      "speechEnd": 77.488,
+      "sourceStartFrame": 2274,
+      "frames": 182
+    },
+    {
+      "scene": "organize",
+      "beat": 0,
+      "start": 77.84,
+      "end": 84.4,
+      "speechStart": 78,
+      "speechEnd": 84.048,
+      "sourceStartFrame": 2530,
+      "frames": 164
+    },
+    {
+      "scene": "organize",
+      "beat": 1,
+      "start": 84.4,
+      "end": 91.32,
+      "speechStart": 84.56,
+      "speechEnd": 90.992,
+      "sourceStartFrame": 2765,
+      "frames": 173
+    },
+    {
+      "scene": "tags",
+      "beat": 0,
+      "start": 91.32,
+      "end": 98.88,
+      "speechStart": 91.47999999999999,
+      "speechEnd": 98.55999999999999,
+      "sourceStartFrame": 2999,
+      "frames": 189
+    },
+    {
+      "scene": "discovery",
+      "beat": 0,
+      "start": 98.88,
+      "end": 103.56,
+      "speechStart": 99.03999999999999,
+      "speechEnd": 103.216,
+      "sourceStartFrame": 3254,
+      "frames": 117
+    },
+    {
+      "scene": "discovery",
+      "beat": 1,
+      "start": 103.56,
+      "end": 109.6,
+      "speechStart": 103.72,
+      "speechEnd": 109.264,
+      "sourceStartFrame": 3425,
+      "frames": 151
+    },
+    {
+      "scene": "discovery",
+      "beat": 2,
+      "start": 109.6,
+      "end": 116.84,
+      "speechStart": 109.75999999999999,
+      "speechEnd": 116.50399999999999,
+      "sourceStartFrame": 3670,
+      "frames": 181
+    },
+    {
+      "scene": "topics",
+      "beat": 0,
+      "start": 116.84,
+      "end": 124.84,
+      "speechStart": 117,
+      "speechEnd": 124.488,
+      "sourceStartFrame": 3917,
+      "frames": 200
+    },
+    {
+      "scene": "models",
+      "beat": 0,
+      "start": 124.84,
+      "end": 131.92,
+      "speechStart": 125,
+      "speechEnd": 131.576,
+      "sourceStartFrame": 4178,
+      "frames": 177
+    },
+    {
+      "scene": "models",
+      "beat": 1,
+      "start": 131.92,
+      "end": 136.2,
+      "speechStart": 132.07999999999998,
+      "speechEnd": 135.87199999999999,
+      "sourceStartFrame": 4407,
+      "frames": 107
+    },
+    {
+      "scene": "data",
+      "beat": 0,
+      "start": 136.2,
+      "end": 143.12,
+      "speechStart": 136.35999999999999,
+      "speechEnd": 142.79199999999997,
+      "sourceStartFrame": 4583,
+      "frames": 173
+    },
+    {
+      "scene": "data",
+      "beat": 1,
+      "start": 143.12,
+      "end": 148.44,
+      "speechStart": 143.28,
+      "speechEnd": 148.104,
+      "sourceStartFrame": 4808,
+      "frames": 133
+    },
+    {
+      "scene": "outro",
+      "beat": 0,
+      "start": 148.44,
+      "end": 156.6,
+      "speechStart": 148.6,
+      "speechEnd": 156.28,
+      "sourceStartFrame": 4968,
+      "frames": 204
     }
   ]
 }

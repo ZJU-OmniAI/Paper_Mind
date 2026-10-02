@@ -11,57 +11,64 @@ export const story = [
       { visual: 'forget', zh: '读过的论文，标题和方法都模糊了。脑海里，只剩几个印象。', en: 'You read the paper, but the title and method have faded. Just a few impressions remain.' },
       { visual: 'remember', zh: '好像是智能体的优化，似乎关于 OPD 算法，可能是某个团队出品。', en: 'Something about agent optimization. Perhaps the OPD algorithm. Maybe a paper from a particular team.' }
     ] },
-  { id: 'recall', mode: 'recall', section: ['这就是 Paper_Mind', 'Meet Paper_Mind'],
-    title: ['从模糊印象，回到你收藏的论文。', 'From a vague idea back to a saved paper.'],
-    kicker: ['基于标签的轻量论文管理插件 · 可选大模型辅助', 'A lightweight, tag-based paper manager · Optional AI assistance'],
+  { id: 'recall', mode: 'recall', section: ['这就是 Paper_Mind 的标签系统', 'How Paper_Mind uses tags'],
+    title: ['一篇论文，由多个标签共同描述。', 'One paper. Several tags.'],
+    kicker: ['研究方向、方法、团队，都可以成为同一篇论文的线索。', 'Direction, method and team: different clues to the same paper.'],
     beats: [
-      { visual: 'papers', zh: 'Paper Mind，让模糊印象连上已有标签，回到你收藏的论文。', en: 'Paper Mind connects what you remember to existing tags, and back to your saved papers.' },
-      { visual: 'save', zh: '为了下次找回，今天收藏时，就把线索一起留下。', en: 'To find it again tomorrow, keep the clues when you save it today.' }
+      { visual: 'papers', zh: 'Paper Mind 用多个标签描述同一篇论文。研究方向、方法、团队，都是线索。', en: 'Paper Mind describes one paper with several tags. Its research direction, method and team are all clues.' },
+      { visual: 'papers', zh: '比如，智能体优化、OPD、某个团队，三个标签可以同时属于这一篇论文。', en: 'For example, agent optimization, OPD and a team label can all belong to this one paper.' }
     ] },
-  { id: 'capture', mode: 'popup', section: ['01 · 收藏时，留下线索', '01 · Save the paper and its clues'],
+  { id: 'capture', mode: 'popup', section: ['01 · 收藏时，把线索一起留下', '01 · Save the paper and its clues'],
     title: ['论文的信息，\n和你的理解。', 'The paper’s details.\nYour own insight.'],
-    kicker: ['保存的不只是标题，还有日后认出它的理由。', 'Keep what will help you recognize it later.'],
-    chips: [['作者 · 年份 · 发表出处', '一句话记住它', '正文 · 图片 · 笔记'], ['Authors · Year · Venue', 'A one-line memory', 'Text · Images · Notes']],
+    kicker: ['为同一篇论文，留下多个角度的描述。', 'Keep several ways to recognize the same paper.'],
+    chips: [['作者 · 年份 · 发表出处', '多个标签共同描述', '一句话记住它'], ['Authors · Year · Venue', 'Several tags per paper', 'A one-line memory']],
     beats: [
-      { zh: '打开插件，保存论文或网页。作者、年份和出处一起留下，空缺也能补查。', en: 'Save a paper or web page, with authors, year and venue. Look up missing details when needed.' },
-      { zh: '再写一句话，记住为什么关注它。正文、图片和笔记，也能一起保存。', en: 'Add one sentence about why it matters to you. Keep the article, images and notes alongside it.' }
+      { zh: '所以，收藏时先保留作者、年份和出处，缺失的信息还能补查。', en: 'When saving a paper, keep its authors, year and venue. Missing details can be looked up.' },
+      { headline: ['给同一篇论文，\n选上多个标签。', 'One paper.\nMore than one tag.'], zh: '再给同一篇论文选上多个标签。这里既是智能体优化，也关注评估与可靠性。', en: 'Give this paper several tags. This example is about both agent optimization and evaluation.' },
+      { headline: ['再用一句话，\n记住为什么关注它。', 'One sentence.\nWhy it matters to you.'], zh: '再用一句话，留下你当时关注它的理由。', en: 'Add one sentence about why this paper mattered to you.' }
     ] },
-  { id: 'search', mode: 'manager', section: ['02 · 下次，只记得一个概念', '02 · Later, all you remember is an idea'],
-    title: ['不记得标题，也有路可找。', 'No title? Start with what you remember.'],
+  { id: 'search', mode: 'manager', section: ['02 · 用标签组合，逐步找回', '02 · Combine tags to find it again'],
+    title: ['不记得标题，就从概念开始。', 'No title? Start with an idea.'],
     beats: [
-      { zh: '以后只记得智能体优化，就从这个概念，找到已有标签。', en: 'Later, all you remember is agent optimization. Start with that idea and find an existing tag.' },
-      { headline: ['还可以怎样缩小范围？', 'Narrow it down. One more clue.'], result: ['3 篇 → 2 篇', '3 papers → 2'], zh: '标签选好，还能继续缩小范围。每加一个线索，都知道还剩几篇。', en: 'Choose a tag, then follow suggestions to narrow the results. See how many papers each clue will leave.' },
-      { headline: ['看到当时的那句话：“对，就是这篇。”', 'Your own words: “That’s the one.”'], result: ['2 篇 → 找到它', '2 papers → found it'], zh: '看到当时记下的那句话：对，就是这篇。记忆句、笔记和正文，都能成为找回的证据。', en: 'Then you see your own words: that is the one. Your memory sentence, notes and saved text reveal why it matches.' }
+      { zh: '下次只记得智能体优化，就从这个概念找到已有标签。', en: 'Later, start with the idea you remember: agent optimization. It leads to an existing tag.' },
+      { headline: ['一个标签，先找到相关的一组。', 'One tag finds a group of papers.'], result: ['9 篇 → 3 篇', '9 papers → 3'], zh: '选中这个标签，先找到三篇相关论文。系统会提示还能怎样缩小范围。', en: 'That tag finds three related papers. Suggestions show which clue can narrow them further.' },
+      { headline: ['同时包含两个标签，范围更小。', 'Both tags together narrow the results.'], result: ['3 篇 → 2 篇', '3 papers → 2'], zh: '再选评估与可靠性，只看同时包含两个标签的论文，就剩两篇。', en: 'Add evaluation. Only papers with both tags remain: two papers.' },
+      { headline: ['当时的那句话，让你认出它。', 'Your own words help you recognize it.'], result: ['2 篇 → 1 篇', '2 papers → 1'], zh: '再搜一点记得的内容，看到当时那句话和命中笔记：对，就是这篇。', en: 'Search a remembered phrase. Your own sentence and matching notes make it clear: that is the one.' }
     ] },
-  { id: 'organize', mode: 'manager', section: ['03 · 材料与进度，各就其位', '03 · Keep your reading organized'],
-    title: ['资料放在一起，进度单独管理。', 'Related material together. Reading progress apart.'],
+  { id: 'organize', mode: 'manager', section: ['03 · 资料和进度，各就其位', '03 · Keep your reading organized'],
+    title: ['一篇论文，相关材料放在一起。', 'One paper, with its supporting material.'],
     beats: [
-      { zh: '同一篇论文的解读和资料放在一起。重复收藏会提醒，阅读进度单独管理。', en: 'Keep commentary and resources with the paper. Duplicate alerts keep things tidy, while reading progress stays separate from tags.' }
+      { zh: '相关解读、剪藏正文和笔记，放在同一篇论文里，方便回看。', en: 'Keep commentary, saved article text and notes with the same paper, ready to revisit.' },
+      { headline: ['阅读进度单独管理，不占概念标签。', 'Reading progress stays separate from tags.'], zh: '未读、在读、已读和待重读单独管理，不占用概念标签。', en: 'Track To read, Reading, Read and Revisit separately from your concept tags.' }
     ] },
-  { id: 'tags', mode: 'manager', section: ['04 · 有含义的标签', '04 · Tags with meaning'],
-    title: ['你选标签，AI 补上含义。', 'Your tags. More meaning with AI.'],
+  { id: 'tags', mode: 'manager', section: ['04 · 每个标签，都有说明', '04 · Every tag has context'],
+    title: ['你选标签，AI 解释它的含义与范围。', 'Your tags. AI explains their meaning and scope.'],
     beats: [
-      { zh: '大模型结合标签和论文补上说明。别名复用、冗余检查和合并，让概念更清楚。', en: 'AI explains your tags using the linked papers. Aliases, redundancy checks and reviewed merges keep concepts clear.' }
+      { zh: '大模型根据你选的标签和关联论文生成说明，解释它的含义与适用范围。', en: 'AI uses your tags and linked papers to explain each tag’s meaning and scope.' }
     ] },
   { id: 'discovery', mode: 'manager', section: ['05 · 找回之后，继续阅读', '05 · Find it, then keep exploring'],
-    title: ['从一篇论文，看到更多关联。', 'See the connections beyond one paper.'],
+    title: ['读懂摘要，再看相关论文。', 'Read the abstract. Explore related papers.'],
     beats: [
-      { zh: '找回之后，用摘要翻译、引用量、相似论文和标签映射，继续阅读。', en: 'Keep exploring with abstract translations, citation counts, similar papers and a map of connections.' }
+      { zh: '摘要翻译，让你更快回到论文的核心内容。', en: 'Translate the abstract to return quickly to the paper’s main ideas.' },
+      { headline: ['共享标签，带你找到相似论文。', 'Shared tags lead to related papers.'], zh: '相似论文按共享标签关联，帮你顺着线索继续阅读。', en: 'Related papers are connected through shared tags, so you can keep following the idea.' },
+      { headline: ['一个标签关联多篇，一篇论文也有多标签。', 'Tags connect papers in more than one way.'], zh: '标签映射还能看到：一个标签关联多篇论文，一篇论文也有多个标签。', en: 'The map shows both sides: one tag can link many papers, and one paper can have several tags.' }
     ] },
   { id: 'topics', mode: 'manager', section: ['06 · 积累成一个研究方向', '06 · Build a research direction'],
-    title: ['下一次组会，相关论文已经在一起。', 'Your next reading group starts here.'],
+    title: ['把一组标签，变成持续更新的清单。', 'Turn a tag combination into a living list.'],
     beats: [
-      { zh: '再把相关论文组成自动更新的主题包，为组会或下一次研究做准备。', en: 'Turn related papers into topic packs that update automatically, ready for your next reading group or research project.' }
+      { zh: '用包含和排除标签组成主题包，自动汇集相关论文，为下一次组会做准备。', en: 'Topic packs use inclusion and exclusion tags to collect relevant papers automatically for your next reading group.' }
     ] },
-  { id: 'models', mode: 'manager', section: ['07 · 用你习惯的模型', '07 · Use the models you prefer'],
-    title: ['Claude Code · Codex · 兼容 API', 'Claude Code · Codex · Compatible APIs'],
+  { id: 'models', mode: 'manager', section: ['07 · 选择你习惯的模型', '07 · Use the models you prefer'],
+    title: ['Claude Code · Codex', 'Claude Code · Codex'],
     beats: [
-      { zh: '接入本机 Claude Code、Codex，或你常用的模型 API，按需选择模型和思考强度。', en: 'Connect local Claude Code or Codex through a bridge, or use a compatible API. Choose your model and reasoning effort.' }
+      { zh: '通过本机桥接接入 Claude Code 或 Codex，自选模型与思考强度。', en: 'Connect Claude Code or Codex through a local bridge, choosing your model and reasoning effort.' },
+      { headline: ['也可以使用你常用的模型 API。', 'Or connect a compatible model API.'], zh: '也可以接入你常用的兼容模型 API。', en: 'Or connect a compatible model API you already use.' }
     ] },
   { id: 'data', mode: 'manager', section: ['08 · 轻量使用，安心积累', '08 · Lightweight, with local control'],
-    title: ['无需注册，论文库留在本地。', 'No sign-up. Your library stays on your device.'],
+    title: ['无需注册，基础收藏与查找无需模型。', 'No sign-up. Basic capture and search need no model.'],
     beats: [
-      { zh: '基础收藏与查找无需模型。双语、主题切换、导入导出和自动备份，让积累留得住。', en: 'Basic capture and search need no model. Bilingual UI, themes, import, export and automatic backups help you keep your collection.' }
+      { zh: '无需注册，基础收藏与查找无需模型，还支持双语和深浅主题。', en: 'No sign-up. Basic capture and search need no model, with bilingual UI and light or dark themes.' },
+      { headline: ['论文库留在本地，备份也由你掌握。', 'Your library and backups stay under your control.'], zh: '论文库留在本地，支持导入导出和自动备份。', en: 'Your library stays on your device, with import, export and automatic backups.' }
     ] },
   { id: 'outro', mode: 'outro', section: ['Paper_Mind', 'Paper_Mind'],
     title: ['通过脑海中的标签，\n找到你的论文。', 'Remember an idea.\nFind your paper.'],

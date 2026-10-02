@@ -52,6 +52,11 @@ body[data-language=en] .recall-column.impressions .recall-item{font-size:22px}
 #result{position:absolute;right:65px;top:133px;padding:10px 19px;border:1px solid #aad7c5;border-radius:30px;background:#e3f3eb;color:#087b66;font-size:23px;font-weight:650;letter-spacing:.2px}
 #result:empty{display:none}body[data-mode=manager] #title{max-width:1370px}
 body:is([data-mode=memory],[data-mode=recall],[data-mode=outro]) :is(#ring,#cursor){display:none}
+.multi-paper{background:white;border:1px solid #b8d9c8;border-radius:14px;padding:24px;margin-top:10px;min-height:264px;box-shadow:0 9px 22px #24574009}
+.multi-paper .paper-symbol{width:40px;height:47px;border:2px solid #80b7a0;border-radius:6px;display:flex;align-items:center;justify-content:center;color:#0c7d72;font-size:23px;margin-bottom:18px}
+.multi-paper h3{font-size:31px;line-height:1.3;margin:0 0 12px;color:#183e32}.multi-paper p{font-size:19px;color:#6a8175;margin:0 0 20px;line-height:1.5}
+.paper-tag-set{display:flex;flex-wrap:wrap;gap:9px}.paper-tag-set span{background:#e7f5ed;border:1px solid #b5dcca;color:#087b66;border-radius:20px;padding:8px 12px;font-size:19px;font-weight:600}
+.many-to-one{height:300px;width:65px;align-self:center}.many-to-one path{fill:none;stroke:#68a58c;stroke-width:2.5}
 </style>
 <body data-mode="title"><header><div class="brand"><img src="/assets/logo.png">Paper_Mind</div><div class="badge" id="badge">功能全景 · 实际界面</div></header>
 <div id="section"></div><h1 id="title"></h1><div id="result"></div><div id="kicker"></div><div id="flow"><span>脑海中的概念</span><b>→</b><span>已有标签</span><b>→</b><span>你的论文</span></div><div id="chips"></div><div id="minor"><strong>轻量收藏 · 简洁管理</strong><br>标签有说明，阅读进度独立管理。<br>按需要添加标签，数量不设上限。</div>
@@ -73,9 +78,15 @@ window.drawRecall=language=>{
   const columns=[
     {kind:'impressions',title:pick('模糊印象','A vague impression'),items:thoughts,hint:pick('研究方向、算法名、团队名，都可能是线索。','A direction, algorithm or team can be a clue.')},
     {kind:'tags',title:pick('已有标签','Existing tags'),items:pick(['智能体优化','OPD','XXX 团队'],['Agent optimization','OPD','Team XXX']),hint:pick('这些都可以是你记录的标签；描述模糊时可用 AI 辅助匹配。','Use tags you have recorded. AI can help match vague descriptions.')},
-    {kind:'papers',title:pick('你收藏的论文','Your saved papers'),items:pick(['智能体优化方向的论文','与 OPD 相关的论文','XXX 团队的论文'],['Papers on agent optimization','Papers related to OPD','Papers from team XXX']),hint:pick('沿着标签缩小范围，重新找到它。','Follow the tags to narrow your search.')}
+    {kind:'papers',title:pick('同一篇论文','The same paper'),items:[],hint:pick('示意案例：三个标签共同描述这一篇论文。标签可以组合，不互斥。','Illustrative example: these tags all describe one paper. Tags can coexist.')}
   ];
   window.drawColumns(columns);
+  const target=document.querySelector('#recallStage .papers'),card=element('div','','multi-paper');
+  card.append(element('div','≡','paper-symbol'),element('h3',pick('你读过的那篇论文','The paper you read')),element('p',pick('从多个角度，记住同一篇论文。','Different angles. One paper.')));
+  const tagSet=element('div','','paper-tag-set');pick(['智能体优化','OPD','XXX 团队'],['Agent optimization','OPD','Team XXX']).forEach(label=>tagSet.append(element('span',label)));
+  card.append(tagSet);target.insertBefore(card,target.querySelector('.recall-hint'));
+  const arrows=document.querySelectorAll('#recallStage .recall-arrow'),merge=arrows[1];
+  merge.classList.add('many-to-one');merge.innerHTML='<svg width="65" height="300" viewBox="0 0 65 300" aria-hidden="true"><path d="M2 70 C30 70 28 150 58 150 M2 150 H58 M2 230 C30 230 28 150 58 150 M49 141 L59 150 L49 159"/></svg>';
 };
 window.drawColumns=columns=>{
   const parts=[];columns.forEach((c,i)=>{if(i)parts.push(element('div','→','recall-arrow'));const col=element('div','',`recall-column ${c.kind}`);col.append(element('span',`0${i+1}`,'step'),element('h2',c.title));c.items.forEach(t=>col.append(element('div',t,'recall-item')));col.append(element('div',c.hint,'recall-hint'));parts.push(col);});

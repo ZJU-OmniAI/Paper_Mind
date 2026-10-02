@@ -9,10 +9,11 @@ import path from 'node:path';
 import { installDemo } from './demo/fixture.mjs';
 import { story } from './demo/story.mjs';
 import { prepareSpeech } from './demo/speech.mjs';
+import { FRAME_RATE, shotTiming, locateShotFrames } from './demo/timing.mjs';
 
 const run = promisify(execFile);
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const scratch = path.join(root, 'dist/demo-v2');
+const scratch = path.join(root, 'dist/demo-v3');
 const output = path.join(root, 'assets/videos');
 const checkOnly = process.env.DEMO_CHECK === '1';
 const encodeOnly = process.env.DEMO_ENCODE_ONLY === '1';
@@ -61,7 +62,7 @@ try {
     await page.goto(origin+'/__demo');
     const app = page.frameLocator('#app');
     await expect(app.locator('#titleInput')).toHaveValue('Reading Papers with Evidence-Aware Agents');
-    // Prepare a real capture form before the synchronization marker; no simulated success UI.
+    // Prepare real UI states before their narrated shots; navigation is cut out.
     await page.evaluate(()=>document.body.dataset.mode='popup');
     const memory = en ? 'Verify tool evidence before an agent answers questions about a paper.' : '先验证工具返回的证据，再让智能体回答论文问题。';
     await app.locator('#captureMemory').fill(memory);
@@ -83,7 +84,12 @@ try {
       await pause(checkOnly?180:380);
       const box=await locator.boundingBox();
       if(!box)throw new Error('Hidden feature in recording');
-      await page.evaluate(box=>{window.highlight(box);window.point(box.x+Math.min(box.width/2,100),box.y+Math.min(box.height/2,60));},box);
+      await page.evaluate(box=>{
+        const viewer=document.getElementById('viewer').getBoundingClientRect();
+        const x=Math.max(box.x,viewer.left+9),y=Math.max(box.y,viewer.top+42);
+        const visible={x,y,width:Math.min(box.x+box.width,viewer.right-9)-x,height:Math.min(box.y+box.height,viewer.bottom-9)-y};
+        window.highlight(visible);window.point(x+Math.min(visible.width/2,100),y+Math.min(visible.height/2,60));
+      },box);
       await pause(checkOnly?80:300);
     };
     const click = async locator => {await locator.click();await pause(checkOnly?80:220);};
@@ -100,16 +106,17 @@ try {
         await expect(app.locator('#captureBibliography [data-bib-field="year"]')).toHaveValue('2026');
         await focus(app.locator('#captureBibliography'));
       },async()=>{
+        await expect(app.locator('#tagBox .chip')).toHaveCount(2);
+        await focus(app.locator('#tagBox'));
+      },async()=>{
         await focus(app.locator('#captureMemory'));
-        await pause(checkOnly?80:2100);
+      }],
+      search:[async()=>{
         await click(app.locator('#saveButton'));
         await expect(app.locator('#message')).toHaveClass(/success/);
-        await focus(app.locator('#savedBanner'));
         const saved=await app.locator('body').evaluate(async()=>{const {handleApi}=await import('/storage.js');return(await handleApi('/api/state')).papers.find(p=>p.title==='Reading Papers with Evidence-Aware Agents');});
         expect(saved.memory).toBe(memory);expect(saved.valueScore).toBe(4.5);expect(saved.readingStatus).toBe('reading');expect(saved.tagIds.slice().sort()).toEqual(['agent','eval']);
         expect(saved.authors).toEqual(['Alex Chen','Morgan Lee']);expect(saved.year).toBe('2026');expect(saved.venue).toContain(en?'Workshop':'研讨会');savedId=saved.id;
-      }],
-      search:[async()=>{
         await click(app.locator('#openManagerButton'));await expect(app.locator('#paperCount')).toHaveText('9');
         await library();await app.locator('#conceptQuery').fill(en?'agent optimization':'智能体优化');
         await expect(app.locator('#conceptResults [data-concept-tag-id]')).toHaveCount(1);await focus(app.locator('.concept-search'));
@@ -119,10 +126,12 @@ try {
         const refinement=app.locator('#libraryRefinement [data-library-tag-id="eval"]');
         await expect(refinement).toContainText(en?'2 left':'剩 2 篇');
         await focus(app.locator('#libraryRefinement'));
-        await page.screenshot({path:path.join(qa,'refinement-before.png')});
-        await pause(checkOnly?80:2800);
-        await click(refinement);await expect(app.locator('#paperLibraryList .paper-card')).toHaveCount(2);
-        await focus(app.locator('#libraryRefinement'));
+      },async()=>{
+        await click(app.locator('#libraryRefinement [data-library-tag-id="eval"]'));
+        await expect(app.locator('#paperLibraryList .paper-card')).toHaveCount(2);
+        await expect(app.locator('#activeLibraryFilters [data-library-tag-id]')).toHaveCount(2);
+        await expect(app.locator('#libraryMatchMode')).toHaveValue('all');
+        await focus(app.locator('#activeLibraryFilters'));
       },async()=>{
         await app.locator('#paperLibraryFilter').fill(en?'"verify tool"':'验证工具');
         await expect(app.locator('#paperLibraryList .paper-card')).toHaveCount(1);
@@ -136,8 +145,7 @@ try {
       organize:[async()=>{
         await openPaper('paper-0');await focus(app.locator('#paperDetailClips'));
         await expect(app.locator('#paperDetailClips .clip-section')).toHaveCount(2);
-        await page.screenshot({path:path.join(qa,'connected-material.png')});
-        await pause(checkOnly?80:2400);
+      },async()=>{
         await openPaper(savedId);await app.locator('#detailQuickStatus').selectOption('revisit');await focus(app.locator('.detail-memory'));
         await expect(app.locator('#detailQuickStatus')).toHaveValue('revisit');
       }],
@@ -146,12 +154,18 @@ try {
         await expect(app.locator('#tagDetail')).toContainText('agent');
       }],
       discovery:[async()=>{
-        await openPaper('paper-1');await focus(app.locator('.recommendations-layout'));
+        await openPaper('paper-1');
         await expect(app.locator('#abstractLangToggle')).toBeVisible();
-        await page.screenshot({path:path.join(qa,'related-papers.png')});
-        await pause(checkOnly?80:2500);
+        await click(app.locator('#abstractLangToggle [data-abstract-lang="zh"]'));
+        await expect(app.locator('#paperDetailAbstract')).toContainText('示例译文');
+        await focus(app.locator('#paperDetailAbstract').locator('..'));
+      },async()=>{
+        await focus(app.locator('.recommendations-layout'));
+      },async()=>{
         await library();await click(app.locator('[data-paper-library-mode="map"]'));await focus(app.locator('#paperMapShell'));
         await expect(app.locator('#paperMapTags [data-map-tag-id]').first()).toBeVisible();
+        await click(app.locator('#paperMapTags [data-map-tag-id="agent"]'));
+        await focus(app.locator('#paperMapShell'));
       }],
       topics:[async()=>{
         await click(app.locator('[data-view="topics"]'));
@@ -161,15 +175,13 @@ try {
         await click(app.locator('[data-view="settings"]'));await app.locator('[name="provider"][value="claude"]').check();
         await app.locator('#claudeModelSelect').selectOption('sonnet');await app.locator('#claudeEffort').selectOption('medium');await app.locator('#codexEffort').selectOption('high');
         await focus(app.locator('#localBackendSettings .local-model-group').first());expect(await app.locator('#bridgeToken').inputValue()).toBe('');
-        await page.screenshot({path:path.join(qa,'local-models.png')});
-        await pause(checkOnly?80:4200);
+      },async()=>{
         await app.locator('[name="provider"][value="custom"]').check();await focus(app.locator('#customBackendSettings'));
       }],
       data:[async()=>{
         await library();await click(app.locator('[data-paper-library-mode="list"]'));
         await page.emulateMedia({colorScheme:'dark'});await focus(app.locator('#paperLibraryList .paper-card').first());
-        await page.screenshot({path:path.join(qa,'dark-library.png')});
-        await pause(checkOnly?80:2300);
+      },async()=>{
         await page.emulateMedia({colorScheme:'light'});await click(app.locator('[data-view="settings"]'));await focus(app.locator('.data-actions'));
         const exported=await app.locator('body').evaluate(async()=>{const {handleApi}=await import('/storage.js');return await handleApi('/api/export');});
         expect(exported.store.papers).toHaveLength(9);expect(JSON.stringify(exported)).not.toContain('bridgeToken');
@@ -178,15 +190,16 @@ try {
       outro:[async()=>{}]
     };
     const timeline=[];
-    const started=Date.now();
-    await page.evaluate(()=>document.getElementById('marker').style.background='#00e080');
+    let outputFrames=0;
     for(let i=0;i<scenes.length;i++) {
       const scene=scenes[i];
       await page.evaluate(({scene,i,total,language})=>window.cue(scene,i,total,language),{scene,i,total:scenes.length,language});
       for(let j=0;j<scene.beats.length;j++) {
-        const beat=scene.beats[j],start=(Date.now()-started)/1000;
+        const beat=scene.beats[j];
+        await page.evaluate(()=>document.getElementById('marker').style.background='#df00df');
         await page.evaluate(({beat,language})=>window.subtitles(beat,language),{beat,language});
         await actions[scene.id][j]();
+        await pause(550); // Finish scrolling, highlighting and title transitions first.
         const fits=await page.locator('#captionWrap').evaluate(el=>{
           const box=el.getBoundingClientRect();return box.bottom<=innerHeight && Array.from(el.children).every(c=>{const r=c.getBoundingClientRect();return r.left>=20&&r.right<=innerWidth-20&&r.top>=box.top&&r.bottom<=box.bottom;});
         });
@@ -195,19 +208,24 @@ try {
           const visualFits=await page.locator(scene.mode==='memory'?'#memoryStage':'#recallStage').evaluate(el=>[el,...el.querySelectorAll('*')].every(c=>{const r=c.getBoundingClientRect();return r.left>=30&&r.right<=innerWidth-30&&r.bottom<=885;}));
           expect(visualFits,'Opening illustration fits above the bilingual subtitles').toBe(true);
         }
-        await pause(350);
         await page.screenshot({path:path.join(qa,`${String(i).padStart(2,'0')}-${scene.id}-${j}.png`)});
-        await pause(checkOnly?80:Math.max(250,(beat.duration+0.55)*1000-((Date.now()-started)-start*1000)));
-        timeline.push({...beat,scene:scene.id,section:scene.section,title:scene.title,start,end:(Date.now()-started)/1000});
+        const timing=shotTiming(beat.duration || 1,timeline.length,outputFrames);
+        // This unique color marks only ready footage. Encoding cuts out all
+        // preceding navigation, so it cannot consume the next sentence's time.
+        await page.evaluate(color=>document.getElementById('marker').style.background=`rgb(${color.join(',')})`,timing.marker);
+        await pause(checkOnly?80:(timing.frameCount/FRAME_RATE+.45)*1000);
+        await page.evaluate(()=>document.getElementById('marker').style.background='#df00df');
+        timeline.push({...beat,scene:scene.id,beatIndex:j,section:scene.section,title:scene.title,...timing});
+        outputFrames+=timing.frameCount;
       }
-      console.log(`${language} ${scene.id}: ${((Date.now()-started)/1000).toFixed(1)}s`);
+      console.log(`${language} ${scene.id}: ${(outputFrames/FRAME_RATE).toFixed(1)}s on the edited timeline`);
     }
-    const videoLength=(Date.now()-started)/1000;
+    const videoLength=outputFrames/FRAME_RATE;
     const raw=checkOnly?null:await page.video().path();
     await context.close();
     if(errors.length)throw new Error(errors.join('\n'));
     if(checkOnly){console.log(`${language}: all feature views and bilingual subtitles verified.`);continue;}
-    const metadata={language,voice:speech.voice,duration:videoLength,raw,timeline};
+    const metadata={syncVersion:3,frameRate:FRAME_RATE,language,voice:speech.voice,duration:videoLength,raw,timeline};
     await writeFile(path.join(scratch,`${language}-timeline.json`),JSON.stringify(metadata,null,2));
     await encode(metadata);
     await makePoster(language,videoLength);
@@ -215,17 +233,20 @@ try {
   }
 } finally {await browser?.close();await new Promise(resolve=>server.close(resolve));}
 
-async function encode({language,duration,raw,timeline}) {
-  const pixels=(await run('ffmpeg',['-v','error','-i',raw,'-vf','crop=8:8:0:0,scale=1:1','-pix_fmt','rgb24','-f','rawvideo','pipe:1'],{encoding:'buffer',maxBuffer:1024*1024})).stdout;
-  let first=-1;
-  for(let i=0;i<pixels.length;i+=3)if(pixels[i]<80&&pixels[i+1]>140&&pixels[i+2]<190){first=i/3;break;}
-  if(first<0)throw new Error('Synchronization marker missing');
+async function encode(metadata) {
+  const {language,duration,raw,syncVersion}=metadata;
+  if(syncVersion!==3)throw new Error('Record new footage with per-shot synchronization first.');
+  const pixels=(await run('ffmpeg',['-v','error','-i',raw,'-vf','crop=4:4:2:2,scale=1:1','-pix_fmt','rgb24','-f','rawvideo','pipe:1'],{encoding:'buffer',maxBuffer:1024*1024})).stdout;
   const fpsText=(await run('ffprobe',['-v','error','-select_streams','v:0','-show_entries','stream=r_frame_rate','-of','default=nw=1:nk=1',raw])).stdout.trim();
-  const [num,den=1]=fpsText.split('/').map(Number),offset=first/(num/den);
+  const [num,den=1]=fpsText.split('/').map(Number);
+  if(num/den!==FRAME_RATE)throw new Error(`Unexpected recording frame rate: ${fpsText}`);
+  const timeline=locateShotFrames(pixels,metadata.timeline);
+  metadata.timeline=timeline;
+  await writeFile(path.join(scratch,`${language}-timeline.json`),JSON.stringify(metadata,null,2));
   const args=['-y','-v','error','-i',raw];
   for(const beat of timeline)args.push('-i',beat.audio);
   const audioInputs=timeline.flatMap(beat=>['-i',beat.audio]);
-  const delayed=base=>timeline.map((beat,i)=>`[${i+base}:a]adelay=${Math.round((beat.start+0.18)*1000)}:all=1[a${i}]`).join(';');
+  const delayed=base=>timeline.map((beat,i)=>`[${i+base}:a]adelay=${Math.round(beat.speechStart*1000)}:all=1[a${i}]`).join(';');
   // Gentle presence/warmth shaping; the natural neural voice provides the timbre.
   const mix=`${timeline.map((_,i)=>`[a${i}]`).join('')}amix=inputs=${timeline.length}:normalize=0,highpass=f=65,equalizer=f=145:t=q:w=0.8:g=1.2,acompressor=threshold=0.18:ratio=1.6:attack=15:release=180,apad,atrim=duration=${duration}`;
   // Measure the entire narration before normalization, leaving headroom for AAC.
@@ -234,7 +255,10 @@ async function encode({language,duration,raw,timeline}) {
   if(!stats || !Number.isFinite(Number(stats.input_i)))throw new Error('Unable to measure narration loudness');
   const normalize=`loudnorm=I=-16:TP=-2:LRA=10:measured_I=${stats.input_i}:measured_TP=${stats.input_tp}:measured_LRA=${stats.input_lra}:measured_thresh=${stats.input_thresh}:offset=${stats.target_offset}:linear=true`;
   // Limit after resampling too: AAC reconstruction can otherwise overshoot peaks.
-  const filters=[`[0:v]trim=start=${offset}:duration=${duration},setpts=PTS-STARTPTS,drawbox=x=0:y=0:w=8:h=8:color=0xf1f5f2:t=fill,format=yuv420p[v]`,delayed(1),`${mix},${normalize},aresample=48000,alimiter=limit=0.63:level=false:latency=true[a]`];
+  const videoFilters=[`[0:v]split=${timeline.length}${timeline.map((_,i)=>`[raw${i}]`).join('')}`,
+    ...timeline.map((beat,i)=>`[raw${i}]trim=start_frame=${beat.sourceStartFrame}:end_frame=${beat.sourceEndFrame},setpts=PTS-STARTPTS[shot${i}]`),
+    `${timeline.map((_,i)=>`[shot${i}]`).join('')}concat=n=${timeline.length}:v=1:a=0,fps=${FRAME_RATE},drawbox=x=0:y=0:w=8:h=8:color=0xf1f5f2:t=fill,format=yuv420p[v]`];
+  const filters=[...videoFilters,delayed(1),`${mix},${normalize},aresample=48000,alimiter=limit=0.63:level=false:latency=true[a]`];
   args.push('-filter_complex',filters.join(';'),'-map','[v]','-map','[a]','-c:v','libx264','-preset','slow','-crf','21','-c:a','aac','-b:a','160k','-ar','48000','-metadata:s:a:0',`language=${language==='zh'?'zho':'eng'}`,'-movflags','+faststart','-t',String(duration),path.join(output,`paper-mind-intro-${language}.mp4`));
   console.log(`${language}: encoding final video…`);await run('ffmpeg',args,{maxBuffer:4*1024*1024});
 }
@@ -249,7 +273,7 @@ async function makePoster(language,duration) {
     document.getElementById('coverButton').textContent=en?'▶  See how it works':'▶　看看如何找回';
     document.getElementById('coverButton').style.display='block';document.getElementById('coverButton').style.left='50%';document.getElementById('coverButton').style.transform='translateX(-50%)';
     document.getElementById('marker').style.display='none';
-    window.subtitles({zh:'概念到标签 · 逐步缩小范围 · 用记忆句认出论文',en:'Follow a concept · Narrow the results · Recognize your paper'},language);
+    window.subtitles({zh:'多个标签描述一篇论文 · 组合线索找回它',en:'Several tags describe one paper · Combine clues to find it again'},language);
     document.getElementById('note').textContent=`${Math.floor(duration/60)}:${String(Math.round(duration%60)).padStart(2,'0')} · 1080p · Paper_Mind`;
   },{scene:story.find(s=>s.id==='recall'),language,duration});
   await page.evaluate(()=>document.fonts.ready);
@@ -264,12 +288,12 @@ async function makePoster(language,duration) {
 }
 async function exportText({language,voice,duration,timeline}) {
   const other=language==='zh'?'en':'zh';
-  const srt=timeline.map((b,i)=>`${i+1}\n${timestamp(b.start+0.18)} --> ${timestamp(b.start+0.18+b.duration)}\n${b[language]}\n${b[other]}\n`).join('\n');
+  const srt=timeline.map((b,i)=>`${i+1}\n${timestamp(b.speechStart)} --> ${timestamp(b.speechStart+b.duration)}\n${b[language]}\n${b[other]}\n`).join('\n');
   await writeFile(path.join(output,`paper-mind-intro-${language}.srt`),srt);
   const title=language==='zh'?'功能全景 · 中文配音 / 中英双语字幕':'Feature overview · English narration / bilingual subtitles';
   const sections=[];
   for(const scene of story){const beats=timeline.filter(b=>b.scene===scene.id);sections.push(`## ${chapterTime(beats[0].start)} · ${scene.section[language==='zh'?0:1]}\n\n${beats.map(b=>`${b[language]}\n\n${b[other]}`).join('\n\n')}\n`);}
   await writeFile(path.join(output,language==='zh'?'transcript.zh-CN.md':'transcript.en.md'),`# ${title}\n\n${sections.join('\n')}`);
-  await writeFile(path.join(output,`production-${language}.json`),JSON.stringify({language,voice,duration:Math.round(duration*100)/100,resolution:'1920x1080',subtitles:['zh','en'],scenes:story.map(s=>({id:s.id,start:timeline.find(b=>b.scene===s.id).start}))},null,2)+'\n');
+  await writeFile(path.join(output,`production-${language}.json`),JSON.stringify({language,voice,duration:Math.round(duration*100)/100,resolution:'1920x1080',subtitles:['zh','en'],sync:'ready-frame-cuts',frameRate:FRAME_RATE,scenes:story.map(s=>({id:s.id,start:timeline.find(b=>b.scene===s.id).start})),shots:timeline.map(b=>({scene:b.scene,beat:b.beatIndex,start:b.start,end:b.end,speechStart:b.speechStart,speechEnd:b.speechStart+b.duration,sourceStartFrame:b.sourceStartFrame,frames:b.frameCount}))},null,2)+'\n');
   console.log(`${language}: complete, ${duration.toFixed(1)} seconds.`);
 }
