@@ -16,6 +16,21 @@
 
 </div>
 
+## 看一段功能介绍
+
+**两分半，看懂怎样从模糊印象找回论文。** 收藏时用多个标签描述它，查找时组合线索缩小范围，最后凭当时记下的那句话认出它。点击下方封面观看。
+
+| 中文配音 | English narration |
+| --- | --- |
+| [![观看中文功能全景](assets/videos/paper-mind-intro-poster-zh.png)](assets/videos/paper-mind-intro-zh.mp4) | [![Watch the English overview](assets/videos/paper-mind-intro-poster-en.png)](assets/videos/paper-mind-intro-en.mp4) |
+| [▶ 观看 / 下载](assets/videos/paper-mind-intro-zh.mp4) · [双语 SRT](assets/videos/paper-mind-intro-zh.srt) | [▶ Watch / download](assets/videos/paper-mind-intro-en.mp4) · [Bilingual SRT](assets/videos/paper-mind-intro-en.srt) |
+
+**中文版 2:37 / 英文版 2:34 · 1080p · 沉稳温暖的神经网络男声 · 两版均同时显示中英文字幕。** [文字稿与制作说明](assets/videos/README.md)
+
+从“好像是智能体优化、似乎关于 OPD、可能来自某个团队”的记忆场景出发，先解释怎样找回，再回到今天怎样收藏、留下线索。随后沿着保存资料、记下理解、日后检索、继续阅读与研究整理，介绍标签说明、主题包、模型与 effort、数据备份等功能。功能演示使用实际界面和隔离示例库，AI 内容为预置示例；具体操作可继续看下方图文教程。
+
+## 从脑海里留下的印象开始
+
 你可能也遇到过：明明读过一篇论文，过了一阵子，**完整标题和具体怎么实现，都已经记不清了**。脑海里留下的可能只是：“好像是智能体的优化”“似乎关于 OPD 算法”“可能是 XXX 某个团队出品”。有时记得一个方向，有时只记得算法缩写，也可能只是对出品团队有印象。这些线索的粒度不同，却往往不足以让我们直接想起是哪一篇论文。
 
 **如果只记得一个模糊的概念，也能顺着它找到已有标签，再回到自己收藏的论文呢？** 因此，我们开发了 **Paper_Mind**：一个基于标签系统、支持大模型辅助的轻量论文管理插件。收藏时，用标签和“一句话记住它”留下自己的理解；回看时，从脑海中还剩下的粗略印象开始，沿着 **模糊概念 → 已有标签 → 收藏论文** 缩小范围，不必先想起完整标题或方法细节。
@@ -28,20 +43,7 @@
 
 <p align="center"><sub>示意案例：多个标签汇向同一篇论文，从不同角度共同描述它。XXX 为团队名称占位，不代表具体论文归属。</sub></p>
 
-**想在以后凭这些印象找回论文，就从今天收藏时留下线索开始。** 读到值得保留的论文或解读，先收藏、剪藏，再选上相关标签，用一句话记下为什么关注它。资料与理解一起留下，下一次只记得方向、算法或团队时，就有一条回到论文的路。下面的视频按这个阅读过程展开，再介绍辅助阅读、研究整理和模型接入。
-
-## 看一段功能介绍
-
-用约两分半看一次完整的找回：先理解多个标签如何描述同一篇论文，再收藏信息、组合标签缩小范围，最后用当时记下的那句话认出它。每段旁白对应一个已就绪的功能画面。
-
-| 中文配音 | English narration |
-| --- | --- |
-| [![观看中文功能全景](assets/videos/paper-mind-intro-poster-zh.png)](assets/videos/paper-mind-intro-zh.mp4) | [![Watch the English overview](assets/videos/paper-mind-intro-poster-en.png)](assets/videos/paper-mind-intro-en.mp4) |
-| [▶ 观看 / 下载](assets/videos/paper-mind-intro-zh.mp4) · [双语 SRT](assets/videos/paper-mind-intro-zh.srt) | [▶ Watch / download](assets/videos/paper-mind-intro-en.mp4) · [Bilingual SRT](assets/videos/paper-mind-intro-en.srt) |
-
-**中文版 2:37 / 英文版 2:34 · 1080p · 沉稳温暖的神经网络男声 · 两版均同时显示中英文字幕。** [文字稿与制作说明](assets/videos/README.md)
-
-从“好像是智能体优化、似乎关于 OPD、可能来自某个团队”的记忆场景出发，先解释怎样找回，再回到今天怎样收藏、留下线索。随后沿着保存资料、记下理解、日后检索、继续阅读与研究整理，介绍标签说明、主题包、模型与 effort、数据备份等功能。功能演示使用实际界面和隔离示例库，AI 内容为预置示例；具体操作可继续看下方图文教程。
+**想在以后凭这些印象找回论文，就从今天收藏时留下线索开始。** 读到值得保留的论文或解读，先收藏、剪藏，再选上相关标签，用一句话记下为什么关注它。资料与理解一起留下，下一次只记得方向、算法或团队时，就有一条回到论文的路。下方图文教程会跟着同一篇论文，走完从收藏到找回的过程。
 
 ![论文库：搜索 RAG 并选择评估标签，从示例收藏中找到两篇相关论文](assets/screenshots/library-zh.png)
 

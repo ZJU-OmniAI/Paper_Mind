@@ -16,6 +16,21 @@
 
 </div>
 
+## Watch the feature tour
+
+**See Paper_Mind in action in about 2½ minutes.** Save a paper with several tags, combine the clues you remember, and recognize it by your own memory sentence. Click either cover to watch.
+
+| English narration | 中文配音 |
+| --- | --- |
+| [![Watch the English overview](assets/videos/paper-mind-intro-poster-en.png)](assets/videos/paper-mind-intro-en.mp4) | [![观看中文功能全景](assets/videos/paper-mind-intro-poster-zh.png)](assets/videos/paper-mind-intro-zh.mp4) |
+| [▶ Watch / download](assets/videos/paper-mind-intro-en.mp4) · [Bilingual SRT](assets/videos/paper-mind-intro-en.srt) | [▶ 观看 / 下载](assets/videos/paper-mind-intro-zh.mp4) · [双语 SRT](assets/videos/paper-mind-intro-zh.srt) |
+
+**English 2:34 / Mandarin 2:37 · 1080p · Warm neural male narration · Chinese and English subtitles visible together in both editions.** [Transcripts and production notes](assets/videos/README.md)
+
+The opening begins with memories of agent optimization, OPD, or a particular team. It explains how to find a paper again, then returns to saving it today and keeping those clues. The tour follows saving material, recording your understanding, finding it later, and continuing to read and organize research, including meaningful tags, topic packs, model/effort choices and backups. Feature demonstrations use the actual interface and an isolated sample library; AI examples are prewritten. Detailed steps follow below.
+
+## Start with what you remember
+
 You know you have read that paper. Yet, some time later, **its full title and how the method actually works are hard to recall**. What stays might be: “something about agent optimization,” “perhaps the OPD algorithm,” or “maybe a paper from team XXX.” Sometimes you remember a research direction, sometimes an algorithm acronym, and sometimes only the team behind it. These clues vary in detail, but they may still leave you unable to name the paper.
 
 **What if a vague idea could lead you to an existing tag, and that tag back to a paper you saved?** That is why we built **Paper_Mind**, a lightweight browser extension for managing papers through tags, with optional LLM assistance. When saving a paper, keep your understanding in tags and a one-line memory. When returning to it, start with what you still recall: **rough idea → existing tags → saved papers**. Narrow the search without first reconstructing the title or the method's details.
@@ -28,20 +43,7 @@ An LLM can use your labels and linked paper content to explain each tag's meanin
 
 <p align="center"><sub>Illustrative example: several tags converge on one paper. XXX is a placeholder, not an attribution to an actual research team.</sub></p>
 
-**To find a paper through those memories later, start by keeping the clues when you save it today.** Capture a paper or clip a useful write-up, choose relevant tags, and add one sentence about why it caught your attention. Keeping the material and your understanding together gives you a route back when only a direction, an algorithm or a team comes to mind. The videos follow that reading journey before introducing further reading, research organization and model options.
-
-## Watch the feature tour
-
-A roughly two-and-a-half-minute rediscovery: see how several tags describe one paper, save its details, combine tags to narrow the results, then recognize your original memory sentence. Each narrated point has its own prepared feature view.
-
-| English narration | 中文配音 |
-| --- | --- |
-| [![Watch the English overview](assets/videos/paper-mind-intro-poster-en.png)](assets/videos/paper-mind-intro-en.mp4) | [![观看中文功能全景](assets/videos/paper-mind-intro-poster-zh.png)](assets/videos/paper-mind-intro-zh.mp4) |
-| [▶ Watch / download](assets/videos/paper-mind-intro-en.mp4) · [Bilingual SRT](assets/videos/paper-mind-intro-en.srt) | [▶ 观看 / 下载](assets/videos/paper-mind-intro-zh.mp4) · [双语 SRT](assets/videos/paper-mind-intro-zh.srt) |
-
-**English 2:34 / Mandarin 2:37 · 1080p · Warm neural male narration · Chinese and English subtitles visible together in both editions.** [Transcripts and production notes](assets/videos/README.md)
-
-The opening begins with memories of agent optimization, OPD, or a particular team. It explains how to find a paper again, then returns to saving it today and keeping those clues. The tour follows saving material, recording your understanding, finding it later, and continuing to read and organize research, including meaningful tags, topic packs, model/effort choices and backups. Feature demonstrations use the actual interface and an isolated sample library; AI examples are prewritten. Detailed steps follow below.
+**To find a paper through those memories later, start by keeping the clues when you save it today.** Capture a paper or clip a useful write-up, choose relevant tags, and add one sentence about why it caught your attention. Keeping the material and your understanding together gives you a route back when only a direction, an algorithm or a team comes to mind. The screenshot walkthrough below follows that journey from saving a paper to finding it again.
 
 ![Paper library: search for RAG and select the evaluation tag to find two relevant papers in the sample collection](assets/screenshots/library-en.png)
 
