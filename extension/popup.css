@@ -22,6 +22,16 @@
   --focus-ring: 0 0 0 3px rgba(12, 125, 114, 0.16);
 }
 
+.bibliography-editor { padding: 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface-2); margin: 12px 0; }
+.bibliography-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 12px; margin-bottom: 8px; }
+.bibliography-heading button { background: var(--surface); border: 1px solid var(--line); color: var(--accent); border-radius: 6px; padding: 5px 8px; cursor: pointer; font-size: 11px; }
+.bibliography-fields { display: grid; grid-template-columns: 72px minmax(0, 1fr); gap: 8px; }
+.bibliography-fields label { margin: 0; min-width: 0; }
+.bibliography-fields input { width: 100%; min-width: 0; }
+.bibliography-authors { grid-column: 1 / -1; }
+.bibliography-status { margin: 8px 0 0; color: var(--muted); font-size: 11px; line-height: 1.5; }
+.bibliography-status:empty { display: none; }
+
 @media (prefers-color-scheme: dark) {
   :root {
     color-scheme: dark;

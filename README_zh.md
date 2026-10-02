@@ -8,7 +8,7 @@
 
 <p>基于标签的轻量论文管理插件，让读完后留下的零散印象，成为下次查找的线索。</p>
 
-[![Version](https://img.shields.io/badge/version-1.5.1-0c7d72.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-1.6.0-0c7d72.svg)](CHANGELOG.md)
 [![Chrome Extension](https://img.shields.io/badge/Chrome-Manifest_V3-4285F4.svg)](extension/manifest.json)
 [![License](https://img.shields.io/badge/license-Apache_2.0-0c7d72.svg)](LICENSE)
 
@@ -53,7 +53,7 @@
 
 ### 01 · 打开论文，点击工具栏中的 Paper_Mind
 
-扩展会尝试把当前页面的**标题、摘要、来源链接和选中文本**带进收藏弹窗。先检查内容；页面未提供摘要或识别不完整时，可以直接补充、修改。
+扩展会尝试把当前页面的**标题、摘要、作者、年份、发表出处、来源链接和选中文本**带进收藏弹窗。先检查内容；页面未提供摘要或识别不完整时，可以直接补充、修改。
 
 <p align="center"><img src="assets/screenshots/step-01-capture-zh.png" width="400" alt="步骤1：打开收藏弹窗，示例论文的标题、摘要、来源与选中文本已自动填入"></p>
 
@@ -125,6 +125,24 @@
 | “这篇和我之前读过的哪几篇有关？” | 查看共享标签的相似论文，或使用可选的 LLM 推荐。 |
 
 `⌘ / Ctrl K` 聚焦搜索 · 空格组合关键词 · 双引号查短语 · 每页 24 篇
+
+## 想起一个线索后，继续缩小范围
+
+选择“智能体”后，新增的 **还可以怎样缩小范围？** 会根据当前结果建议下一步标签，例如“再加评估与可靠性 → 剩 2 篇”。计数同时考虑搜索、阅读状态和评分；“任一标签”模式会提示切换到“包含全部”，再逐步细分。标签数量仍不设上限。
+
+![选中智能体后提示添加评估标签缩小范围，卡片突出展示记忆句](assets/screenshots/refine-results-zh.png)
+
+搜索结果直接展示 **你当时记住的是**，并高亮命中的词。卡片也会列出实际命中的笔记、摘要、剪藏正文或标签说明，帮助判断是不是要找的那篇。
+
+![搜索证据时显示记忆句和笔记中的真实命中片段](assets/screenshots/memory-evidence-zh.png)
+
+## 作者、年份和发表出处，也能成为线索
+
+收藏时会尝试读取页面中的学术元数据，补上作者、年份与会议 / 期刊；三个字段均可编辑，也参与搜索。已有论文可在 **详情 → 编辑 → 论文信息 → 补全空缺信息** 中补查。作者用分号分隔。
+
+![可编辑的作者、年份和发表出处，以及补全空缺信息入口](assets/screenshots/publication-details-zh.png)
+
+补查按需使用 Semantic Scholar / Crossref，优先根据 arXiv / DOI 匹配；按标题查找时要求准确且无歧义。只填空缺，保留手动修改，核对后保存。查不到时留空，不由模型猜测。截图中的作者、出处为合成示例；字段随 JSON 导入导出一起保留。
 
 ## 你选标签，AI 补上含义与边界
 

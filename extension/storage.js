@@ -1,5 +1,6 @@
 import { normalizeMemory, normalizeReadingStatus, READING_STATUSES, conceptTagMatches, DEFAULT_TAG_POLICY, normalizeTagName, tagKey, splitTags, paperSearchScore, matchesText, safeWebUrl, descriptionContext, contextFingerprint, mergeStoreChanges } from "./library-tools.js";
 import { fetchCitationCount } from "./citations.js";
+import { normalizeBibliography, mergeBibliography } from "./bibliography.js";
 import { clipExcerpt, clipImageUrls, clipPlainText } from "./clipper.js";
 
 import { EXTRA_DEFAULTS, isLocalProvider, extraConfig, bridgeRequest } from "./model-backends.js";
@@ -560,6 +561,7 @@ function normalizeStore(store) {
   store.tags ||= [];
   for (const paper of store.papers) {
     paper.memory = normalizeMemory(paper.memory);
+    Object.assign(paper, normalizeBibliography(paper));
     paper.readingStatus = normalizeReadingStatus(paper.readingStatus);
     paper.contentUpdatedAt ||= paper.updatedAt || paper.createdAt || "";
     paper.valueScore = normalizeValueScore(paper.valueScore, null);
@@ -1498,6 +1500,7 @@ async function searchPapersWithLLM(config, query, store) {
         paperCatalog: store.papers.map((paper) => ({
           id: paper.id,
           title: paper.title,
+          ...normalizeBibliography(paper),
           abstract: paperBodyText(paper, 600),
           memory: normalizeMemory(paper.memory),
           conversation: compactText(paper.conversation, 800),
@@ -2171,6 +2174,7 @@ export async function handleApi(path, options = {}) {
       // 那么标题/摘要/来源要换成论文自己的，解读的标题不该占着正主的位置
       const promote = Boolean(body.promote) && isPaperSourceUrl(sourceUrl);
       if (promote) {
+        mergeBibliography(host, body, { replace: true });
         if (title) host.title = title;
         if (typeof body.abstract === "string" && body.abstract.trim()) host.abstract = body.abstract.trim();
         if (sourceUrl) host.sourceUrl = sourceUrl;
@@ -2208,6 +2212,7 @@ export async function handleApi(path, options = {}) {
     const duplicateMatch = duplicateAction === "create" ? null : findDuplicatePaper(store, { ...body, title, sourceUrl });
     if (duplicateMatch) {
       const existingPaper = duplicateMatch.paper;
+      mergeBibliography(existingPaper, body, { replace: body.replacePersonalFields === true });
       if (duplicateAction === "merge") mergePaperContent(existingPaper, body, sourceUrl);
       else {
         if (!existingPaper.sourceUrl && sourceUrl) existingPaper.sourceUrl = sourceUrl;
@@ -2231,6 +2236,7 @@ export async function handleApi(path, options = {}) {
     }
     const paper = {
       id: makeId("paper"),
+      ...normalizeBibliography(body),
       title,
       abstract: String(body.abstract || "").trim(),
       conversation: String(body.conversation || "").trim(),
@@ -2476,6 +2482,7 @@ export async function handleApi(path, options = {}) {
     }
     host.links = [...(host.links || []), ...(source.links || []).filter((link) => !(host.links || []).some((item) => item.url === link.url))];
     mergePaperMemory(host, source);
+    mergeBibliography(host, source);
     host.abstract = appendUniqueText(host.abstract, source.abstract);
     host.conversation = appendUniqueText(host.conversation, source.conversation);
     mergePaperTags(store, host, tagNamesForPaper(store, source));
@@ -2589,6 +2596,7 @@ export async function handleApi(path, options = {}) {
     const paper = store.papers.find((item) => item.id === decodeURIComponent(paperMatch[1]));
     if (!paper) return response(404, { error: "论文不存在" });
     if (typeof body.title === "string" && stripSiteTitleSuffix(body.title)) paper.title = stripSiteTitleSuffix(body.title);
+    mergeBibliography(paper, body, { replace: true });
     let abstractChanged = false;
     if (typeof body.abstract === "string" && body.abstract.trim() !== paper.abstract) {
       paper.abstract = body.abstract.trim();

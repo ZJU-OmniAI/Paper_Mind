@@ -69,6 +69,7 @@
                 <input id="paperTitle" name="title" autocomplete="off" placeholder="输入论文标题" required />
               </label>
 
+<section class="bibliography-editor" id="paperBibliography"></section>
 <div class="memory-fields"><label><span data-zh="一句话记住它" data-en="Remember it in one sentence"></span><textarea id="paperMemory" name="memory" rows="2" maxlength="280" data-placeholder-zh="例如：用检索到的证据，让智能体读论文时少编造。" data-placeholder-en="E.g. Ground paper-reading agents in retrieved evidence." placeholder="例如：用检索到的证据，让智能体读论文时少编造。"></textarea></label><label><span data-zh="阅读状态" data-en="Reading status"></span><select id="paperReadingStatus" name="readingStatus" data-reading-status><option value="unread">未读</option><option value="reading">在读</option><option value="read">已读</option><option value="revisit">待重读</option></select></label></div>
               <label class="value-score-field">
                 <div class="score-label-row">
@@ -161,6 +162,7 @@
                 <button type="button" class="text-button" id="clearLibraryFilters">清除筛选</button>
               </div>
               <div id="activeLibraryFilters" class="chip-row" aria-label="已选标签"></div>
+              <section class="library-refinement" id="libraryRefinement" aria-live="polite" hidden></section>
               <p class="muted search-help" id="librarySearchHelp">多个关键词用空格分隔；英文短语可加双引号。⌘ / Ctrl K 快速搜索</p>
               <div class="paper-list" id="paperLibraryList" aria-live="polite"></div>
               <div id="libraryPagination" class="pagination"></div>
@@ -217,7 +219,7 @@
                 </div>
               </div>
 
-              <div class="paper-detail-read-view" id="paperDetailReadView"><div class="detail-memory"><h4 data-zh="一句话记住它" data-en="Remember it in one sentence"></h4><p id="paperDetailMemory"></p><label><span data-zh="阅读状态" data-en="Reading status"></span><select id="detailQuickStatus" data-reading-status></select></label></div>
+              <div class="paper-detail-read-view" id="paperDetailReadView"><p class="bibliography-line" id="paperDetailBibliography"></p><div class="detail-memory"><h4 data-zh="一句话记住它" data-en="Remember it in one sentence"></h4><p id="paperDetailMemory"></p><label><span data-zh="阅读状态" data-en="Reading status"></span><select id="detailQuickStatus" data-reading-status></select></label></div>
                 <div class="detail-block">
                   <h4 id="paperDetailLinksHeading">外部资料</h4>
                   <div class="link-list" id="paperDetailLinks"></div>
@@ -258,6 +260,7 @@
                   <input id="paperDetailTitleInput" autocomplete="off" required />
                 </label>
 
+<section class="bibliography-editor" id="detailBibliography"></section>
 <div class="memory-fields"><label><span data-zh="一句话记住它" data-en="Remember it in one sentence"></span><textarea id="detailMemory" name="memory" rows="2" maxlength="280" data-placeholder-zh="例如：用检索到的证据，让智能体读论文时少编造。" data-placeholder-en="E.g. Ground paper-reading agents in retrieved evidence." placeholder="例如：用检索到的证据，让智能体读论文时少编造。"></textarea></label><label><span data-zh="阅读状态" data-en="Reading status"></span><select id="detailReadingStatus" name="readingStatus" data-reading-status><option value="unread">未读</option><option value="reading">在读</option><option value="read">已读</option><option value="revisit">待重读</option></select></label></div>
                 <label class="value-score-field">
                   <div class="score-label-row">

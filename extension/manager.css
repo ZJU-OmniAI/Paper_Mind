@@ -34,6 +34,32 @@
   --map-line-active: rgba(12, 125, 114, 0.75);
 }
 
+.bibliography-editor { margin: 16px 0; padding: 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface-3); }
+.bibliography-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; flex-wrap: wrap; }
+.bibliography-fields { display: grid; grid-template-columns: 100px minmax(0, 1fr); gap: 10px; }
+.bibliography-fields label { margin: 0; min-width: 0; }
+.bibliography-fields input { width: 100%; min-width: 0; }
+.bibliography-authors { grid-column: 1 / -1; }
+.bibliography-status { color: var(--muted); font-size: 12px; margin: 8px 0 0; overflow-wrap: anywhere; }
+.bibliography-status:empty { display: none; }
+.paper-card .bibliography-line, .bibliography-line { font-size: 13px; color: var(--muted); line-height: 1.65; overflow-wrap: anywhere; }
+.paper-card .bibliography-line { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin: 4px 0; }
+.library-refinement { background: var(--accent-soft); border: 1px solid var(--accent-border); border-radius: 12px; padding: 16px; margin: 14px 0; }
+.library-refinement h4 { margin: 0 0 6px; font-size: 14px; }
+.library-refinement p { color: var(--muted); font-size: 13px; margin: 0 0 10px; }
+.refinement-options { display: flex; flex-wrap: wrap; gap: 8px; }
+.refinement-option { display: flex; gap: 12px; align-items: center; max-width: 100%; text-align: left; overflow-wrap: anywhere; border: 1px solid var(--accent-border); border-radius: 8px; background: var(--surface); padding: 9px 12px; color: var(--ink); cursor: pointer; }
+.refinement-option strong { color: var(--accent); white-space: nowrap; font-size: 12px; }
+.paper-card .recall-memory { background: var(--accent-soft); border-left: 3px solid var(--accent); padding: 12px; border-radius: 8px; align-items: flex-start; }
+.recall-memory > div { min-width: 0; }
+.memory-label { display: block; color: var(--accent); font-size: 11px; margin-bottom: 5px; }
+.paper-card .recall-memory .paper-memory { display: block; overflow: visible; -webkit-line-clamp: unset; margin: 0; font-size: 14px; font-weight: 500; }
+.search-evidence { padding: 3px 0; }
+.paper-card .search-evidence p { display: block; -webkit-line-clamp: unset; color: var(--muted); font-size: 12px; line-height: 1.7; margin: 5px 0; overflow-wrap: anywhere; }
+.search-evidence strong { color: var(--ink); font-size: 11px; margin-right: 7px; }
+.paper-card mark { background: var(--warn-soft); color: var(--ink); border-bottom: 1px solid var(--warn); border-radius: 2px; padding: 0 1px; }
+@media (max-width: 600px) { .bibliography-fields { grid-template-columns: 80px minmax(0, 1fr); } .paper-card .recall-memory { flex-direction: column; gap: 8px; } }
+
 @media (prefers-color-scheme: dark) {
   :root {
     color-scheme: dark;

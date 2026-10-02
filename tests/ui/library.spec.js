@@ -263,3 +263,124 @@ test('backend settings connect local CLI and compatible API, mask credentials an
   await page.locator('#languageSelect').selectOption('en');await expect(page.locator('#customBackendSettings')).toContainText('optional for local servers');
   expect(errors).toEqual([]);
 });
+
+test('refinement follows the visible results, shows exact next counts, and explains OR mode',async({page})=>{
+  const errors=await setup(page,{count:6});
+  await expect(page.locator('#libraryRefinement')).toBeHidden();
+  await page.locator('#paperLibraryTagList [data-library-tag-id="tag-0"]').click();
+  await expect(page.locator('#paperLibraryList .paper-card')).toHaveCount(2);
+  const option=page.locator('#libraryRefinement [data-library-tag-id="tag-1"]');
+  await expect(option).toContainText('剩 1 篇');
+  await expect(page.locator('#libraryRefinement [data-library-tag-id="tag-2"]')).toHaveCount(0);
+  await option.click();
+  await expect(page.locator('#paperLibraryList .paper-card')).toHaveCount(1);
+  await expect(page.locator('#libraryRefinement')).toContainText('已缩小到 1 篇');
+  await page.locator('#libraryMatchMode').selectOption('any');
+  await expect(page.locator('#libraryRefinement')).toContainText('会扩大范围');
+  await page.locator('[data-refine-all]').click();
+  await expect(page.locator('#libraryMatchMode')).toHaveValue('all');
+  await page.locator('#libraryMinScore').selectOption('5');
+  await expect(page.locator('#libraryRefinement')).toContainText('当前组合没有结果');
+  await expect(page.locator('#activeLibraryFilters button')).toHaveCount(2);
+  await page.locator('#languageSelect').selectOption('en');
+  await expect(page.locator('#libraryRefinement')).toContainText('No results');
+  await page.locator('#clearLibraryFilters').click();
+  await expect(page.locator('#libraryRefinement')).toBeHidden();
+  expect(errors).toEqual([]);
+});
+
+test('search surfaces the personal memory, escaped highlights and evidence including bibliographic fields',async({page})=>{
+  const errors=await setup(page,{count:2});
+  await page.evaluate(async()=>{
+    const {handleApi}=await import('/storage.js');
+    await handleApi('/api/papers/paper-0',{method:'PUT',body:{memory:'先检查证据 <img src=x onerror=alert(1)> 再回答',authors:['Ada Lovelace'],year:'2025',venue:'ICLR',conversation:'原文笔记：关注 OPD 算法的证据检查'}});
+  });
+  await page.reload();
+  await page.locator('#paperLibraryFilter').fill('证据');
+  const card=page.locator('#paperLibraryList .paper-card');
+  await expect(card).toHaveCount(1);
+  await expect(card.locator('.memory-label')).toHaveText('你当时记住的是');
+  await expect(card.locator('.paper-memory mark')).toHaveText('证据');
+  await expect(card.locator('.paper-memory')).toContainText('<img src=x onerror=alert(1)>');
+  await expect(card.locator('.paper-memory img')).toHaveCount(0);
+  await expect(card.locator('.search-evidence')).toContainText('你的笔记');
+  await page.locator('#paperLibraryFilter').fill('Ada 2025 ICLR');
+  await expect(card).toHaveCount(1);
+  await expect(card.locator('.search-evidence')).toContainText('作者');
+  await expect(card.locator('.bibliography-line')).toContainText('Ada Lovelace · 2025 · ICLR');
+  await page.screenshot({path:'test-results/recall-evidence.png',fullPage:true});
+  await card.click();
+  await expect(page.locator('#paperDetailBibliography')).toContainText('Ada Lovelace');
+  await page.locator('#editPaperDetailButton').click();
+  await page.locator('#detailBibliography [data-bib-field="venue"]').fill('NeurIPS');
+  await page.locator('#paperDetailTagForm button[type="submit"]').click();
+  await expect(page.locator('#paperDetailBibliography')).toContainText('NeurIPS');
+  await page.locator('#editPaperDetailButton').click();
+  await page.setViewportSize({width:390,height:844});
+  await page.emulateMedia({colorScheme:'dark'});
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.locator('#detailBibliography').screenshot({path:'test-results/publication-details-mobile-dark.png'});
+  expect(errors).toEqual([]);
+});
+
+test('metadata lookup fills blanks, preserves concurrent edits and ignores stale titles',async({page})=>{
+  const errors=await setup(page,{count:0});
+  await page.locator('#libraryAddPaper').click();
+  await page.locator('#paperTitle').fill('A verified paper');
+  const editor=page.locator('#paperBibliography');
+  let release,started;
+  const gate=new Promise(r=>release=r), ready=new Promise(r=>started=r);
+  await page.route('https://api.semanticscholar.org/**',async route=>{started();await gate;await route.fulfill({json:{data:[{title:'A verified paper',authors:[{name:'Lookup Author'}],year:2025,venue:'ICLR'}]}});});
+  await editor.locator('button').click();await ready;
+  await editor.locator('[data-bib-field="authors"]').fill('My edit');
+  release();
+  await expect(editor.locator('button')).toBeEnabled();
+  await expect(editor.locator('[data-bib-field="authors"]')).toHaveValue('My edit');
+  await expect(editor.locator('[data-bib-field="year"]')).toHaveValue('2025');
+  await expect(editor.locator('[data-bib-field="venue"]')).toHaveValue('ICLR');
+  await expect(editor.locator('[role="status"]')).toContainText('补全 2 项');
+  await page.locator('#paperForm button[type="submit"]').click();
+  await expect(page.locator('#paperCount')).toHaveText('1');
+  await page.reload();
+  await expect(page.locator('#paperLibraryList')).toContainText('My edit · 2025 · ICLR');
+  await page.locator('#libraryAddPaper').click();
+  await page.locator('#paperTitle').fill('A verified paper');
+  let finish,begin;
+  const pending=new Promise(r=>finish=r), request=new Promise(r=>begin=r);
+  await page.route('https://api.semanticscholar.org/**',async route=>{begin();await pending;await route.fulfill({json:{data:[{title:'A verified paper',authors:[{name:'Stale Author'}],year:2020,venue:'Wrong Venue'}]}});});
+  await editor.locator('button').click();await request;
+  await page.locator('#paperTitle').fill('A different paper');finish();
+  await expect(editor.locator('button')).toBeEnabled();
+  await expect(editor.locator('[data-bib-field="authors"]')).toBeEmpty();
+  await expect(editor.locator('[data-bib-field="year"]')).toBeEmpty();
+  expect(errors).toEqual([]);
+});
+
+test('popup captures and persists authors year and venue without generating them',async({page})=>{
+  const errors=await setup(page,{count:0});
+  await page.addInitScript(()=>{
+    chrome.tabs.query=async()=>[{id:42,title:'Captured paper',url:'https://example.org/paper'}];
+    chrome.scripting.executeScript=async({func})=>[{result:func.name==='pagePaperMetadata'?{title:'Captured paper',description:'Abstract',authors:['First Author','Second Author'],year:'2024',venue:'Test Conference'}:null}];
+  });
+  await page.goto('/popup.html');
+  const editor=page.locator('#captureBibliography');
+  await expect(editor.locator('[data-bib-field="authors"]')).toHaveValue('First Author; Second Author');
+  await expect(editor.locator('[data-bib-field="year"]')).toHaveValue('2024');
+  await editor.locator('[data-bib-field="venue"]').fill('Confirmed Conference');
+  await page.locator('#saveButton').click();
+  await expect(page.locator('#message')).toHaveClass(/success/);
+  await expect(editor.locator('[data-bib-field="venue"]')).toHaveValue('Confirmed Conference');
+  await page.goto('/manager.html');
+  await expect(page.locator('#paperLibraryList .bibliography-line')).toContainText('First Author; Second Author · 2024 · Confirmed Conference');
+  expect(errors).toEqual([]);
+});
+
+test('page extractor distinguishes scholarly metadata from a blog byline',async({page})=>{
+  const {pagePaperMetadata}=await import('../../extension/bibliography.js');
+  await page.setContent('<meta name="citation_author" content="First Author"><meta name="citation_author" content="Second Author"><meta name="citation_publication_date" content="2024/04/20"><meta name="citation_conference_title" content="ICLR">');
+  let result=await page.evaluate(pagePaperMetadata);expect(result.authors).toEqual(['First Author','Second Author']);expect(result.year).toBe('2024');expect(result.venue).toBe('ICLR');
+  await page.setContent('<meta name="author" content="Blog writer"><script type="application/ld+json">{"@type":"BlogPosting","author":{"name":"Blog writer"},"datePublished":"2026-01-01"}</script>');
+  result=await page.evaluate(pagePaperMetadata);expect(result.authors).toEqual([]);expect(result.year).toBe('');
+  await page.setContent('<script type="application/ld+json">{"@graph":[{"@type":"ScholarlyArticle","author":[{"name":"JSON Author"}],"datePublished":"2023-05-10","isPartOf":{"name":"A Journal"}}]}</script>');
+  result=await page.evaluate(pagePaperMetadata);expect(result.authors).toEqual(['JSON Author']);expect(result.year).toBe('2023');expect(result.venue).toBe('A Journal');
+});

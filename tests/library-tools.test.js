@@ -50,3 +50,30 @@ test('memory participates in search and concept suggestions never invent or retu
   assert.ok(paperSearchScore({title:'Paper',memory:'evidence prevents hallucinations'},[], 'evidence hallucinations')>0);
   assert.equal(normalizeMemory('a'.repeat(500)).length,280);assert.equal(normalizeReadingStatus('invented'),'unread');
 });
+
+test('refinement counts describe the actual next result set, including OR and zero results', async () => {
+  const {libraryTagFacets}=await import('../extension/library-tools.js');
+  const tags=['a','b','c','d'].map(id=>({id,name:id}));
+  const papers=[{tagIds:['a','b']},{tagIds:['a','c']},{tagIds:['a']},{tagIds:['d']}];
+  let facets=libraryTagFacets(papers,tags,['a']);
+  assert.deepEqual(facets.filter(f=>f.narrows).map(f=>[f.tag.id,f.nextCount]),[['b',1],['c',1]]);
+  assert.equal(facets.find(f=>f.tag.id==='d').nextCount,0);
+  facets=libraryTagFacets(papers,tags,['a'],'any');
+  assert.equal(facets.find(f=>f.tag.id==='b').nextCount,3);
+  assert.equal(facets.find(f=>f.tag.id==='d').nextCount,4);
+  assert.equal(facets.some(f=>f.narrows),false);
+  assert.equal(libraryTagFacets(papers,tags,['b','d']).filter(f=>f.narrows).length,0);
+  assert.equal(libraryTagFacets(papers.slice(0,1),tags,['a']).find(f=>f.tag.id==='b').narrows,false);
+});
+
+test('search evidence locates late clip matches and highlights literal Unicode text safely', async () => {
+  const {paperSearchEvidence, highlightedParts}=await import('../extension/library-tools.js');
+  const paper={title:'Paper',memory:'Remember evidence',authors:['Ada Lovelace'],year:'2025',venue:'ICLR',clips:[{id:'clip-a',markdown:'Beginning '.repeat(1500)+'Late evidence from OPD'}]};
+  assert.ok(paperSearchScore(paper,[],'Ada 2025 ICLR')>0);
+  const evidence=paperSearchEvidence(paper,[],'OPD');
+  assert.equal(evidence[0].clipId,'clip-a');assert.match(evidence[0].text,/Late evidence from OPD/);assert.ok(evidence[0].text.length<200);
+  const parts=highlightedParts('<img src=x> ＲＡＧ [a+b]', 'rag "[a+b]"');
+  assert.deepEqual(parts.filter(p=>p.match).map(p=>p.text),['ＲＡＧ','[a+b]']);
+  assert.equal(parts.map(p=>p.text).join(''),'<img src=x> ＲＡＧ [a+b]');
+  assert.deepEqual(paperSearchEvidence(paper,[],'does-not-exist'),[]);
+});

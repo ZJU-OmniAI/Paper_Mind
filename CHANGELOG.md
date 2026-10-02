@@ -2,6 +2,14 @@
 
 Notable changes to Paper_Mind. Versions follow the `version` field in `extension/manifest.json`.
 
+## 1.6.0
+
+- Added context-aware tag refinements with exact remaining-paper counts. Suggestions respect text/AI results, reading status and ratings; match-any mode explains how to switch to intersection filtering.
+- Search cards now foreground the saved memory sentence and show escaped, highlighted evidence from titles, tags, notes, clipped content and publication details.
+- Added editable authors, publication year and venue to capture, manual entry and paper details. Academic page metadata is extracted automatically; optional Semantic Scholar / Crossref lookup fills missing fields with identifier or unambiguous exact-title matches.
+- Bibliographic facts participate in local and AI paper search and round-trip through backups. Duplicate saves preserve existing facts; attaching commentary does not replace paper authors. Delayed lookups do not overwrite edits or changed forms.
+- Updated bilingual documentation and screenshots. Existing libraries receive empty optional publication fields; no tag-count limits were introduced.
+
 ## 1.5.1
 
 - Reframed both READMEs and videos around remembered research directions, algorithm names and teams, using agent optimization, OPD and team XXX as examples. The opening connects saving papers today with finding them later, and narration follows the reading process. The actual search demo matches an existing Agent optimization tag.

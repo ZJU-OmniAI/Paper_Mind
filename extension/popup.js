@@ -1,4 +1,6 @@
 import { normalizeReadingStatus, tagKey, splitTags, suggestTags } from "./library-tools.js";
+import { pagePaperMetadata } from "./bibliography.js";
+import { bibliographyEditor } from "./bibliography-ui.js";
 import { handleApi } from "./storage.js";
 import { renderWorkflowLabels } from "./workflow-ui.js";
 import { CLIP_MIN_TEXT_LENGTH, buildClipRecord, clipExcerpt, pageClipExtractor } from "./clipper.js";
@@ -88,6 +90,11 @@ const els = {
   mergeChoiceMerge: document.querySelector("#mergeChoiceMerge"),
   mergeChoiceNew: document.querySelector("#mergeChoiceNew")
 };
+
+const captureBibliography = bibliographyEditor(document.getElementById('captureBibliography'), {
+  getContext: () => ({ title: els.title.value.trim(), sourceUrl: state.currentTab?.url || '' }),
+  getLanguage: () => state.language
+});
 
 const translations = {
   zh: {
@@ -335,6 +342,9 @@ async function detectExistingPaper() {
     }
   }
   if (state.existingPaper?.paper && !state.forceCreate) {
+    const existing = state.existingPaper.paper;
+    const detected = captureBibliography.read();
+    captureBibliography.set({ authors: existing.authors?.length ? existing.authors : detected.authors, year: existing.year || detected.year, venue: existing.venue || detected.venue });
     document.getElementById("captureMemory").value = state.existingPaper.paper.memory || "";
     document.getElementById("captureReadingStatus").value = normalizeReadingStatus(state.existingPaper.paper.readingStatus);
     els.valueScore.value = String(normalizeValueScore(state.existingPaper.paper.valueScore, 3));
@@ -589,6 +599,7 @@ async function readPageClip(tab) {
 async function readCurrentPage() {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   state.currentTab = tab;
+  captureBibliography.set();
   if (!tab) return;
 
   els.title.value = cleanPageTitle(tab.title);
@@ -598,25 +609,10 @@ async function readCurrentPage() {
   try {
     const [result] = await chrome.scripting.executeScript({
       target: { tabId: tab.id },
-      func: () => {
-        const meta = (selector) => document.querySelector(selector)?.content?.trim() || "";
-        const title =
-          meta('meta[name="citation_title"]') ||
-          meta('meta[property="og:title"]') ||
-          document.querySelector("h1")?.innerText?.trim() ||
-          document.title ||
-          "";
-        const description =
-          meta('meta[name="citation_abstract"]') ||
-          document.querySelector("blockquote.abstract")?.innerText?.replace(/^Abstract:?\s*/i, "").trim() ||
-          meta('meta[name="description"]') ||
-          meta('meta[property="og:description"]') ||
-          "";
-        const selectedText = window.getSelection()?.toString().trim() || "";
-        return { title: title.trim(), description, selectedText };
-      }
+      func: pagePaperMetadata
     });
     const page = result?.result || {};
+    captureBibliography.set(page, { onlyMissing: true });
     const pageTitle = cleanPageTitle(page.title);
     if (pageTitle && (!els.title.value || els.title.value.length > pageTitle.length + 20)) els.title.value = pageTitle;
     if (page.description) els.abstract.value = page.description;
@@ -660,6 +656,7 @@ function hideDuplicatePanel() {
 function collectPayload() {
   return {
     title: els.title.value.replace(/\s+/g, " ").trim(),
+    ...captureBibliography.read(),
     abstract: els.abstract.value.trim(),
     conversation: els.conversation.value.trim(),
     memory: document.getElementById("captureMemory").value.trim(),

@@ -6,6 +6,7 @@
 
 const S2_BASE = "https://api.semanticscholar.org/graph/v1/paper";
 const S2_FIELDS = "title,citationCount";
+const METADATA_FIELDS = "title,authors,year,venue,journal,url";
 const S2_TIMEOUT_MS = 15000;
 const S2_RETRY_DELAY_MS = 3000;
 
@@ -145,3 +146,63 @@ export async function fetchCitationCount(input) {
 }
 
 export const __testing = { extractArxivId, extractDoi, cleanTitle, titleOverlap };
+
+async function fetchS2Metadata(input) {
+  const toMetadata = paper => ({ authors: (paper.authors || []).map(author => author.name).filter(Boolean),
+    year: paper.year ? String(paper.year) : '', venue: paper.venue || paper.journal?.name || '' });
+  const ids = [extractArxivId(input) && `arXiv:${extractArxivId(input)}`, extractDoi(input) && `DOI:${extractDoi(input)}`].filter(Boolean);
+  for (const id of ids) {
+    const paper = await requestS2(`${S2_BASE}/${encodeURIComponent(id)}?fields=${encodeURIComponent(METADATA_FIELDS)}`, S2_MAX_RETRY);
+    if (paper) return { ...toMetadata(paper), matchedBy: 'id', title: paper.title || '', sourceUrl: paper.url || '', found: true };
+  }
+  const title = cleanTitle(input.title).slice(0, 600);
+  if (!title) return { found: false };
+  const result = await requestS2(`${S2_BASE}/search?query=${encodeURIComponent(title)}&limit=5&fields=${encodeURIComponent(METADATA_FIELDS)}`, S2_MAX_RETRY);
+  // Title-only matches must be exact after punctuation/case normalization. An
+  // ambiguous title never silently supplies a different paper's bibliographic facts.
+  const exact = (result?.data || []).filter(paper => normalizeForCompare(paper.title) === normalizeForCompare(title));
+  const distinct = new Map(exact.map(paper => [JSON.stringify(toMetadata(paper)), paper]));
+  if (distinct.size !== 1) return { found: false, ambiguous: distinct.size > 1 };
+  const paper = [...distinct.values()][0];
+  return { ...toMetadata(paper), title: paper.title, matchedBy: 'title', sourceUrl: paper.url || '', found: true };
+}
+
+
+async function fetchCrossrefMetadata(input) {
+  const doi = extractDoi(input), title = cleanTitle(input.title).slice(0, 600);
+  if (!doi && !title) return { found: false };
+  const url = doi ? `https://api.crossref.org/works/${encodeURIComponent(doi)}`
+    : `https://api.crossref.org/works?query.title=${encodeURIComponent(title)}&rows=5`;
+  const response = await fetch(url, { headers: { accept: 'application/json' }, signal: AbortSignal.timeout(12000) });
+  if (response.status === 404) return { found: false };
+  if (!response.ok) throw new Error(`Crossref HTTP ${response.status}`);
+  const payload = await response.json();
+  const toMetadata = item => ({
+    title: item.title?.[0] || '',
+    authors: (item.author || []).map(author => author.name || [author.given,author.family].filter(Boolean).join(' ')).filter(Boolean),
+    year: String((item['published-print'] || item.published || item.issued)?.['date-parts']?.[0]?.[0] || ''),
+    venue: item['container-title']?.[0] || '',
+    sourceUrl: item.DOI ? `https://doi.org/${item.DOI}` : ''
+  });
+  const candidates = doi ? [payload.message].filter(item=>item?.DOI?.toLowerCase() === doi)
+    : (payload.message?.items || []).filter(item=>normalizeForCompare(item.title?.[0]) === normalizeForCompare(title));
+  const distinct = new Map(candidates.map(item => {
+    const result = toMetadata(item);
+    return [JSON.stringify([result.authors,result.year,result.venue]), result];
+  }));
+  if (distinct.size !== 1) return { found:false, ambiguous:distinct.size>1 };
+  return { ...[...distinct.values()][0], found:true, matchedBy:doi?'id':'title' };
+}
+
+export async function fetchPaperMetadata(input) {
+  let firstError;
+  try {
+    const result = await fetchS2Metadata(input);
+    if (result.found || result.ambiguous) return { ...result, provider:'Semantic Scholar' };
+  } catch (error) { firstError = error; }
+  try {
+    return { ...await fetchCrossrefMetadata(input), provider:'Crossref' };
+  } catch (error) {
+    throw new Error([firstError?.message,error.message].filter(Boolean).join('; '));
+  }
+}

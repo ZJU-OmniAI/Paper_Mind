@@ -175,3 +175,17 @@ test('reading progress changes do not reshuffle tag description evidence or cons
   await api(`/api/papers/${paper.id}`,{readingStatus:'read'},'PUT');
   const result=await api('/api/tags/describe',{});assert.equal(result.generated,0);assert.equal(calls,1);
 });
+
+test('bibliography survives edits, duplicates and backup; commentary metadata cannot replace paper facts',async()=>{
+  await reset();
+  let saved=await add('Bibliographic paper',['RAG'],{authors:['Ada'],year:'2025',venue:'ICLR',sourceUrl:'https://arxiv.org/abs/2501.12345'});
+  await api('/api/papers',{title:'Bibliographic paper',sourceUrl:saved.paper.sourceUrl,authors:['Wrong'],year:'2020',venue:'Blog',duplicateAction:'merge'});
+  let paper=(await state()).papers[0];assert.deepEqual(paper.authors,['Ada']);assert.equal(paper.venue,'ICLR');
+  await api('/api/papers',{title:'Commentary',authors:['Blogger'],year:'2026',venue:'Blog',mergeIntoPaperId:paper.id});
+  paper=(await state()).papers[0];assert.deepEqual(paper.authors,['Ada']);assert.equal(paper.year,'2025');
+  await api(`/api/papers/${paper.id}`,{authors:'Ada; Alan',year:'2024',venue:'NeurIPS'},'PUT');
+  const backup=await handleApi('/api/export');await api('/api/import',backup);
+  paper=(await state()).papers[0];assert.deepEqual(paper.authors,['Ada','Alan']);assert.equal(paper.year,'2024');assert.equal(paper.venue,'NeurIPS');
+  await api(`/api/papers/${paper.id}`,{authors:[],year:'',venue:''},'PUT');
+  paper=(await state()).papers[0];assert.deepEqual(paper.authors,[]);assert.equal(paper.year,'');assert.equal(paper.venue,'');
+});

@@ -1,8 +1,8 @@
 # README screenshots
 
-These images show the actual Paper_Mind extension UI with an isolated, synthetic library. Paper titles, abstracts, notes, tag descriptions and topic packs are authored demo content. Descriptions are explicitly marked as preview text. Screenshots do not represent a live model response, research findings, or the user's collection.
+These images show the actual Paper_Mind extension UI with an isolated, synthetic library. Paper titles, authors, years, publication venues, abstracts, notes, tag descriptions and topic packs are authored demo content. Descriptions are explicitly marked as preview text. Screenshots do not represent a live model response, research findings, or the user's collection.
 
-Each README includes thirteen localized images: eight sequential walkthrough screenshots and five feature overviews. The walkthrough follows **Reading Papers with Evidence-Aware Agents** from a new capture to a saved paper found through the **Agents / 智能体** tag.
+Each README includes eight sequential walkthrough screenshots, eight feature overviews and a conceptual recall illustration. The walkthrough follows **Reading Papers with Evidence-Aware Agents** from a new capture to a saved paper found through the **Agents / 智能体** tag.
 
 | Step | Filename (suffix `-{zh,en}.png`) | Action and visible result |
 | --- | --- | --- |
@@ -16,6 +16,10 @@ Each README includes thirteen localized images: eight sequential walkthrough scr
 | 8 | `step-08-paper-detail` | Open the saved paper and verify its tags, memory sentence, reading status and original reading note. |
 
 Feature overviews:
+
+- `refine-results-{zh,en}.png`: tag intersections with precise remaining counts.
+- `memory-evidence-{zh,en}.png`: highlighted memory and real note matches.
+- `publication-details-{zh,en}.png`: editable authors, year and venue; lookup is not invoked.
 
 - `library-{zh,en}.png`: keyword search combined with a tag filter.
 - `tags-{zh,en}.png`: tag descriptions, aliases and linked papers.

@@ -73,6 +73,8 @@ try {
     expect(saved.tagIds.slice().sort()).toEqual(['agent', 'eval']);
     expect(saved.valueScore).toBe(4.5);
     expect(saved.memory).toBe(memory);
+    expect(saved.authors).toEqual(['Alex Chen', 'Morgan Lee']);
+    expect(saved.year).toBe('2026');
     expect(saved.readingStatus).toBe('reading');
     expect(saved.conversation).toContain(note);
 
@@ -92,6 +94,16 @@ try {
     await expect(page.locator('#paperLibraryList .paper-card')).toHaveCount(3);
     await expect(savedCard).toBeVisible();
     await capture('step-07-tag-results', page.locator('#view-papers'));
+    const refinement = page.locator('#libraryRefinement [data-library-tag-id="eval"]');
+    await expect(refinement).toContainText(language === 'zh' ? '剩 2 篇' : '2 left');
+    await capture('refine-results', page.locator('#paperLibraryListMode'));
+    await refinement.click();
+    await expect(page.locator('#paperLibraryList .paper-card')).toHaveCount(2);
+    await page.locator('#paperLibraryFilter').fill(language === 'zh' ? '证据' : 'evidence');
+    await expect(page.locator('#paperLibraryList .paper-card')).toHaveCount(1);
+    await expect(savedCard.locator('.paper-memory mark')).toHaveCount(1);
+    await capture('memory-evidence', page.locator('#paperLibraryListMode'));
+
     await savedCard.click();
     await expect(page.locator('#paperDetailTitle')).toHaveText(title);
     await expect(page.locator('#paperDetailConversation')).toContainText(note);
@@ -99,6 +111,11 @@ try {
     await expect(page.locator('#detailQuickStatus')).toHaveValue('reading');
     await expect(page.locator('#paperDetailTags')).toContainText(language === 'zh' ? '智能体' : 'Agents');
     await capture('step-08-paper-detail', page.locator('#view-paper-detail .paper-detail-page'));
+    await page.locator('#editPaperDetailButton').click();
+    await expect(page.locator('#detailBibliography [data-bib-field="authors"]')).toHaveValue('Alex Chen; Morgan Lee');
+    await capture('publication-details', page.locator('#detailBibliography'));
+    await page.locator('#cancelPaperDetailEditButton').click();
+
 
     await page.locator('[data-view="papers"]').click();
     await page.locator('#libraryReadingStatus').selectOption('reading');
@@ -127,7 +144,7 @@ try {
     await page.locator('#view-topics .topics-layout').screenshot({ path: path.join(output, `topics-${language}.png`), animations: 'disabled' });
     if (errors.length) throw new Error(errors.join('\n'));
     await context.close();
-    console.log(`Captured ${language}: 8 workflow steps + 5 feature views. Verified memory, reading status, tags, score, notes and 9 → 3 → 1 filtering.`);
+    console.log(`Captured ${language}: 8 workflow steps + 8 feature views. Verified memory, reading status, tags, score, notes and 9 → 3 → 1 filtering.`);
   }
 } finally {
   await browser?.close();

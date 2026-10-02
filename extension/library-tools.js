@@ -50,17 +50,25 @@ export function matchesText(text, query) {
   return queryTerms(query).every((term) => haystack.includes(term));
 }
 
+function paperSearchFields(paper, tags) {
+  const linked = tags.filter((tag) => paper.tagIds?.includes(tag.id));
+  return [
+    { field: 'title', text: paper.title, weight: 8 },
+    { field: 'memory', text: paper.memory, weight: 7 },
+    ...['authors', 'year', 'venue'].map(field => ({field, text: Array.isArray(paper[field]) ? paper[field].join('; ') : paper[field], weight: 5})),
+    { field: 'tags', text: linked.flatMap(tag => [tag.name, ...(tag.aliases || [])]).join(' · '), weight: 5 },
+    ...['abstract', 'abstractZh', 'sourceUrl'].map(field => ({field, text: paper[field], weight: 3})),
+    ...(paper.links || []).map(link => ({ field: 'links', text: `${link.title || ''} ${link.url || ''}`, weight: 3 })),
+    { field: 'conversation', text: paper.conversation, weight: 1 },
+    ...(paper.clips || (paper.clip ? [paper.clip] : [])).map(clip => ({ field: 'clip', clipId: clip.id, text: clip.markdown, weight: 1 })),
+    ...linked.map(tag => ({ field: 'description', text: tag.description, weight: 1 }))
+  ].filter(item => typeof item.text === 'string' && item.text.trim());
+}
+
 export function paperSearchScore(paper, tags, query) {
   const terms = queryTerms(query);
   if (!terms.length) return 1;
-  const linked = tags.filter((tag) => paper.tagIds?.includes(tag.id));
-  const fields = [
-    [paper.title, 8],
-    [paper.memory, 7],
-    [linked.flatMap((tag) => [tag.name, ...(tag.aliases || [])]).join(" "), 5],
-    [[paper.abstract, paper.abstractZh, paper.sourceUrl, ...(paper.links || []).flatMap((link) => [link.title, link.url])].join(" "), 3],
-    [[paper.conversation, ...(paper.clips || (paper.clip ? [paper.clip] : [])).map((clip) => clip.markdown), ...linked.map((tag) => tag.description)].join(" "), 1]
-  ].map(([value, weight]) => [searchText(value), weight]);
+  const fields = paperSearchFields(paper, tags).map(item => [searchText(item.text), item.weight]);
   let score = 0;
   for (const term of terms) {
     const weight = fields.find(([text]) => text.includes(term))?.[1];
@@ -68,6 +76,93 @@ export function paperSearchScore(paper, tags, query) {
     score += weight;
   }
   return score;
+}
+
+// Return text segments, never HTML; callers escape each segment before rendering.
+export function highlightedParts(value, query) {
+  const text = String(value || '');
+  const terms = queryTerms(query);
+  if (!terms.length) return [{ text, match: false }];
+  let normalized = '', offset = 0;
+  const positions = [];
+  for (const character of text) {
+    const next = character.normalize('NFKC').toLocaleLowerCase();
+    for (let i = 0; i < next.length; i++) positions.push([offset, offset + character.length]);
+    normalized += next;
+    offset += character.length;
+  }
+  const ranges = [];
+  for (const term of terms) {
+    let start = normalized.indexOf(term);
+    while (start !== -1) {
+      ranges.push([positions[start][0], positions[start + term.length - 1][1]]);
+      start = normalized.indexOf(term, start + term.length);
+    }
+  }
+  const merged = [];
+  for (const range of ranges.sort((a,b) => a[0]-b[0])) {
+    const last = merged.at(-1);
+    if (last && range[0] <= last[1]) last[1] = Math.max(last[1], range[1]);
+    else merged.push(range);
+  }
+  const parts = []; let cursor = 0;
+  for (const [start, end] of merged) {
+    if (start > cursor) parts.push({text: text.slice(cursor,start), match:false});
+    parts.push({text:text.slice(start,end), match:true}); cursor = end;
+  }
+  if (cursor < text.length) parts.push({text:text.slice(cursor), match:false});
+  return parts;
+}
+
+export function paperSearchEvidence(paper, tags, query) {
+  const terms = queryTerms(query);
+  if (!terms.length) return [];
+  const pattern = new RegExp(terms.map(term=>term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|'), 'iu');
+  const evidence = [];
+  const fields = paperSearchFields(paper, tags).sort((a, b) =>
+    Number(['sourceUrl', 'links'].includes(a.field)) - Number(['sourceUrl', 'links'].includes(b.field)));
+  // Find the passage first. Only the short excerpt needs per-character highlight
+  // ranges, even when the match is at the end of a large clipped article.
+  for (const item of fields) {
+    if (item.field === 'memory') continue;
+    const text = item.text.replace(/\s+/g, ' ').trim();
+    let first = text.search(pattern);
+    if (first < 0) {
+      const normalized = searchText(text);
+      const positions = terms.map(term=>normalized.indexOf(term)).filter(index=>index>=0);
+      if (!positions.length) continue;
+      const target = Math.min(...positions);
+      first = 0; let cursor = 0;
+      for (const character of text) {
+        if (cursor >= target) break;
+        cursor += character.normalize('NFKC').toLocaleLowerCase().length;
+        first += character.length;
+      }
+    }
+    const start = Math.max(0, first - 48), end = Math.min(text.length, Math.max(first + 100, start + 160));
+    evidence.push({ ...item, text: `${start ? '…' : ''}${text.slice(start, end)}${end < text.length ? '…' : ''}` });
+    if (evidence.length === 3) break;
+  }
+  return evidence;
+}
+
+export function libraryTagFacets(basePapers, tags, selected = [], mode = 'all') {
+  const matches = (paper, ids) => !ids.length || (mode === 'any' ? ids.some(id => paper.tagIds?.includes(id)) : ids.every(id => paper.tagIds?.includes(id)));
+  const current = basePapers.filter(paper => matches(paper, selected));
+  const counts = papers => {
+    const result = new Map();
+    for (const paper of papers) for (const id of new Set(paper.tagIds || [])) result.set(id, (result.get(id) || 0) + 1);
+    return result;
+  };
+  const currentCounts = counts(current), baseCounts = counts(basePapers);
+  return tags.map(tag => {
+    const chosen = selected.includes(tag.id);
+    const currentCount = currentCounts.get(tag.id) || 0;
+    const nextCount = chosen ? current.length : mode === 'all' || !selected.length ? currentCount
+      : current.length + (baseCounts.get(tag.id) || 0) - currentCount;
+    return { tag, selected: chosen, currentCount, nextCount,
+      narrows: !chosen && mode === 'all' && nextCount > 0 && nextCount < current.length };
+  });
 }
 
 export function suggestTags(tags, query, { selected = [], context = "", limit = 8 } = {}) {
