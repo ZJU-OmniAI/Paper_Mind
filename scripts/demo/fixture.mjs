@@ -26,6 +26,10 @@ export async function installDemo(context, language, origin, { overview = false 
     ];
     const papers = rows.map(([title, tagIds, zh, en, valueScore], i) => ({ id: `paper-${i}`, title, abstract: text(zh, en), conversation: text('阅读笔记：关注适用场景、评估设计和下一步可验证的问题。', 'Reading note: focus on scope, evaluation design and the next question to test.'), tagIds, valueScore, citationCount: null, citationStatus: 'notfound', citationUpdatedAt: new Date().toISOString(), createdAt: date, updatedAt: date }));
     if (overview) {
+      const agentTag=tags.find(tag=>tag.id==='agent');
+      agentTag.name=text('智能体优化','Agent optimization');
+      agentTag.aliases.push('agent optimization','智能体优化');
+      agentTag.description=text('关注智能体的规划、工具使用和执行反馈如何改进，适用于任务分解、工具选择、证据检查和计划修正。','Improving agent planning, tool use and execution feedback. Covers task decomposition, tool selection, evidence checks and plan revision.');
       papers[0].abstract = 'Compare retrieval strategies through answer faithfulness, separating retrieval quality from generation reliability.';
       papers[0].abstractZh = '比较不同检索策略对回答事实一致性的影响，将检索质量与生成可信度分开评估。（示例译文）';
       papers[0].abstractZhModel = 'Demo translation';

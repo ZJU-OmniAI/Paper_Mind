@@ -92,7 +92,7 @@ try {
     const openPaper = async id => {await library();await click(app.locator(`#paperLibraryList [data-open-paper-id="${id}"]`));};
     const actions = {
       intro:[async()=>{},async()=>{}],
-      recall:[async()=>{},async()=>{}],
+      recall:[async()=>{},async()=>{},async()=>{}],
       capture:[async()=>{await focus(app.locator('#titleInput'));},async()=>{
         await click(app.locator('#saveButton'));
         await expect(app.locator('#message')).toHaveClass(/success/);
@@ -109,7 +109,7 @@ try {
         await app.locator('#libraryReadingStatus').selectOption('revisit');await expect(app.locator('#paperLibraryList .paper-card')).toHaveCount(1);await focus(app.locator('.library-filters'));
       }],
       search:[async()=>{
-        await library();await app.locator('#conceptQuery').fill(en?'tools':'工具');
+        await library();await app.locator('#conceptQuery').fill(en?'agent optimization':'智能体优化');
         await expect(app.locator('#conceptResults [data-concept-tag-id]')).toHaveCount(1);await focus(app.locator('.concept-search'));
       },async()=>{
         await click(app.locator('#conceptResults [data-concept-tag-id="agent"]'));

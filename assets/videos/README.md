@@ -5,15 +5,17 @@
 | [![中文功能全景](paper-mind-intro-poster-zh.png)](paper-mind-intro-zh.mp4) | [![English feature overview](paper-mind-intro-poster-en.png)](paper-mind-intro-en.mp4) |
 | [观看 / 下载 MP4](paper-mind-intro-zh.mp4) · [双语 SRT](paper-mind-intro-zh.srt) · [文字稿与章节](transcript.zh-CN.md) | [Watch / download MP4](paper-mind-intro-en.mp4) · [Bilingual SRT](paper-mind-intro-en.srt) · [Transcript and chapters](transcript.en.md) |
 
-中文版 2:45，英文版 2:52，1920 × 1080。**两版均将完整的中英双语字幕直接显示在画面中**，无需另外开启字幕。主字幕对应配音语言，下一行为译文；SRT 也包含两种语言。英文版使用英文产品界面。
+中文版 3:07，英文版 3:13，1920 × 1080。**两版均将完整的中英双语字幕直接显示在画面中**，无需另外开启字幕。主字幕对应配音语言，下一行为译文；SRT 也包含两种语言。英文版使用英文产品界面。
 
 Both editions show complete Chinese and English subtitles together, burned into the video. The primary line follows the narration language; its translation appears beneath it. Both SRT files are bilingual. Each edition uses the matching interface language.
 
 ## 内容范围 / Coverage
 
-开场先呈现一个阅读后的真实困境：标题、方法名称和实现细节都模糊了，只记得“查资料”“用工具”“回答是否靠谱”这些粗略印象。随后用示意图解释开发动机，以及“模糊概念 → 已有标签 → 收藏论文”的路径，再进入各组功能概览。时间标记见上方文字稿。
+开场先呈现一个阅读后的真实困境：完整标题和实现细节模糊了，只留下“好像是智能体的优化”“似乎关于 OPD 算法”“可能是 XXX 某个团队出品”这些线索，分别来自研究方向、算法名称和团队来源。随后解释“记忆线索 → 已有标签 → 收藏论文”，再用“想在以后找回，先在今天留下线索”承接到收藏与剪藏。时间标记见上方文字稿。
 
-The opening starts with a familiar gap in memory: the title and method details have faded, leaving only broad impressions. An illustrated sequence explains why Paper_Mind was built and how rough ideas lead to existing tags and saved papers, before the feature overview begins.
+The opening uses three memory clues: agent optimization, the OPD algorithm, and a paper from team XXX. They represent a research direction, an algorithm name, and a team's identity. After showing how clues connect to existing tags and saved papers, a bridge explains: keep the clues when saving a paper today, so you can find it again later. XXX is a placeholder, not an attribution to a real team.
+
+整段叙事沿着一次阅读的过程推进：读到并收藏 → 保存相关材料 → 记下理解与进度 → 日后凭印象找回 → 继续阅读与发现 → 积累成研究主题，再交代模型接入与数据管理。功能仍按用途概览，不逐个按钮教学。
 
 | 功能 | What the overview covers |
 | --- | --- |
@@ -34,11 +36,11 @@ The opening starts with a familiar gap in memory: the title and method details h
 - 两版均做轻微低频修饰、柔和压缩与两遍响度校准，并在重采样后限制峰值，为 AAC 编码保留余量；无背景音乐。
 - 使用 [edge-tts](https://github.com/rany2/edge-tts) 调用在线语音服务，发送的内容仅为本仓库公开的介绍文案。语音合成需要联网，不是全离线制作；未发送个人论文库或凭据。两版均为合成配音。
 
-开头两幕为解释阅读记忆和产品设计的示意图；随后使用实际扩展页面和隔离的示例库。收藏、IndexedDB 保存、概念匹配、筛选、阅读状态和导出均执行真实应用代码。检索演示只输入“工具 / tools”，通过已有标签的说明找到“智能体 / Agents”，再查看相关论文。脚本核对记忆句、标签、评分和阅读状态，验证收藏后共 9 篇论文、智能体标签匹配 3 篇、待重读筛选 1 篇，以及主题包中的 2 篇论文。
+开头的记忆、标签映射和阅读过程画面为示意图；随后使用实际扩展页面和隔离的示例库。收藏、IndexedDB 保存、概念匹配、筛选、阅读状态和导出均执行真实应用代码。检索演示输入“智能体优化 / agent optimization”，匹配已有标签，再查看相关论文。脚本核对记忆句、标签、评分和阅读状态，验证收藏后共 9 篇论文、智能体优化标签匹配 3 篇、待重读筛选 1 篇，以及主题包中的 2 篇论文。
 
 论文、标签说明、译文与剪藏材料均为预置演示内容，不代表真实研究结论或现场模型生成。模型接入部分只展示配置选项；录制不填写真实凭据、不连接用户账号、不调用论文处理模型。浏览器只允许访问本机演示服务器，未使用个人浏览器资料。外层标题、双语字幕、指针和高亮用于讲解；不修改产品界面或伪造成功响应。
 
-The first two scenes are explanatory illustrations. Subsequent footage uses the actual extension with synthetic fixtures, including a real search for “tools” that matches the existing Agents tag through its description. AI descriptions and translations are prewritten examples, not live model results. No personal library, account or credentials are used. Only the public narration text is sent to the online speech service. Basic capture/search works without an LLM; enabling AI features may send relevant paper content to the configured backend.
+The opening memory, tag mapping and reading-journey visuals are explanatory illustrations. Subsequent footage uses the actual extension with synthetic fixtures, including a real search for “agent optimization” that matches an existing tag. AI descriptions and translations are prewritten examples, not live model results. No personal library, account or credentials are used. Only the public narration text is sent to the online speech service. Basic capture/search works without an LLM; enabling AI features may send relevant paper content to the configured backend.
 
 ## 本地重新制作 / Reproduce
 

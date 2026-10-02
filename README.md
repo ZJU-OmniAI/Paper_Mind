@@ -16,15 +16,17 @@
 
 </div>
 
-You know you have read that paper. Yet, some time later, **its title, the method's name, and how it actually works are all hard to recall**. What remains is a rough, high-level impression: “a model that looks things up,” “something about using tools,” or “making answers more reliable.” You may not even remember the right technical term. Those vague impressions are often the only clues you have when you want to find it again.
+You know you have read that paper. Yet, some time later, **its full title and how the method actually works are hard to recall**. What stays might be: “something about agent optimization,” “perhaps the OPD algorithm,” or “maybe a paper from team XXX.” Sometimes you remember a research direction, sometimes an algorithm acronym, and sometimes only the team behind it. These clues vary in detail, but they may still leave you unable to name the paper.
 
 **What if a vague idea could lead you to an existing tag, and that tag back to a paper you saved?** That is why we built **Paper_Mind**, a lightweight browser extension for managing papers through tags, with optional LLM assistance. When saving a paper, keep your understanding in tags and a one-line memory. When returning to it, start with what you still recall: **rough idea → existing tags → saved papers**. Narrow the search without first reconstructing the title or the method's details.
 
-You choose the tags; an LLM can use those tags and linked paper content to explain their meaning and scope. Search matches tag names, aliases and descriptions locally. For a vaguer description, optional AI can suggest relevant existing tags; you choose a tag and explore its papers. Reuse tags and merge synonymous concepts to keep the collection clear, with no cap on tag counts. Your library stays on your machine; basic capture and search work without a configured model.
+Research directions, algorithm names and team names can all be tags you record. An LLM can use those labels and linked paper content to explain their meaning and scope. Search matches tag names, aliases and descriptions locally. For a vaguer description, optional AI can suggest relevant existing tags; you choose a tag and explore its papers. Reuse tags and merge synonymous concepts to keep the collection clear, with no cap on tag counts. Your library stays on your machine; basic capture and search work without a configured model.
 
-![Rough impressions about looking things up, using tools and answer reliability lead to existing tags and saved papers](assets/screenshots/concept-recall-en.png)
+![Clues about agent optimization, the OPD algorithm and team XXX lead to existing tags and saved papers](assets/screenshots/concept-recall-en.png)
 
-<p align="center"><sub>Concept illustration: begin with what you recall, match existing tags, then search your own collection. The example connections explain the workflow.</sub></p>
+<p align="center"><sub>Concept illustration: begin with what you recall, match existing tags, then search your own collection. XXX is a placeholder for a team name you can record as a tag.</sub></p>
+
+**To find a paper through those memories later, start by keeping the clues when you save it today.** Capture a paper or clip a useful write-up, choose relevant tags, and add one sentence about why it caught your attention. Keeping the material and your understanding together gives you a route back when only a direction, an algorithm or a team comes to mind. The videos follow that reading journey before introducing further reading, research organization and model options.
 
 ## Watch the feature tour
 
@@ -33,9 +35,9 @@ You choose the tags; an LLM can use those tags and linked paper content to expla
 | [![Watch the English overview](assets/videos/paper-mind-intro-poster-en.png)](assets/videos/paper-mind-intro-en.mp4) | [![观看中文功能全景](assets/videos/paper-mind-intro-poster-zh.png)](assets/videos/paper-mind-intro-zh.mp4) |
 | [▶ Watch / download](assets/videos/paper-mind-intro-en.mp4) · [Bilingual SRT](assets/videos/paper-mind-intro-en.srt) | [▶ 观看 / 下载](assets/videos/paper-mind-intro-zh.mp4) · [双语 SRT](assets/videos/paper-mind-intro-zh.srt) |
 
-**English 2:52 / Mandarin 2:45 · 1080p · Warm neural male narration · Chinese and English subtitles visible together in both editions.** [Transcripts and production notes](assets/videos/README.md)
+**English 3:13 / Mandarin 3:07 · 1080p · Warm neural male narration · Chinese and English subtitles visible together in both editions.** [Transcripts and production notes](assets/videos/README.md)
 
-The opening starts with a familiar problem: you remember reading a paper, but only a few vague concepts remain. An illustrated sequence shows how tags connect those memories to papers, followed by an overview of capture, web clipping, connected materials, one-line memories, reading progress, search, meaningful tags, translation, discovery, topic packs, model/effort choices, and backups. Feature demonstrations use the actual interface and an isolated sample library; AI examples are prewritten. Detailed steps follow below.
+The opening begins with memories of agent optimization, OPD, or a particular team. It explains how to find a paper again, then returns to saving it today and keeping those clues. The tour follows saving material, recording your understanding, finding it later, and continuing to read and organize research, including meaningful tags, topic packs, model/effort choices and backups. Feature demonstrations use the actual interface and an isolated sample library; AI examples are prewritten. Detailed steps follow below.
 
 ![Paper library: search for RAG and select the evaluation tag to find two relevant papers in the sample collection](assets/screenshots/library-en.png)
 

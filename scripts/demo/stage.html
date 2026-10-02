@@ -60,7 +60,7 @@ body[data-language=en] .recall-column.impressions .recall-item{font-size:22px}
 const element=(tag,text,className)=>{const el=document.createElement(tag);el.textContent=text;el.className=className||'';return el;};
 window.drawRecall=language=>{
   const en=language==='en',pick=(zh,english)=>en?english:zh;
-  const thoughts=pick(['让模型先查点资料…','好像会自己调用工具…','回答能不能更靠谱？'],['A model that looks things up…','Something about using tools…','Can the answers be more reliable?']);
+  const thoughts=pick(['好像是智能体的优化…','似乎关于 OPD 算法…','可能是 XXX 某个团队出品…'],['Something about agent optimization…','Perhaps the OPD algorithm…','Maybe a paper from team XXX…']);
   const paper=element('div','','faded-paper');
   paper.append(element('div',pick('读过的那篇论文','THE PAPER YOU READ'),'visual-label'),element('div',pick('标题是什么来着？','What was the title?'),'forgotten-title'),element('div','','blur-line'),element('div','','blur-line short'));
   const method=element('div','','method-sketch');for(const word of ['Input','→','Model','→','Output'])method.append(element(word==='→'?'b':'span',word));
@@ -68,12 +68,26 @@ window.drawRecall=language=>{
   const notes=element('div','','memory-notes');notes.append(element('div',pick('脑海里留下的，只是一些粗略印象','ALL YOU RECALL: A FEW ROUGH IMPRESSIONS'),'visual-label'));thoughts.forEach(t=>notes.append(element('div',t,'thought')));
   document.getElementById('memoryStage').replaceChildren(paper,notes);
   const columns=[
-    {kind:'impressions',title:pick('模糊印象','A vague impression'),items:thoughts,hint:pick('不必先想起准确标题或方法名称。','No exact title or method name needed.')},
-    {kind:'tags',title:pick('已有标签','Existing tags'),items:pick(['检索增强生成','智能体','评估与可靠性'],['Retrieval-augmented generation','Agents','Evaluation']),hint:pick('复用名称、别名与说明；模糊描述可用 AI 辅助匹配。','Reuse names, aliases and descriptions. AI can help with vague phrasing.')},
-    {kind:'papers',title:pick('你收藏的论文','Your saved papers'),items:['Grounded Answers with Retrieval-Augmented Generation','Tool Selection for Research Agents','When Retrieved Evidence Disagrees'],hint:pick('沿着标签缩小范围，重新找到它。','Follow the tags to narrow your search.')}
+    {kind:'impressions',title:pick('模糊印象','A vague impression'),items:thoughts,hint:pick('研究方向、算法名、团队名，都可能是线索。','A direction, algorithm or team can be a clue.')},
+    {kind:'tags',title:pick('已有标签','Existing tags'),items:pick(['智能体优化','OPD','XXX 团队'],['Agent optimization','OPD','Team XXX']),hint:pick('这些都可以是你记录的标签；描述模糊时可用 AI 辅助匹配。','Use tags you have recorded. AI can help match vague descriptions.')},
+    {kind:'papers',title:pick('你收藏的论文','Your saved papers'),items:pick(['智能体优化方向的论文','与 OPD 相关的论文','XXX 团队的论文'],['Papers on agent optimization','Papers related to OPD','Papers from team XXX']),hint:pick('沿着标签缩小范围，重新找到它。','Follow the tags to narrow your search.')}
   ];
+  window.drawColumns(columns);
+};
+window.drawColumns=columns=>{
   const parts=[];columns.forEach((c,i)=>{if(i)parts.push(element('div','→','recall-arrow'));const col=element('div','',`recall-column ${c.kind}`);col.append(element('span',`0${i+1}`,'step'),element('h2',c.title));c.items.forEach(t=>col.append(element('div',t,'recall-item')));col.append(element('div',c.hint,'recall-hint'));parts.push(col);});
   document.getElementById('recallStage').replaceChildren(...parts);
+};
+window.drawJourney=language=>{
+  const pick=(zh,en)=>language==='en'?en:zh;
+  document.getElementById('title').textContent=pick('想在以后找回，先在今天留下线索。','Keep the clues today. Find it again later.');
+  document.getElementById('kicker').textContent=pick('从读到一篇论文开始，让收藏和找回连成一个过程。','Start with a paper you are reading. Connect saving it with finding it again.');
+  document.getElementById('section').textContent=pick('把想法，放进一次真实的阅读过程','Put the idea into your reading routine');
+  window.drawColumns([
+    {kind:'papers',title:pick('今天：读到论文','Today: read a paper'),items:pick(['原论文','博客与解读','相关外部资料'],['The original paper','Blogs and commentary','Related resources']),hint:pick('遇到值得保留的内容。','Find something worth keeping.')},
+    {kind:'tags',title:pick('收藏时：留下线索','At capture: keep clues'),items:pick(['标签：方向、算法、团队','一句话记住它','来源与阅读笔记'],['Tags: direction, algorithm, team','A one-line memory','Sources and reading notes']),hint:pick('记下当时关注它的理由。','Keep why it caught your attention.')},
+    {kind:'impressions',title:pick('以后：凭印象找回','Later: recall and find'),items:pick(['脑海里剩下的印象','匹配已有标签','回到收藏的论文'],['What you still remember','Match existing tags','Return to the saved paper']),hint:pick('标题模糊了，线索仍然在。','The title may fade; the clues remain.')}
+  ]);
 };
 window.cue = (scene, index, total, language='zh') => {
   const en=language==='en', i=en?1:0;
@@ -90,7 +104,7 @@ window.cue = (scene, index, total, language='zh') => {
   document.querySelectorAll('#flow span').forEach((el,index)=>el.textContent=flow[index]);
   document.getElementById('progress').style.width=`${index/total*100}%`; document.getElementById('ring').style.opacity=0; document.getElementById('cursor').style.opacity=0;
 };
-window.subtitles=(beat,language)=>{document.getElementById('caption').textContent=beat[language];document.getElementById('captionSecondary').textContent=beat[language==='zh'?'en':'zh'];document.body.dataset.visual=beat.visual||'';};
+window.subtitles=(beat,language)=>{document.getElementById('caption').textContent=beat[language];document.getElementById('captionSecondary').textContent=beat[language==='zh'?'en':'zh'];document.body.dataset.visual=beat.visual||'';if(beat.visual==='save')window.drawJourney(language);};
 window.point=(x,y)=>{const el=document.getElementById('cursor');el.style.opacity=1;el.style.transform=`translate(${x}px,${y}px)`;};
 window.highlight=rect=>{const el=document.getElementById('ring');Object.assign(el.style,{left:rect.x-5+'px',top:rect.y-5+'px',width:rect.width+10+'px',height:rect.height+10+'px',opacity:1});};
 </script></body></html>
