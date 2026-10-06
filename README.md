@@ -102,23 +102,26 @@ Choose a backend in **Manager → Model settings**:
 
 | Backend | What you need | Bridge required? |
 | --- | --- | --- |
-| **Claude Code / Codex** | Node.js (22 or newer recommended) and the corresponding installed, signed-in CLI | Yes; keep `npm run bridge` running while using it |
+| **Claude Code / Codex** | Node.js (22 or newer recommended) and the corresponding installed, signed-in CLI | Yes; macOS supports background autostart; other systems can run it manually |
 | **Model service API** | Configuration for Qwen, Zhipu GLM, Kimi Code, DeepSeek, or another Chat Completions-compatible service | No |
 | **Local model API** | A running local service with a Chat Completions-compatible endpoint | No |
 
 ### Local Claude Code / Codex
 
 1. Sign in to your chosen CLI with `claude auth login` or `codex login`.
-2. From the **Paper_Mind repository root**, run:
+2. From the **Paper_Mind repository root**, macOS users can install autostart once:
 
    ```bash
-   npm run bridge
+   npm run bridge:install
+   npm run bridge:token
    ```
 
-3. Paste the printed URL and connection token into model settings. Click **Check local connection**.
+3. Enter `http://127.0.0.1:39321` and the displayed token in model settings. Click **Check local connection**. Existing tokens remain valid.
 4. Select the **model** and **reasoning effort**, save the settings, then click **Test model**.
 
-Sign-in and connection setup are usually one-time steps. The bridge must be running whenever you use a local CLI backend. Its token is reused by default; keep the terminal open and press `Ctrl+C` to stop it. Basic capture and local search remain available without the bridge.
+Sign-in and pairing are usually one-time steps. On macOS, the service starts at login and restarts after exit, with no open terminal needed. Use `npm run bridge:status` to check it, or `npm run bridge:uninstall` to disable autostart. After updating bridge code, run `npm run bridge:install` again to refresh the background copy. Stop any manually started bridge before installation.
+
+For Windows / Linux or a temporary session, run `npm run bridge`, keep the terminal open, and use `Ctrl+C` to stop it. Copy the URL and token from its output. Basic capture and local search remain available without the bridge.
 
 ### API or local model service
 

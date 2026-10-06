@@ -2,6 +2,12 @@
 
 Notable changes to Paper_Mind. Versions follow the `version` field in `extension/manifest.json`.
 
+## 1.6.2
+
+- Added a macOS bridge installer with login startup and automatic process recovery, plus status, restart, token-display and uninstall commands.
+- The managed bridge uses a private runtime copy and reuses the existing loopback address and token. Background logs omit the token, and installation never terminates an unrelated process occupying the port.
+- Updated setup guidance in both languages to distinguish automatic and manual bridge modes.
+
 ## 1.6.1
 
 - Fixed citation matching that chose the most-cited similar title and incorrectly discarded valid zero counts. Exact titles, source identifiers and available author/year evidence now determine matches; ambiguous records remain unconfirmed.

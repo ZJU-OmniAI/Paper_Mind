@@ -1,6 +1,6 @@
 # 本机模型与兼容 API / Local models and compatible APIs
 
-Paper_Mind 1.5.1 提供三种调用方式：已登录的 Claude Code、已登录的 Codex，以及 Chat Completions 兼容 API。它们共用概念匹配、标签说明、论文语义检索、摘要翻译、库内推荐、标签合并建议和模型测试入口。
+Paper_Mind 提供三种调用方式：已登录的 Claude Code、已登录的 Codex，以及 Chat Completions 兼容 API。它们共用概念匹配、标签说明、论文语义检索、摘要翻译、库内推荐、标签合并建议和模型测试入口。
 
 ## 本机 CLI
 
@@ -17,6 +17,29 @@ npm run bridge
 ```
 
 终端会显示 `http://127.0.0.1:39321` 和随机连接码。在插件 **模型设置** 选择 **Claude Code** 或 **Codex**，填入两项信息，点击 **检测本机连接**读取模型目录，分别选择模型与 **effort（思考强度）**，**保存设置**，再用 **测试模型**发送一条简单问题。保持终端开启；`Ctrl+C` 停止服务。只安装其中一个 CLI 也能使用。
+
+### macOS：自动启动，免开终端
+
+在项目根目录执行一次：
+
+```bash
+npm run bridge:install
+```
+
+如已有手动启动的 `npm run bridge`，先在它的终端按 `Ctrl+C`，再安装。安装命令不会擅自停止占用该端口的其他进程。
+
+安装后由 macOS `launchd` 管理当前用户的后台服务：登录后自动启动，进程退出后自动恢复；无需一直开着终端，也无需管理员权限。地址、原连接码和 CLI 登录状态保持不变。首次配置时运行 `npm run bridge:token` 查看连接码，复制到插件并保存。连接码属于本机私密配置，不应提交到仓库。
+
+```bash
+npm run bridge:status      # 查看后台服务及 CLI 登录状态
+npm run bridge:restart     # 重启已安装的服务
+npm run bridge:install     # 更新代码后，再运行一次以更新后台副本
+npm run bridge:uninstall   # 停止服务并关闭自启动；保留连接码和设置
+```
+
+服务配置为 `~/Library/LaunchAgents/org.paper-mind.bridge.plist`。运行副本、配置和日志位于 `~/.paper-mind/service/`，不依赖原项目目录一直存在；日志不打印连接码。运行使用安装时的 Node 可执行文件，删除该 Node 版本后需在新 Node 环境重新安装服务。只复制桥接必需的代码，不复制论文库或模型凭据。自启动配置只作用于当前用户登录期间，退出登录时服务停止。Windows / Linux 暂用手动模式。
+
+### 模型与调用设置
 
 - **模型**：下拉框可用 CLI 默认项、当前目录中的模型，或自定义模型 ID。Claude 未读取目录时提供 `sonnet`、`opus`、`haiku` 别名。Codex 列表通过本机 app-server 的 `model/list` 获取；目录不是账号权限保证，用“测试模型”验证实际可用性。
 - **effort**：Claude 与 Codex 分别保存。目录提供能力信息时只列出该模型支持的档位；自定义模型或未知能力时显示 CLI 档位供选择，以实际模型支持为准。较高 effort 通常更慢。切换模型时，若原档位不受支持则恢复默认并提示；刷新目录不擅自改动选择。
@@ -54,10 +77,10 @@ Qwen、智谱、Kimi、DeepSeek 的预设入口和模型列表保持可用。原
 
 | 提示 | 处理 |
 | --- | --- |
-| 无法连接本机服务 | 确认终端仍运行 `npm run bridge`，地址和端口一致；必须用 `127.0.0.1` |
+| 无法连接本机服务 | macOS 运行 `npm run bridge:status` 检查，必要时 `npm run bridge:install` 恢复；手动模式确认终端仍运行。地址和端口一致，必须用 `127.0.0.1` |
 | 连接码不正确 | 从正在运行的桥接终端复制连接码，保存插件设置 |
 | 未检测到 CLI | 确认终端能运行 `claude --version` / `codex --version`；必要时指定绝对路径 |
-| 提示重启桥接 / 模型目录不可用 | 更新代码后重启 `npm run bridge`；确认 CLI 已登录且版本较新。单个后端目录失败不影响另一个，也可手填模型 ID |
+| 提示重启桥接 / 模型目录不可用 | 自动模式更新代码后运行 `npm run bridge:install`；手动模式重启 `npm run bridge`。确认 CLI 已登录且版本较新。单个后端目录失败不影响另一个，也可手填模型 ID |
 | effort 不支持 | 刷新目录后重新选择模型支持的档位，或恢复 CLI 默认；升级 CLI 后再测试 |
 | 需要登录 | 在本机终端运行相应 login 命令，再检测 |
 | 额度或频率受限 | 等待账户恢复，或手动切换另一个已配置后端 |
@@ -67,6 +90,8 @@ Qwen、智谱、Kimi、DeepSeek 的预设入口和模型列表保持可用。原
 ## English quick start
 
 Install a recent Claude Code or Codex CLI and sign in, then run `npm run bridge` from the repository root. No development dependencies are needed. Paste the printed loopback URL and token into **Model settings**, choose the CLI, check the connection to load its catalog, then select a model and reasoning effort. Save and test the model. Keep the terminal running.
+
+On **macOS**, stop any manually started bridge, then run `npm run bridge:install` once to install a per-user launch agent. It starts at login, restarts after exit, and needs no open terminal or administrator privileges. Existing tokens and CLI sign-ins are reused; use `npm run bridge:token` for first-time pairing. Use `bridge:status`, `bridge:restart`, or `bridge:uninstall` to manage it. Run `bridge:install` again after updating bridge code: it refreshes a private runtime copy in `~/.paper-mind/service/`, so moving the repository does not break the service. Keep the Node executable used at installation, or reinstall with the new Node version. The service stops at logout; Windows and Linux currently use manual mode.
 
 Model and effort choices are saved independently for each CLI. Refresh reads metadata without generation and preserves selections on failure. Model capability metadata narrows effort choices; custom IDs remain available. Default omits the corresponding CLI flag. Restart an older bridge after updating to 1.5.1, then reload the extension. The bridge reuses CLI authentication. It does not imply offline inference. Codex runs with user configuration ignored to avoid inheriting additional tools; custom Codex provider/profile configuration is not inherited. Use an explicit model ID or the Compatible API option when needed. Tokens are private local configuration and are excluded from backups. The environment variables above allow port, token directory and executable-path overrides.
 

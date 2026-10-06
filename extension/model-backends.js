@@ -52,7 +52,7 @@ export async function bridgeRequest(config, path, body) {
       ...(body ? { body: JSON.stringify(body) } : {}), signal: AbortSignal.timeout(body ? 310000 : 20000)
     });
   } catch (error) {
-    throw new Error(error.name === "TimeoutError" ? "本机模型调用超时 / Local model timed out" : "无法连接本机服务，请在项目目录运行 npm run bridge / Start the local bridge");
+    throw new Error(error.name === "TimeoutError" ? "本机模型调用超时 / Local model timed out" : "无法连接本机服务：macOS 可运行 npm run bridge:install；手动启动使用 npm run bridge / Start the bridge; on macOS, bridge:install enables autostart");
   }
   const result = await response.json();
   if (response.status === 404 && path.startsWith("/models")) throw new Error("请重启 npm run bridge 后刷新模型列表 / Restart npm run bridge to load models");

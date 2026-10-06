@@ -102,23 +102,26 @@ git clone https://github.com/ZJU-OmniAI/Paper_Mind.git
 
 | 接入方式 | 需要准备 | 是否需要桥接 |
 | --- | --- | --- |
-| **Claude Code / Codex** | Node.js（建议 22 或更新版本），以及已安装、已登录的对应 CLI | 是，使用时保持 `npm run bridge` 运行 |
+| **Claude Code / Codex** | Node.js（建议 22 或更新版本），以及已安装、已登录的对应 CLI | 是；macOS 支持后台自启动，其他系统可手动运行 |
 | **模型服务 API** | Qwen、智谱 GLM、Kimi Code、DeepSeek，或其他 Chat Completions 兼容服务的配置 | 否 |
 | **本地模型 API** | 已运行且提供 Chat Completions 兼容接口的本机模型服务 | 否 |
 
 ### 本机 Claude Code / Codex
 
 1. 在终端登录要使用的 CLI：`claude auth login` 或 `codex login`。
-2. 在 **Paper_Mind 项目根目录**运行：
+2. 在 **Paper_Mind 项目根目录**启动桥接，macOS 推荐一次性安装自启动：
 
    ```bash
-   npm run bridge
+   npm run bridge:install
+   npm run bridge:token
    ```
 
-3. 将终端显示的地址和连接码填入模型设置，点击 **检测本机连接**。
+3. 填入地址 `http://127.0.0.1:39321` 和上一步显示的连接码，点击 **检测本机连接**。已有连接码无需更改。
 4. 选择 **模型** 与 **effort（思考强度）**，保存设置，再点击 **测试模型**。
 
-登录和连接配置通常只需首次完成；每次使用本机模型时需要桥接处于运行状态。连接码默认可复用，保持终端开启即可，`Ctrl+C` 停止。基础收藏和本地搜索不依赖桥接。
+登录和连接配置通常只需首次完成。macOS 自动模式在登录后启动、进程退出后自动恢复，无需开着终端；`npm run bridge:status` 查看状态，`npm run bridge:uninstall` 关闭自启动。更新桥接代码后重新运行 `npm run bridge:install` 更新后台副本。安装前先停止已有手动桥接。
+
+Windows / Linux 或临时试用可运行 `npm run bridge`，保持终端开启，`Ctrl+C` 停止；从启动终端复制地址和连接码。基础收藏和本地搜索不依赖桥接。
 
 ### API 或本地模型服务
 

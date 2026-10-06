@@ -1,6 +1,6 @@
 {
   "name": "paper-mind",
-  "version": "1.6.1",
+  "version": "1.6.2",
   "private": true,
   "description": "Find saved papers through the concepts you remember: existing tags, one-line memories, reading progress, local CLI and API models.",
   "license": "Apache-2.0",
@@ -27,6 +27,11 @@
     "test": "node --test tests/*.test.js",
     "test:ui": "playwright test",
     "bridge": "node bridge/server.mjs",
+    "bridge:install": "node bridge/service.mjs install",
+    "bridge:status": "node bridge/service.mjs status",
+    "bridge:restart": "node bridge/service.mjs restart",
+    "bridge:uninstall": "node bridge/service.mjs uninstall",
+    "bridge:token": "node bridge/service.mjs token",
     "demo:video": "node scripts/make-demo.mjs"
   },
   "engines": {

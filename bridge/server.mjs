@@ -104,7 +104,9 @@ if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.ar
   const server = createBridge({ token });
   server.on('error', error => { console.error(error.code === 'EADDRINUSE' ? '端口已被占用 / Port in use. Set PAPER_MIND_BRIDGE_PORT to another port.' : error.message); process.exitCode = 1; });
   server.listen(port, '127.0.0.1', () => {
-    console.log(`Paper_Mind 本机模型桥接 / Local model bridge\n地址 / URL: http://127.0.0.1:${port}\n连接码 / Token: ${token}\n在插件「模型设置」填入地址和连接码，然后检测连接。保持此终端运行；Ctrl+C 停止。`);
+    console.log(`Paper_Mind 本机模型桥接 / Local model bridge\n地址 / URL: http://127.0.0.1:${port}`);
+    if (process.env.PAPER_MIND_BRIDGE_MANAGED === '1') console.log('后台服务运行中；连接码沿用本机配置 / Managed service; using the saved local token.');
+    else console.log(`连接码 / Token: ${token}\n在插件「模型设置」填入地址和连接码，然后检测连接。手动模式需保持终端运行；macOS 可用 npm run bridge:install 开启自动启动。`);
   });
   for (const signal of ['SIGINT', 'SIGTERM']) process.on(signal, () => server.stop());
 }
