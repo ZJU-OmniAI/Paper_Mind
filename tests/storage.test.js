@@ -2,6 +2,7 @@ import 'fake-indexeddb/auto';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { handleApi } from '../extension/storage.js';
+import { citationNeedsRefresh } from '../extension/citation-state.js';
 
 const values = {};
 const messages = [];
@@ -188,4 +189,62 @@ test('bibliography survives edits, duplicates and backup; commentary metadata ca
   paper=(await state()).papers[0];assert.deepEqual(paper.authors,['Ada','Alan']);assert.equal(paper.year,'2024');assert.equal(paper.venue,'NeurIPS');
   await api(`/api/papers/${paper.id}`,{authors:[],year:'',venue:''},'PUT');
   paper=(await state()).papers[0];assert.deepEqual(paper.authors,[]);assert.equal(paper.year,'');assert.equal(paper.venue,'');
+});
+
+test('citation refresh persists provenance, zero counts and distinct success/attempt dates', async t => {
+  await reset(); const saved = await add('A new paper', [], { conversation: 'Related work: https://arxiv.org/abs/1111.11111' });
+  assert.equal(saved.paper.sourceUrl, '');
+  const urls = [];
+  t.mock.method(globalThis, 'fetch', async url => { urls.push(url); return { ok: true, status: 200, json: async () => ({ data: [{ paperId: 'a'.repeat(40), title: 'A new paper', citationCount: 0 }] }) }; });
+  const path = `/api/papers/${saved.paper.id}/citation`;
+  const verified = (await api(path)).paper;
+  assert.equal(verified.citationCount, 0); assert.equal(verified.citationStatus, 'ok');
+  assert.equal(verified.citationMatchedTitle, 'A new paper'); assert.match(urls[0], /\/search\?/);
+  assert.ok(verified.citationUpdatedAt); assert.ok(verified.citationCheckedAt);
+  t.mock.method(globalThis, 'fetch', async () => ({ ok: false, status: 503 }));
+  const failed = (await api(path)).paper;
+  assert.equal(failed.citationCount, 0); assert.equal(failed.citationStatus, 'error');
+  assert.equal(failed.citationUpdatedAt, verified.citationUpdatedAt);
+  assert.ok(citationNeedsRefresh(failed, Date.parse(failed.citationCheckedAt) + 11 * 60e3));
+  await api(`/api/papers/${saved.paper.id}`, { title: 'An entirely different paper' }, 'PUT');
+  assert.equal((await state()).papers[0].citationCount, null);
+});
+
+test('ambiguous refresh clears the old count instead of retaining it as a fact', async t => {
+  await reset(); const saved = await add('Same title'); const path = `/api/papers/${saved.paper.id}/citation`;
+  const candidate = { paperId: 'a'.repeat(40), title: 'Same title', citationCount: 9 };
+  t.mock.method(globalThis, 'fetch', async () => ({ ok: true, status: 200, json: async () => ({ data: [candidate] }) }));
+  await api(path);
+  t.mock.method(globalThis, 'fetch', async () => ({ ok: true, status: 200, json: async () => ({ data: [candidate, { ...candidate, paperId: 'b'.repeat(40), citationCount: 900 }] }) }));
+  const result = (await api(path)).paper;
+  assert.equal(result.citationCount, null); assert.equal(result.citationStatus, 'ambiguous');
+  assert.equal(result.citationExternalId, ''); assert.equal(result.citationUpdatedAt, '');
+});
+
+test('an older in-flight citation response cannot overwrite a newer refresh', async t => {
+  await reset(); const saved = await add('Concurrent paper');
+  let release, started; const ready = new Promise(resolve => started = resolve); const gate = new Promise(resolve => release = resolve);
+  let calls = 0;
+  t.mock.method(globalThis, 'fetch', async () => {
+    const first = calls++ === 0;
+    if (first) { started(); await gate; }
+    return { ok: true, status: 200, json: async () => ({ data: [{ paperId: 'a'.repeat(40), title: 'Concurrent paper', citationCount: first ? 1 : 2 }] }) };
+  });
+  const path = `/api/papers/${saved.paper.id}/citation`;
+  const pending = api(path); await ready;
+  await api(path); release(); await pending;
+  assert.equal((await state()).papers[0].citationCount, 2);
+});
+
+test('citation responses cannot follow a changed identity or resurrect a deleted paper', async t => {
+  for (const remove of [false, true]) {
+    await reset(); const saved = await add('Old title');
+    let release, started; const ready = new Promise(resolve => started = resolve); const gate = new Promise(resolve => release = resolve);
+    t.mock.method(globalThis, 'fetch', async () => { started(); await gate; return { ok: true, status: 200, json: async () => ({ data: [{ paperId: 'a'.repeat(40), title: 'Old title', citationCount: 777 }] }) }; });
+    const pending = api(`/api/papers/${saved.paper.id}/citation`); await ready;
+    await api(`/api/papers/${saved.paper.id}`, { title: 'New title' }, remove ? 'DELETE' : 'PUT');
+    release();
+    if (remove) { await assert.rejects(pending, /论文不存在/); assert.equal((await state()).papers.length, 0); }
+    else { await pending; assert.equal((await state()).papers[0].citationCount, null); }
+  }
 });

@@ -1,5 +1,6 @@
 import { normalizeMemory, normalizeReadingStatus, READING_STATUSES, conceptTagMatches, DEFAULT_TAG_POLICY, normalizeTagName, tagKey, splitTags, paperSearchScore, matchesText, safeWebUrl, descriptionContext, contextFingerprint, mergeStoreChanges } from "./library-tools.js";
 import { fetchCitationCount } from "./citations.js";
+import { normalizeCitation, citationQueryKey } from "./citation-state.js";
 import { normalizeBibliography, mergeBibliography } from "./bibliography.js";
 import { clipExcerpt, clipImageUrls, clipPlainText } from "./clipper.js";
 
@@ -473,17 +474,6 @@ function ensureSystemTags(store) {
   unsorted.updatedAt ||= timestamp;
 }
 
-function normalizeCitation(paper) {
-  if (!Object.hasOwn(paper, "citationCount") || typeof paper.citationCount !== "number") {
-    paper.citationCount = null;
-  }
-  paper.citationSource ||= "";
-  paper.citationStatus ||= "";
-  paper.citationUpdatedAt ||= "";
-  paper.citationExternalId ||= "";
-  paper.citationError ||= "";
-}
-
 const CLIP_ASSET_STATUSES = new Set(["pending", "done", "partial", "error", "skipped"]);
 
 /* 一条记录可以挂多份剪藏材料：论文原文页、公众号解读、知乎回答……
@@ -677,10 +667,10 @@ function extractSourceUrl(input) {
   const explicit = String(input.sourceUrl || "").trim();
   if (explicit) return explicit;
   const conversation = String(input.conversation || "");
-  const labelled = conversation.match(/(?:来源页面|Source page)：?\s*(https?:\/\/\S+)/i);
+  const labelled = conversation.match(/(?:^|\n)\s*(?:来源页面|Source page)\s*[:：]\s*(https?:\/\/\S+)/i);
   if (labelled) return labelled[1].trim();
-  const anyUrl = conversation.match(/https?:\/\/\S+/i);
-  return anyUrl ? anyUrl[0].trim() : "";
+  // References in notes are not the saved paper's canonical source.
+  return "";
 }
 
 // 分享链接常挂一堆一次性参数（公众号 chksm、小红书 xsec_token…），
@@ -2266,18 +2256,25 @@ export async function handleApi(path, options = {}) {
     const target = store.papers.find((item) => item.id === paperId);
     if (!target) return response(404, { error: "论文不存在" });
 
-    // 先发起网络请求，再读取最新整库写回，缩小并发写覆盖（lost update）窗口。
+    // The newest request wins; an edit or promotion invalidates the old identity.
+    const queryKey = citationQueryKey(target);
+    const requestId = makeId("citation");
+    await updatePaperInIndexedDb(paperId, record => {
+      normalizeCitation(record);
+      if (citationQueryKey(record) === queryKey) record.citationRequestId = requestId;
+    });
     let citation;
     try {
       const result = await fetchCitationCount({
         title: target.title,
-        sourceUrl: target.sourceUrl || extractSourceUrl(target),
-        conversation: target.conversation
+        sourceUrl: target.sourceUrl,
+        authors: target.authors,
+        year: target.year
       });
       citation =
         result.status === "ok"
-          ? { citationCount: result.count, citationSource: result.source, citationStatus: "ok", citationExternalId: result.externalId || "", citationError: "" }
-          : { citationStatus: "notfound", citationError: "" };
+          ? { citationCount: result.count, citationSource: result.source, citationStatus: "ok", citationExternalId: result.externalId || "", citationMatchedTitle: result.matchedTitle || "", citationUpdatedAt: nowIso(), citationError: "" }
+          : { citationCount: null, citationSource: "", citationStatus: result.status, citationExternalId: "", citationMatchedTitle: "", citationUpdatedAt: "", citationError: "" };
     } catch (err) {
       citation = { citationStatus: "error", citationError: err.message || "引用量获取失败" };
     }
@@ -2285,7 +2282,10 @@ export async function handleApi(path, options = {}) {
     // 只原子更新这一条论文记录，不整库写回：引用量抓取和自动推荐会同时在后台跑，
     // 整库写回会互相覆盖，还可能丢掉期间新增的论文
     const paper = await updatePaperInIndexedDb(paperId, (record) => {
-      Object.assign(record, citation, { citationUpdatedAt: nowIso() });
+      normalizeCitation(record);
+      if (record.citationRequestId !== requestId || citationQueryKey(record) !== queryKey) return;
+      // On a transient error, retain a previously verified count and its success date.
+      Object.assign(record, citation, { citationCheckedAt: nowIso(), citationRequestId: "" });
     });
     if (!paper) return response(404, { error: "论文不存在" });
     return response(200, { paper, papers: store.papers.map((item) => (item.id === paperId ? paper : item)) });

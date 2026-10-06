@@ -158,6 +158,15 @@ git clone https://github.com/ZJU-OmniAI/Paper_Mind.git
 
 </details>
 
+<details>
+<summary><strong>为什么引用量与 Google Scholar 不一样？</strong></summary>
+
+引用量来自 **Semantic Scholar**，不是所有数据库的总和；不同平台的收录范围不同，[官方说明](https://webflow.semanticscholar.org/faq/estimated-citations)也明确指出计数可能不同。点击论文卡片中的来源可打开匹配记录，详情页显示匹配标题和数据获取时间。
+
+匹配优先使用论文来源中的 arXiv ID / DOI，并核对标题；标题检索只接受规范化后完全相同且可唯一确认的记录，可结合已填写的作者和年份消歧。不会因候选的引用量更大就采用它，也不会把笔记里的任意参考文献链接当成论文来源。真实的 0、未收录、匹配待确认和刷新失败会分别显示。刷新失败时保留已核验的上次记录并标注；升级后旧计数会自动重新核验，也可点击“刷新全部引用量”。
+
+</details>
+
 ## 文档导航
 
 | 文档 | 内容 |

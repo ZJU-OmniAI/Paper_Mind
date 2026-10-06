@@ -2,6 +2,14 @@
 
 Notable changes to Paper_Mind. Versions follow the `version` field in `extension/manifest.json`.
 
+## 1.6.1
+
+- Fixed citation matching that chose the most-cited similar title and incorrectly discarded valid zero counts. Exact titles, source identifiers and available author/year evidence now determine matches; ambiguous records remain unconfirmed.
+- Citation lookups no longer scan notes for identifiers or infer a source from arbitrary reference links. Source paths support alphaXiv overview pages, versioned/legacy arXiv IDs and encoded DOIs.
+- Added Semantic Scholar source links, matched titles and retrieval dates. Failed refreshes keep only previously verified counts with a visible warning, and retry sooner than the successful-cache interval.
+- Recheck old citation caches on upgrade; invalidate counts when paper identity changes. Concurrent or delayed citation requests cannot overwrite newer results or edited papers.
+- Added citation matching, cache migration, concurrency and browser interaction regression coverage.
+
 ## 1.6.0
 
 - Added a model-settings notice covering optional text processing and save-triggered translation / recommendations.

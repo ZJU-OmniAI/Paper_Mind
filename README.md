@@ -158,6 +158,15 @@ Some pages lack complete academic metadata. Edit the fields manually, or use **F
 
 </details>
 
+<details>
+<summary><strong>Why do citation counts differ from Google Scholar?</strong></summary>
+
+Counts come from **Semantic Scholar**, not a combined total across databases. Coverage differs between providers, as its [official explanation](https://webflow.semanticscholar.org/faq/estimated-citations) notes. Click the citation source on a paper card to inspect the matched record; the detail view shows its title and when the count was retrieved.
+
+Matching prefers an arXiv ID / DOI from the paper's source and checks the title. Title search accepts only normalized exact, unambiguous matches, using supplied authors and year to disambiguate. A higher count never determines the match, and arbitrary reference links in notes are not treated as the paper's source. Zero citations, missing records, uncertain matches and failed refreshes have distinct states. A failed refresh retains a previously verified count with a warning. Old cached counts are rechecked after upgrading; **Refresh all citations** also triggers a new lookup.
+
+</details>
+
 ## Documentation
 
 | Document | Contents |

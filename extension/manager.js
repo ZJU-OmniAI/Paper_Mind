@@ -1,6 +1,7 @@
 import { fallbackModels, modelEfforts } from "./local-models.js";
 import { normalizeReadingStatus, readingStatusLabel, conceptTagMatches, tagKey as canonicalTagKey, splitTags, suggestTags, paperSearchScore, paperSearchEvidence, highlightedParts, libraryTagFacets, matchesText, safeWebUrl } from "./library-tools.js";
 import { bibliographyEditor } from "./bibliography-ui.js";
+import { hasCitationCount, citationNeedsRefresh, citationSourceLink } from "./citation-state.js";
 import { handleApi } from "./storage.js";
 import { renderWorkflowLabels } from "./workflow-ui.js";
 
@@ -237,9 +238,12 @@ const translations = {
     paperTitle: "论文标题",
     paperTitlePlaceholder: "输入论文标题",
     valueScore: "价值评分",
-    citations: (count) => `被引 ${count}`,
+    citations: (count) => `被引 ${count} · Semantic Scholar`,
     citationsUnknown: "被引 暂无",
     citationsLoading: "被引更新中…",
+    citationsUnverified: "被引 待核验",
+    citationsAmbiguous: "被引 匹配待确认",
+    citationsCached: "上次记录；刷新失败",
     abstract: "简介摘要",
     abstractPlaceholder: "粘贴 abstract 或自己的简介",
     conversation: "对话记录",
@@ -267,12 +271,13 @@ const translations = {
     refreshCitationsStart: (count) => `开始从 Semantic Scholar 刷新 ${count} 篇，逐篇限速，请耐心等待…`,
     refreshCitationsEmpty: "论文库里还没有论文",
     refreshCitationsSummary: (s) =>
-      `刷新完成：成功 ${s.ok}，未找到 ${s.notfound}，限流 ${s.blocked}，失败 ${s.error}（共 ${s.total} 篇）` +
+      `刷新完成：成功 ${s.ok}，未找到 ${s.notfound}，待确认 ${s.ambiguous}，限流 ${s.blocked}，失败 ${s.error}（共 ${s.total} 篇）` +
       (s.blocked ? "。被限流（429）的请稍后再点一次刷新即可补齐" : ""),
     refreshOneCitation: "更新引用量",
     refreshOneCitationBusy: "更新中…",
     refreshOneCitationOk: (count) => `引用量已更新：被引 ${count}`,
     refreshOneCitationNotFound: "未找到该论文的引用量",
+    refreshOneCitationAmbiguous: "无法唯一确认论文，请核对标题、作者、年份和来源链接",
     refreshOneCitationFailed: "引用量获取失败，请稍后重试",
     paperClusters: (count) => `${count} 个标签簇`,
     untaggedCluster: "待归类",
@@ -493,9 +498,12 @@ const translations = {
     paperTitle: "Paper title",
     paperTitlePlaceholder: "Enter paper title",
     valueScore: "Value score",
-    citations: (count) => `${count} citations`,
+    citations: (count) => `${count} citations · Semantic Scholar`,
     citationsUnknown: "Citations N/A",
     citationsLoading: "Updating citations…",
+    citationsUnverified: "Citations awaiting verification",
+    citationsAmbiguous: "Citation match needs review",
+    citationsCached: "previous count; refresh failed",
     abstract: "Abstract",
     abstractPlaceholder: "Paste the abstract or your own summary",
     conversation: "Conversation",
@@ -523,12 +531,13 @@ const translations = {
     refreshCitationsStart: (count) => `Refreshing ${count} papers from Semantic Scholar, rate-limited one by one…`,
     refreshCitationsEmpty: "No papers in the library yet",
     refreshCitationsSummary: (s) =>
-      `Done: ${s.ok} ok, ${s.notfound} not found, ${s.blocked} rate-limited, ${s.error} failed (of ${s.total})` +
+      `Done: ${s.ok} ok, ${s.notfound} not found, ${s.ambiguous} need review, ${s.blocked} rate-limited, ${s.error} failed (of ${s.total})` +
       (s.blocked ? ". Rate-limited (429) — just click refresh again later to fill them in" : ""),
     refreshOneCitation: "Update citations",
     refreshOneCitationBusy: "Updating…",
     refreshOneCitationOk: (count) => `Citations updated: ${count}`,
     refreshOneCitationNotFound: "No citation data found for this paper",
+    refreshOneCitationAmbiguous: "Cannot uniquely identify this paper. Check its title, authors, year and source link.",
     refreshOneCitationFailed: "Failed to fetch citations, please try again later",
     paperClusters: (count) => `${count} tag clusters`,
     untaggedCluster: "Unsorted",
@@ -1742,7 +1751,6 @@ function applyLanguage() {
   renderValueScore(els.paperDetailValueScore, els.paperDetailValueScoreText);
 }
 
-const CITATION_MAX_AGE_MS = 14 * 24 * 60 * 60 * 1000;
 // Semantic Scholar 免费接口有共享限额，逐篇之间留较短且带抖动的间隔（约 1.2~2.4 秒）以避免触发 429。
 const CITATION_REFRESH_DELAY_MS = 1200;
 const CITATION_REFRESH_JITTER_MS = 1200;
@@ -1766,8 +1774,7 @@ async function loadState() {
 
 function citationIsStale(paper) {
   if (state.citationRefreshing.has(paper.id)) return false;
-  const updated = Date.parse(paper.citationUpdatedAt || "") || 0;
-  return !updated || Date.now() - updated > CITATION_MAX_AGE_MS;
+  return citationNeedsRefresh(paper);
 }
 
 async function refreshPaperCitation(paperId) {
@@ -1795,15 +1802,14 @@ function citationLooksBlocked(paper) {
   return /拦截|验证|429|captcha|超时/i.test(paper?.citationError || "");
 }
 
-// 逐篇刷新引用量并限速，降低被 Google Scholar 验证码拦截的概率。
-// 打开管理页面时只处理过期（>2 周）或从未获取过的论文；force=true（手动按钮）则刷新全部。
-// 返回 { total, ok, notfound, blocked, error }，供手动刷新展示结果。
+// Refresh sequentially to reduce Semantic Scholar rate limiting. Failed attempts
+// use a shorter retry age than successful records; manual refresh bypasses age.
 async function refreshStaleCitations({ force = false } = {}) {
   if (state.citationRefreshStarted) return null;
   state.citationRefreshStarted = true;
   els.refreshCitationsButton.disabled = true;
   els.refreshCitationsButton.textContent = t("refreshCitationsBusy");
-  const summary = { total: 0, ok: 0, notfound: 0, blocked: 0, error: 0 };
+  const summary = { total: 0, ok: 0, notfound: 0, ambiguous: 0, blocked: 0, error: 0 };
   try {
     const targets = state.papers.filter((paper) => force || citationIsStale(paper)).map((paper) => paper.id);
     summary.total = targets.length;
@@ -1818,6 +1824,7 @@ async function refreshStaleCitations({ force = false } = {}) {
       const status = updated?.citationStatus;
       if (status === "ok") summary.ok += 1;
       else if (status === "notfound") summary.notfound += 1;
+      else if (status === "ambiguous") summary.ambiguous += 1;
       else if (citationLooksBlocked(updated)) summary.blocked += 1;
       else summary.error += 1;
       if (updated?.citationError) console.warn("[Paper_Mind] 引用量未获取", updated.title, updated.citationError);
@@ -2209,10 +2216,30 @@ function sourceDomain(paper) {
 
 function paperCitationText(paper) {
   if (!paper) return "";
-  if (paper.citationStatus === "ok" && typeof paper.citationCount === "number") return t("citations", paper.citationCount);
   if (state.citationRefreshing.has(paper.id)) return t("citationsLoading");
+  if (hasCitationCount(paper)) return t("citations", paper.citationCount) + (paper.citationStatus === "error" ? ` (${t("citationsCached")})` : "");
+  if (paper.citationStatus === "ambiguous") return t("citationsAmbiguous");
+  if (paper.citationStatus === "unverified") return t("citationsUnverified");
   if (paper.citationStatus === "error" || paper.citationStatus === "notfound") return t("citationsUnknown");
   return "";
+}
+
+function citationProvenanceText(paper) {
+  const parts = [ui("统计来源：Semantic Scholar；不同数据库的收录范围不同。", "Source: Semantic Scholar; citation coverage varies across databases.")];
+  if (paper.citationMatchedTitle) parts.push(ui("匹配论文：", "Matched paper: ") + paper.citationMatchedTitle);
+  if (paper.citationUpdatedAt) parts.push(ui("数据获取时间：", "Count retrieved: ") + formatDate(paper.citationUpdatedAt));
+  if (paper.citationStatus === "error") parts.push(ui("最近刷新失败，上次记录未更新。", "Last refresh failed; the previous record is unchanged."));
+  if (paper.citationStatus === "ambiguous") parts.push(t("refreshOneCitationAmbiguous"));
+  return parts.join(" ");
+}
+
+function paperCitationHtml(paper) {
+  const label = paperCitationText(paper);
+  if (!label) return "";
+  const attrs = `class="citation-value" title="${escapeHtml(citationProvenanceText(paper))}"`;
+  const href = citationSourceLink(paper);
+  return href ? `<a ${attrs} href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer">${escapeHtml(label)}</a>`
+    : `<span ${attrs}>${escapeHtml(label)}</span>`;
 }
 
 function bibliographyText(paper) {
@@ -2221,9 +2248,11 @@ function bibliographyText(paper) {
 
 function paperCardMetaHtml(paper) {
   const score = paperValueScore(paper);
-  const parts = [score !== null ? `★ ${score} / 5` : "", formatDate(paper.createdAt || paper.updatedAt), paperClips(paper).length ? t("clipBadge", paperClips(paper).length) : "", sourceDomain(paper), paperCitationText(paper)].filter(Boolean);
+  const parts = [score !== null ? `★ ${score} / 5` : "", formatDate(paper.createdAt || paper.updatedAt), paperClips(paper).length ? t("clipBadge", paperClips(paper).length) : "", sourceDomain(paper)].filter(Boolean).map(escapeHtml);
+  const citation = paperCitationHtml(paper);
+  if (citation) parts.push(citation);
   const bibliography = bibliographyText(paper);
-  return (bibliography ? `<p class="bibliography-line">${escapeHtml(bibliography)}</p>` : "") + (parts.length ? `<small class="paper-card-meta">${escapeHtml(parts.join(" · "))}</small>` : "");
+  return (bibliography ? `<p class="bibliography-line">${escapeHtml(bibliography)}</p>` : "") + (parts.length ? `<small class="paper-card-meta">${parts.join(" · ")}</small>` : "");
 }
 
 function paperSemanticTagIds(paper) {
@@ -2253,7 +2282,7 @@ function sortPapersForLibrary(papers) {
   if (mode === "updated") return items.sort((a, b) => paperTime(b, "updatedAt") - paperTime(a, "updatedAt"));
   if (mode === "title") return items.sort((a, b) => String(a.title || "").localeCompare(String(b.title || ""), "zh-CN"));
   if (mode === "citations") {
-    const count = (paper) => (paper.citationStatus === "ok" && typeof paper.citationCount === "number" ? paper.citationCount : -1);
+    const count = (paper) => (hasCitationCount(paper) ? paper.citationCount : -1);
     return items.sort((a, b) => count(b) - count(a) || paperTime(b, "createdAt") - paperTime(a, "createdAt"));
   }
   return clusterPapersByTags(items).flatMap((cluster) => cluster.papers);
@@ -3045,6 +3074,7 @@ function renderPaperDetail(paperId) {
     els.paperDetailTitle.classList.remove("paper-title-by-score");
     els.paperDetailTitle.style.removeProperty("color");
     els.paperDetailMeta.textContent = "";
+    document.getElementById("paperDetailCitation").textContent = "";
     els.paperDetailTags.innerHTML = "";
     els.paperDetailTagList.innerHTML = "";
     els.paperDetailTitleInput.value = "";
@@ -3072,8 +3102,8 @@ function renderPaperDetail(paperId) {
   const detailTitleColor = paperTitleColor(paper);
   if (detailTitleColor) els.paperDetailTitle.style.color = detailTitleColor;
   else els.paperDetailTitle.style.removeProperty("color");
-  const detailCitation = paperCitationText(paper);
-  els.paperDetailMeta.innerHTML = `${escapeHtml(t("created"))} ${escapeHtml(formatDate(paper.createdAt))} · ${escapeHtml(t("updated"))} ${escapeHtml(formatDate(paper.updatedAt))} · ${escapeHtml(t("valueScoreMeta", valueScoreLabel(paperValueScore(paper))))}${detailCitation ? ` · ${escapeHtml(detailCitation)}` : ""}${paperSourceUrl(paper) ? ` · ${sourceLinkHtml(paper, "source-inline-link")}` : ""}`;
+  els.paperDetailMeta.innerHTML = `${escapeHtml(t("created"))} ${escapeHtml(formatDate(paper.createdAt))} · ${escapeHtml(t("updated"))} ${escapeHtml(formatDate(paper.updatedAt))} · ${escapeHtml(t("valueScoreMeta", valueScoreLabel(paperValueScore(paper))))}${paperSourceUrl(paper) ? ` · ${sourceLinkHtml(paper, "source-inline-link")}` : ""}`;
+  document.getElementById("paperDetailCitation").innerHTML = `${paperCitationHtml(paper)}<span class="citation-provenance">${escapeHtml(citationProvenanceText(paper))}</span>`;
   els.paperDetailTags.innerHTML = tags.length ? tags.map((tag) => `<button type="button" class="tag-chip" data-library-tag-id="${escapeHtml(tag.id)}" title="${escapeHtml(tagDescriptionLabel(tag))}">${escapeHtml(tag.name)}</button>`).join("") : `<span class="empty">${escapeHtml(t("noTags"))}</span>`;
   renderAbstractSection(paper);
   els.absorbPaperButton.hidden = state.papers.length < 2;
@@ -3956,6 +3986,8 @@ els.refreshPaperDetailCitationButton.addEventListener("click", async () => {
     renderCitationViews(paperId);
     if (updated?.citationStatus === "ok" && typeof updated.citationCount === "number") {
       toast(t("refreshOneCitationOk", updated.citationCount));
+    } else if (updated?.citationStatus === "ambiguous") {
+      toast(t("refreshOneCitationAmbiguous"));
     } else if (updated?.citationStatus === "notfound") {
       toast(t("refreshOneCitationNotFound"));
     } else {
@@ -4443,6 +4475,8 @@ document.body.addEventListener("click", async (event) => {
       renderCitationViews(paperId);
       if (updated?.citationStatus === "ok" && typeof updated.citationCount === "number") {
         toast(t("refreshOneCitationOk", updated.citationCount));
+      } else if (updated?.citationStatus === "ambiguous") {
+        toast(t("refreshOneCitationAmbiguous"));
       } else if (updated?.citationStatus === "notfound") {
         toast(t("refreshOneCitationNotFound"));
       } else {

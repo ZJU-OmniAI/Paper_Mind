@@ -6,7 +6,7 @@ async function setup(page, {count=30, configured=false}={}) {
     const now=new Date().toISOString();
     const names=['检索增强生成','评估','多模态','智能体','强化学习','扩散模型','长上下文','推理'];
     const tags=names.map((name,i)=>({id:`tag-${i}`,name,aliases:i===0?['RAG']:[],description:`${name}相关论文的研究方法、适用范围与实际评估。`,descriptionStatus:'ready',paperIds:[],createdAt:now,updatedAt:now}));
-    const papers=Array.from({length:count},(_,i)=>({id:`paper-${i}`,title:i===0?'Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks':i===1?'Evaluating RAG: Faithfulness and Hallucination':`Research paper ${i+1}: ${names[i%names.length]}`,abstract:i<2?'Use retrieved knowledge to improve grounded generation and evaluate hallucination.':'研究论文摘要：探索模型的能力边界、方法设计与评估结果。',conversation:i===0?'讨论检索质量如何影响生成回答的准确性。':'',tagIds:i===0?['tag-0']:i===1?['tag-0','tag-1']:[`tag-${i%names.length}`],valueScore:i===0?5:3,citationCount:100+i,citationStatus:'ok',citationUpdatedAt:now,createdAt:now,updatedAt:now}));
+    const papers=Array.from({length:count},(_,i)=>({id:`paper-${i}`,title:i===0?'Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks':i===1?'Evaluating RAG: Faithfulness and Hallucination':`Research paper ${i+1}: ${names[i%names.length]}`,abstract:i<2?'Use retrieved knowledge to improve grounded generation and evaluate hallucination.':'研究论文摘要：探索模型的能力边界、方法设计与评估结果。',conversation:i===0?'讨论检索质量如何影响生成回答的准确性。':'',tagIds:i===0?['tag-0']:i===1?['tag-0','tag-1']:[`tag-${i%names.length}`],valueScore:i===0?5:3,citationCount:100+i,citationStatus:'ok',citationMatchVersion:2,citationSource:'semanticscholar:title',citationUpdatedAt:now,createdAt:now,updatedAt:now}));
     const values=JSON.parse(localStorage.getItem('paper-mind-test-values') || 'null') || {paperTagStore:{papers,tags,topicPacks:[]},paperTagConfig:{qwenKey:configured?'test-only-key':'',autoDescribeTags:false}};
     const listeners=[];
     window.chrome={storage:{local:{async get(keys){return Object.fromEntries(keys.map(key=>[key,structuredClone(values[key])]));},async set(data){Object.assign(values,structuredClone(data));localStorage.setItem('paper-mind-test-values',JSON.stringify(values));},async remove(key){delete values[key];localStorage.setItem('paper-mind-test-values',JSON.stringify(values));}}},runtime:{id:'test-extension',getURL:p=>`http://127.0.0.1:4178/${p}`,sendMessage:async()=>{},onMessage:{addListener:listener=>listeners.push(listener)},getContexts:async()=>[]},tabs:{query:async()=>[],create:async()=>{}},scripting:{executeScript:async()=>[]}};
@@ -383,4 +383,53 @@ test('page extractor distinguishes scholarly metadata from a blog byline',async(
   result=await page.evaluate(pagePaperMetadata);expect(result.authors).toEqual([]);expect(result.year).toBe('');
   await page.setContent('<script type="application/ld+json">{"@graph":[{"@type":"ScholarlyArticle","author":[{"name":"JSON Author"}],"datePublished":"2023-05-10","isPartOf":{"name":"A Journal"}}]}</script>');
   result=await page.evaluate(pagePaperMetadata);expect(result.authors).toEqual(['JSON Author']);expect(result.year).toBe('2023');expect(result.venue).toBe('A Journal');
+});
+
+test('citations show verified zero, source link, retrieval date and a labeled cached count on failure', async ({page}) => {
+  const errors = await setup(page, {count: 1});
+  const title = 'Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks';
+  await page.route('https://api.semanticscholar.org/**', route => route.fulfill({json:{data:[{paperId:'a'.repeat(40),title,citationCount:0}]}}));
+  await page.locator('#paperLibraryList [data-refresh-citation-id="paper-0"]').click();
+  const citation = page.locator('#paperLibraryList .citation-value');
+  await expect(citation).toHaveText('被引 0 · Semantic Scholar');
+  await expect(citation).toHaveAttribute('href', `https://www.semanticscholar.org/paper/${'a'.repeat(40)}`);
+  await expect(citation).toHaveAttribute('title', /数据获取时间/);
+  await page.locator('#paperLibraryList [data-open-paper-id="paper-0"]').first().click();
+  await expect(page.locator('#paperDetailCitation')).toContainText('匹配论文：' + title);
+  await page.route('https://api.semanticscholar.org/**', route => route.fulfill({status:503,json:{error:'Unavailable'}}));
+  await page.locator('#refreshPaperDetailCitationButton').click();
+  await expect(page.locator('#paperDetailCitation')).toContainText('上次记录；刷新失败');
+  await expect(page.locator('#paperDetailCitation .citation-value')).toContainText('被引 0');
+  await page.locator('#languageSelect').selectOption('en');
+  await expect(page.locator('#paperDetailCitation')).toContainText('previous count; refresh failed');
+  await expect(page.locator('#paperDetailCitation')).toContainText('Count retrieved:');
+  await page.screenshot({path:'test-results/citation-provenance.png',fullPage:true});
+  expect(errors).toEqual([]);
+});
+
+test('legacy citation cache is rechecked and ambiguous matches never show the old high count', async ({page}) => {
+  const errors = await setup(page, {count: 1});
+  await page.evaluate(async () => {
+    const {handleApi} = await import('/storage.js');
+    const exported = await handleApi('/api/export');
+    const paper = exported.store.papers[0];
+    delete paper.citationMatchVersion; paper.citationCount = 987654;
+    await handleApi('/api/import', {method:'POST',body:exported});
+  });
+  let release, started;
+  const ready = new Promise(resolve => started = resolve), gate = new Promise(resolve => release = resolve);
+  await page.route('https://api.semanticscholar.org/**', async route => {
+    started(); await gate;
+    const title='Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks';
+    await route.fulfill({json:{data:[{paperId:'a'.repeat(40),title,citationCount:0},{paperId:'b'.repeat(40),title,citationCount:5000}]}});
+  });
+  await page.reload(); await ready;
+  await expect(page.locator('#paperLibraryList')).not.toContainText('987654');
+  release();
+  await expect(page.locator('#paperLibraryList .citation-value')).toHaveText('被引 匹配待确认');
+  await expect(page.locator('#paperLibraryList .citation-value')).not.toHaveAttribute('href');
+  await page.locator('#paperLibraryList [data-open-paper-id="paper-0"]').first().click();
+  await expect(page.locator('#paperDetailCitation')).toContainText('请核对标题、作者、年份和来源链接');
+  await expect(page.locator('#paperDetailCitation')).not.toContainText('5000');
+  expect(errors).toEqual([]);
 });

@@ -1,37 +1,42 @@
-// 引用量获取模块：使用 Semantic Scholar 免费 API。
-// 选用原因：Google Scholar 对脚本化 fetch 一律返回验证码（实测整库被拦），无法稳定使用；
-// Semantic Scholar 免费、稳定、不被封，对 arXiv 预印本聚合快、数字接近 Google Scholar。
-// 解析顺序：arXiv ID → DOI → 标题检索。
+// Counts describe Semantic Scholar's corpus, not Google Scholar or a global total.
+// Match paper identity before reading its count; popularity is never identity evidence.
 // 文档：https://api.semanticscholar.org/
 
 const S2_BASE = "https://api.semanticscholar.org/graph/v1/paper";
-const S2_FIELDS = "title,citationCount";
+const S2_FIELDS = "title,citationCount,externalIds,authors,year";
 const METADATA_FIELDS = "title,authors,year,venue,journal,url";
 const S2_TIMEOUT_MS = 15000;
 const S2_RETRY_DELAY_MS = 3000;
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-function buildText(input) {
-  return `${input?.sourceUrl || ""}\n${input?.conversation || ""}`;
+function sourceUrl(input) {
+  try {
+    const url = new URL(String(input?.sourceUrl || "").trim());
+    return /^(https?:)$/.test(url.protocol) ? url : null;
+  } catch { return null; }
 }
 
 // 识别 arxiv.org / alphaxiv.org 上的 arXiv 编号，支持新式（2605.29829）与旧式（hep-th/9901001）。
 function extractArxivId(input) {
-  const text = buildText(input);
-  const modern = text.match(/(?:arxiv\.org|alphaxiv\.org)\/(?:abs|pdf|html)\/(\d{4}\.\d{4,5})(?:v\d+)?/i);
+  const url = sourceUrl(input);
+  if (!url || !/^(?:www\.|export\.)?(?:arxiv|alphaxiv)\.org$/i.test(url.hostname)) return "";
+  let path;
+  try { path = decodeURIComponent(url.pathname); } catch { return ""; }
+  const modern = path.match(/^\/(?:abs|pdf|html|overview)\/(\d{4}\.\d{4,5})(?:v\d+)?(?:\.pdf)?\/?$/i);
   if (modern) return modern[1];
-  const legacy = text.match(/arxiv\.org\/(?:abs|pdf)\/([a-z-]+(?:\.[a-z]{2})?\/\d{7})/i);
-  if (legacy) return legacy[1].toLowerCase();
-  const bare = text.match(/\barxiv:\s*(\d{4}\.\d{4,5})(?:v\d+)?/i);
-  return bare ? bare[1] : "";
+  const legacy = path.match(/^\/(?:abs|pdf|html)\/([a-z-]+(?:\.[a-z]{2})?\/\d{7})(?:v\d+)?(?:\.pdf)?\/?$/i);
+  return legacy ? legacy[1].toLowerCase() : "";
 }
 
 function extractDoi(input) {
-  const text = buildText(input);
-  const match = text.match(/\b10\.\d{4,9}\/[-._;()/:a-z0-9]+/i);
+  const url = sourceUrl(input);
+  if (!url) return "";
+  let path;
+  try { path = decodeURIComponent(url.pathname); } catch { return ""; }
+  const match = path.match(/(?:^|\/)(10\.\d{4,9}\/\S+)$/i);
   if (!match) return "";
-  return match[0].replace(/[).,;]+$/, "").toLowerCase();
+  return match[1].replace(/[.,;]+$/, "").toLowerCase();
 }
 
 // 去掉标题里的站点后缀和常见前缀，提升标题检索命中率。
@@ -39,30 +44,22 @@ function cleanTitle(title) {
   return String(title || "")
     .replace(/\s*[|｜]\s*(alphaXiv|arXiv|OpenReview|Papers With Code|Hugging Face).*$/i, "")
     .replace(/^\s*(Abstract|摘要)\s*[:：]\s*/i, "")
+    .replace(/^\s*\[\d{4}\.\d{4,5}(?:v\d+)?\]\s*/i, "")
     .replace(/\s+/g, " ")
     .trim();
 }
 
 function normalizeForCompare(value) {
   return String(value || "")
+    .normalize("NFKC")
     .toLowerCase()
-    .replace(/[^a-z0-9一-龥]+/g, " ")
+    .replace(/[^\p{L}\p{N}]+/gu, " ")
     .trim();
 }
 
-// 标题相似度（词级重合 + 子串包含），用于校验标题检索结果，避免匹配到无关论文。
-function titleOverlap(a, b) {
-  const left = normalizeForCompare(a);
-  const right = normalizeForCompare(b);
-  if (!left || !right) return 0;
-  if (left === right) return 1;
-  if (left.includes(right) || right.includes(left)) return 0.9;
-  const leftTokens = new Set(left.split(" ").filter(Boolean));
-  const rightTokens = new Set(right.split(" ").filter(Boolean));
-  if (!leftTokens.size || !rightTokens.size) return 0;
-  const shared = [...leftTokens].filter((token) => rightTokens.has(token)).length;
-  const union = new Set([...leftTokens, ...rightTokens]).size || 1;
-  return shared / union;
+function sameTitle(a, b) {
+  const title = normalizeForCompare(cleanTitle(a));
+  return Boolean(title) && title === normalizeForCompare(cleanTitle(b));
 }
 
 const S2_MAX_RETRY = 2;
@@ -93,59 +90,65 @@ async function requestS2(url, attempt = 0) {
 }
 
 function toResult(paper, source) {
-  if (!paper || typeof paper.citationCount !== "number") return null;
-  return { status: "ok", count: paper.citationCount, source, externalId: paper.paperId || "" };
+  if (!paper || !Number.isSafeInteger(paper.citationCount) || paper.citationCount < 0) return null;
+  return { status: "ok", count: paper.citationCount, source, externalId: paper.paperId || "", matchedTitle: paper.title || "" };
 }
 
-async function fetchById(idPath, source) {
-  const paper = await requestS2(`${S2_BASE}/${idPath}?fields=${encodeURIComponent(S2_FIELDS)}`);
+const noCount = (status = "notfound") => ({ status, count: null, source: "", externalId: "", matchedTitle: "" });
+
+async function fetchById(idPath, source, input) {
+  const paper = await requestS2(`${S2_BASE}/${encodeURIComponent(idPath)}?fields=${encodeURIComponent(S2_FIELDS)}`);
+  // A legacy source URL may have been inferred from an unrelated link in notes.
+  if (paper && cleanTitle(input.title) && !sameTitle(input.title, paper.title)) return noCount("ambiguous");
   return toResult(paper, source);
 }
 
-// 标题检索可能返回同名副本，取多条候选，在标题高度吻合（>=0.82）的记录中选引用数最高的规范记录。
-async function fetchByTitle(title) {
-  const url = `${S2_BASE}/search?query=${encodeURIComponent(title)}&limit=5&fields=${encodeURIComponent(S2_FIELDS)}`;
+async function fetchByTitle(title, input) {
+  const url = `${S2_BASE}/search?query=${encodeURIComponent(title)}&limit=10&fields=${encodeURIComponent(S2_FIELDS)}`;
   const payload = await requestS2(url);
-  const candidates = (payload?.data || []).filter((paper) => titleOverlap(title, paper.title) >= 0.82);
-  const best = candidates.reduce((top, paper) => ((paper.citationCount || 0) > (top?.citationCount || 0) ? paper : top), null);
-  return toResult(best, "semanticscholar:title");
+  const nameKey = name => normalizeForCompare(name).split(" ").sort().join(" ");
+  const authors = (Array.isArray(input.authors) ? input.authors : []).map(nameKey).filter(Boolean);
+  const arxivId = extractArxivId(input), doi = extractDoi(input);
+  const exact = (payload?.data || []).filter(paper => sameTitle(input.title, paper.title));
+  const candidates = exact.filter(paper => {
+    const ids = paper.externalIds || {};
+    if (arxivId && ids.ArXiv && ids.ArXiv.replace(/v\d+$/i, "").toLowerCase() !== arxivId) return false;
+    if (doi && ids.DOI && ids.DOI.toLowerCase() !== doi) return false;
+    if (input.year && paper.year && String(input.year) !== String(paper.year)) return false;
+    if (authors.length && !(paper.authors || []).some(author => authors.includes(nameKey(author.name)))) return false;
+    return true;
+  });
+  // Distinct records remain ambiguous even when one happens to have more citations.
+  const distinct = new Map(candidates.map(paper => [paper.paperId || JSON.stringify(paper), paper]));
+  if (distinct.size !== 1) return noCount(exact.length ? "ambiguous" : "notfound");
+  return toResult([...distinct.values()][0], "semanticscholar:title");
 }
 
-// 返回 { status: "ok"|"notfound", count, source, externalId }。
+// Returns an exact count, an unavailable record, or an ambiguous identity.
 // 网络/限流错误会抛出，交由上层记录为 error 状态并下次重试。
-export async function fetchCitationCount(input) {
+export async function fetchCitationCount(input = {}) {
   const arxivId = extractArxivId(input);
   if (arxivId) {
-    const result = await fetchById(`arXiv:${arxivId}`, "semanticscholar:arxiv");
-    if (result) {
-      console.debug("[Paper_Mind] S2 命中(arXiv)", { arxivId, count: result.count });
-      return result;
-    }
+    const result = await fetchById(`arXiv:${arxivId}`, "semanticscholar:arxiv", input);
+    if (result) return result;
   }
 
   const doi = extractDoi(input);
   if (doi) {
-    const result = await fetchById(`DOI:${doi}`, "semanticscholar:doi");
-    if (result) {
-      console.debug("[Paper_Mind] S2 命中(DOI)", { doi, count: result.count });
-      return result;
-    }
+    const result = await fetchById(`DOI:${doi}`, "semanticscholar:doi", input);
+    if (result) return result;
   }
 
   const title = cleanTitle(input?.title);
   if (title) {
-    const result = await fetchByTitle(title);
-    if (result) {
-      console.debug("[Paper_Mind] S2 命中(标题)", { title, count: result.count });
-      return result;
-    }
+    const result = await fetchByTitle(title.slice(0, 600), input);
+    if (result) return result;
   }
 
-  console.debug("[Paper_Mind] S2 未找到", { title, arxivId });
-  return { status: "notfound", count: null, source: "", externalId: "" };
+  return noCount();
 }
 
-export const __testing = { extractArxivId, extractDoi, cleanTitle, titleOverlap };
+export const __testing = { extractArxivId, extractDoi, cleanTitle };
 
 async function fetchS2Metadata(input) {
   const toMetadata = paper => ({ authors: (paper.authors || []).map(author => author.name).filter(Boolean),
