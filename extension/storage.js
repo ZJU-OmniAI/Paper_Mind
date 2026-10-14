@@ -2,6 +2,8 @@ import { normalizeMemory, normalizeReadingStatus, READING_STATUSES, conceptTagMa
 import { fetchCitationCount } from "./citations.js";
 import { normalizeCitation, citationQueryKey } from "./citation-state.js";
 import { normalizeBibliography, mergeBibliography } from "./bibliography.js";
+import { cleanPaperTitle, isPaperHost, resolvePaperSource } from "./paper-source.js";
+import { applyBibliography, bibliographyGaps, fetchArxivRecords, lookupPaperMetadata, metadataFromArxiv, needsBibliography, titleSearchAllowed, ARXIV_SPACING_MS } from "./paper-metadata.js";
 import { clipExcerpt, clipImageUrls, clipPlainText } from "./clipper.js";
 
 import { EXTRA_DEFAULTS, isLocalProvider, extraConfig, bridgeRequest } from "./model-backends.js";
@@ -692,8 +694,14 @@ const SHARE_PARAMS_BY_HOST = {
 };
 
 function normalizeSourceUrl(value) {
-  const raw = String(value || "").trim().replace(/[)\].,;，。；、]+$/g, "");
+  let raw = String(value || "").trim().replace(/[)\].,;，。；、]+$/g, "");
   if (!raw) return "";
+  // 同一篇论文的不同入口（arXiv 摘要页 / PDF / alphaXiv / HF Papers / 阅读器 / 会议 PDF 直链）归到一个地址
+  const source = resolvePaperSource(raw);
+  if (source.arxivId) return `https://arxiv.org/abs/${source.arxivId}`;
+  if (source.openreviewId) return `https://openreview.net/forum?id=${source.openreviewId}`;
+  if (source.landingUrl) raw = source.landingUrl;
+  else if (source.reader && !source.local && source.url) raw = source.url;
   try {
     const url = new URL(raw);
     url.hash = "";
@@ -736,8 +744,8 @@ function normalizeSourceUrl(value) {
 }
 
 function stripSiteTitleSuffix(value) {
-  // alphaXiv 等网站的页面标题会在论文标题后面拼 "| 站名"，保存时去掉
-  return String(value || "").replace(/\s*[|｜]\s*alphaXiv\s*$/i, "").trim();
+  // 网站和阅读器会在论文标题后面拼 "| alphaXiv"、" · LLM_in_PDF"，保存时去掉
+  return cleanPaperTitle(value);
 }
 
 function normalizePaperTitle(value) {
@@ -924,37 +932,9 @@ function doisIn(text) {
   return dois;
 }
 
-// 论文原始出处的站点。用来判断合并时谁是"正主"：论文页的标题/摘要应该盖过解读文章的
-const PAPER_HOSTS = [
-  "arxiv.org",
-  "ar5iv.org",
-  "alphaxiv.io",
-  "alphaxiv.org",
-  "doi.org",
-  "openreview.net",
-  "aclanthology.org",
-  "ieeexplore.ieee.org",
-  "dl.acm.org",
-  "link.springer.com",
-  "nature.com",
-  "science.org",
-  "sciencedirect.com",
-  "pubmed.ncbi.nlm.nih.gov",
-  "biorxiv.org",
-  "medrxiv.org",
-  "semanticscholar.org",
-  "papers.nips.cc",
-  "proceedings.mlr.press",
-  "huggingface.co"
-];
-
+// 论文原始出处的站点（列表在 paper-source.js）。用来判断合并时谁是"正主"：论文页的标题/摘要应该盖过解读文章的
 function isPaperSourceUrl(value) {
-  try {
-    const host = new URL(String(value || "")).hostname.toLowerCase().replace(/^www\./, "");
-    return PAPER_HOSTS.some((paperHost) => host === paperHost || host.endsWith(`.${paperHost}`));
-  } catch {
-    return false;
-  }
+  return isPaperHost(resolvePaperSource(value).url);
 }
 
 // 一条记录"自己是什么"：标题和来源里的编号
@@ -2071,6 +2051,75 @@ function response(status, body) {
 
 // 通知后台跑耗时的 LLM 任务（翻译摘要、相似推荐）。
 // 必须交给后台跑：popup 保存完就会关闭，在这里直接调 LLM 会被中途杀掉。
+// 阅读器地址（chrome-extension://…/reader.html?id=…）存成论文自己的地址；本地文件没有网址，保留原样
+function canonicalSourceUrl(value) {
+  const source = resolvePaperSource(value);
+  return source.reader && !source.local && source.url ? source.url : String(value || "").trim();
+}
+
+// 保存后要不要立刻在后台补：缺作者、年份，或者标题只是占位
+function missingCoreBibliography(paper) {
+  const gaps = bibliographyGaps(paper);
+  return (gaps.authors || gaps.year || gaps.title || (gaps.arxivId && !String(paper.abstract || "").trim())) && needsBibliography(paper);
+}
+
+async function fillPaperBibliography(target, found = null) {
+  let result = found;
+  if (!result) {
+    try {
+      result = await lookupPaperMetadata({ sourceUrl: target.sourceUrl, title: target.title, allowTitleSearch: titleSearchAllowed(target) });
+    } catch (error) {
+      return { paperId: target.id, status: "error", error: error.message || "论文信息查询失败", filled: [] };
+    }
+  }
+  if (!result?.found) return { paperId: target.id, status: result?.ambiguous ? "ambiguous" : "notfound", filled: [] };
+  let filled = [];
+  // 只原子更新这一条：补全可能和引用量、翻译、用户编辑同时进行
+  const paper = await updatePaperInIndexedDb(target.id, (record) => {
+    filled = applyBibliography(record, result);
+    if (!filled.length) return;
+    record.updatedAt = nowIso();
+    if (filled.includes("title") || filled.includes("abstract")) record.contentUpdatedAt = record.updatedAt;
+  });
+  if (!paper) return { paperId: target.id, status: "notfound", filled: [] };
+  if (filled.includes("abstract") && paper.abstract) notifyBackground("auto-translate-abstract", paper.id);
+  return { paperId: target.id, status: filled.length ? "filled" : "unchanged", filled, provider: result.provider || "", paper };
+}
+
+async function fillBibliographyBatch(targets) {
+  const arxivIds = new Map(targets.map((paper) => [paper.id, resolvePaperSource(paper.sourceUrl || "").arxivId]).filter(([, id]) => id));
+  let records = new Map();
+  let arxivError = "";
+  if (arxivIds.size) {
+    try {
+      records = await fetchArxivRecords([...arxivIds.values()]);
+    } catch (error) {
+      arxivError = error.message || "arXiv 查询失败";
+    }
+  }
+  const results = [];
+  let lastLookup = 0;
+  for (const paper of targets) {
+    const entry = records.get(arxivIds.get(paper.id));
+    if (entry) {
+      results.push(await fillPaperBibliography(paper, { found: true, provider: "arXiv", matchedBy: "id", ...metadataFromArxiv(entry) }));
+      continue;
+    }
+    // 批量请求成功但没有这条：编号本身不存在。批量请求失败（断网、限流）时整批记为失败，
+    // 不逐篇重试，免得每篇都等一次超时；稍后再点一次即可
+    if (arxivIds.has(paper.id)) {
+      results.push({ paperId: paper.id, status: arxivError ? "error" : "notfound", error: arxivError, filled: [] });
+      continue;
+    }
+    // 逐篇查询会打到 arXiv / Semantic Scholar，间隔 3 秒以上免得被限流
+    const wait = lastLookup + ARXIV_SPACING_MS - Date.now();
+    if (wait > 0) await new Promise((resolve) => setTimeout(resolve, wait));
+    lastLookup = Date.now();
+    results.push(await fillPaperBibliography(paper));
+  }
+  return results;
+}
+
 function notifyBackground(type, paperId, clipId = "") {
   try {
     const sending = globalThis.chrome?.runtime?.sendMessage?.({ type, paperId, clipId });
@@ -2660,7 +2709,7 @@ export async function handleApi(path, options = {}) {
   if (method === "POST" && url.pathname === "/api/papers") {
     const body = await parseBody(options);
     const title = stripSiteTitleSuffix(body.title);
-    const sourceUrl = extractSourceUrl(body);
+    const sourceUrl = canonicalSourceUrl(extractSourceUrl(body));
     const incomingClip = normalizeIncomingClip(body.clip, { title, sourceUrl });
 
     // 直接并进指定的那条记录：popup 里选了"这是《XXX》的解读"，或者"库里已有这篇论文的解读"
@@ -2730,6 +2779,7 @@ export async function handleApi(path, options = {}) {
       markTagsStale(store);
       await writeStore(store);
       if (attached?.imageCount) notifyBackground("clip-archive-images", existingPaper.id, attached.id);
+      if (missingCoreBibliography(existingPaper)) notifyBackground("auto-fill-bibliography", existingPaper.id);
       return response(200, { paper: existingPaper, papers: store.papers, tags: store.tags, meta: store.meta, duplicate: true, duplicateMerged: duplicateAction === "merge" });
     }
     const paper = {
@@ -2753,6 +2803,8 @@ export async function handleApi(path, options = {}) {
     await writeStore(store);
     notifyBackground("auto-translate-abstract", paper.id);
     notifyBackground("auto-recommend-similar", paper.id);
+    // popup 里的联网补全可能还没回来用户就点了保存：缺作者/年份就交给后台再查一次
+    if (missingCoreBibliography(paper)) notifyBackground("auto-fill-bibliography", paper.id);
     // 图片存档放后台跑：popup 保存完就关了，在这里等下载会被中途掐断
     if (incomingClip?.imageCount) notifyBackground("clip-archive-images", paper.id, incomingClip.id);
     return response(201, { paper, papers: store.papers, tags: store.tags, meta: store.meta });
@@ -2797,6 +2849,26 @@ export async function handleApi(path, options = {}) {
     });
     if (!paper) return response(404, { error: "论文不存在" });
     return response(200, { paper, papers: store.papers.map((item) => (item.id === paperId ? paper : item)) });
+  }
+
+  // 补全一篇论文的作者 / 年份 / 出处 / 完整摘要（保存后后台调用，也供管理页单篇调用）
+  const bibliographyMatch = url.pathname.match(/^\/api\/papers\/([^/]+)\/bibliography$/);
+  if (method === "POST" && bibliographyMatch) {
+    const target = store.papers.find((item) => item.id === decodeURIComponent(bibliographyMatch[1]));
+    if (!target) return response(404, { error: "论文不存在" });
+    if (!needsBibliography(target)) return response(200, { paperId: target.id, status: "unchanged", filled: [], paper: target });
+    return response(200, await fillPaperBibliography(target));
+  }
+
+  // 批量补全：有 arXiv 编号的合并成一次请求，其余逐篇限速查询
+  if (method === "POST" && url.pathname === "/api/papers/bibliography") {
+    const body = await parseBody(options);
+    const ids = Array.isArray(body.paperIds) ? body.paperIds.map(String) : store.papers.map((paper) => paper.id);
+    const targets = ids.map((id) => store.papers.find((paper) => paper.id === id)).filter((paper) => paper && needsBibliography(paper)).slice(0, 60);
+    const results = await fillBibliographyBatch(targets);
+    const summary = { total: targets.length, filled: 0, unchanged: 0, notfound: 0, ambiguous: 0, error: 0 };
+    for (const result of results) summary[result.status in summary ? result.status : "error"] += 1;
+    return response(200, { summary, results: results.map(({ paper, ...rest }) => rest), papers: results.map((result) => result.paper).filter(Boolean) });
   }
 
   const paperTranslateMatch = url.pathname.match(/^\/api\/papers\/([^/]+)\/translate-abstract$/);

@@ -1,6 +1,7 @@
 import { fallbackModels, modelEfforts } from "./local-models.js";
 import { normalizeReadingStatus, readingStatusLabel, conceptTagMatches, tagKey as canonicalTagKey, splitTags, suggestTags, paperSearchScore, paperSearchEvidence, highlightedParts, libraryTagFacets, matchesText, safeWebUrl } from "./library-tools.js";
 import { bibliographyEditor } from "./bibliography-ui.js";
+import { needsBibliography } from "./paper-metadata.js";
 import { hasCitationCount, citationNeedsRefresh, citationSourceLink } from "./citation-state.js";
 import { handleApi } from "./storage.js";
 import { renderWorkflowLabels } from "./workflow-ui.js";
@@ -95,6 +96,7 @@ const els = {
   paperLibraryLlmSearchButton: document.querySelector("#paperLibraryLlmSearchButton"),
   paperLibrarySort: document.querySelector("#paperLibrarySort"),
   refreshCitationsButton: document.querySelector("#refreshCitationsButton"),
+  fillBibliographyButton: document.querySelector("#fillBibliographyButton"),
   paperLibraryListMode: document.querySelector("#paperLibraryListMode"),
   paperLibraryMapMode: document.querySelector("#paperLibraryMapMode"),
   paperMapFilter: document.querySelector("#paperMapFilter"),
@@ -276,6 +278,17 @@ const translations = {
     refreshCitationsSummary: (s) =>
       `刷新完成：成功 ${s.ok}，未找到 ${s.notfound}，待确认 ${s.ambiguous}，限流 ${s.blocked}，失败 ${s.error}（共 ${s.total} 篇）` +
       (s.blocked ? "。被限流（429）的请稍后再点一次刷新即可补齐" : ""),
+    fillBibliography: "补全论文信息",
+    fillBibliographyBusy: "补全中…",
+    fillBibliographyTitle: "按 arXiv 编号 / DOI / 论文页补全缺失的作者、年份、出处和截断的摘要",
+    fillBibliographyRunning: "正在补全论文信息，请稍候…",
+    fillBibliographyNone: "没有需要补全的论文：作者、年份都已齐全，或缺的那些查不到编号",
+    fillBibliographyStart: (count) => `开始补全 ${count} 篇的作者、年份、出处和完整摘要：有 arXiv 编号的批量查，其余逐篇限速…`,
+    fillBibliographyProgress: (done, total) => `论文信息补全中：${done}/${total}`,
+    fillBibliographySummary: (s) =>
+      `补全完成：更新 ${s.filled} 篇，已是最新 ${s.unchanged}，未找到 ${s.notfound}，同名待核对 ${s.ambiguous}，失败 ${s.error}（共 ${s.total} 篇）` +
+      (s.error ? "。失败的多半是网络或限流，稍后再点一次即可" : ""),
+    bibliographyFilledToast: (title) => `已补全论文信息：${title}`,
     refreshOneCitation: "更新引用量",
     refreshOneCitationBusy: "更新中…",
     refreshOneCitationOk: (count) => `引用量已更新：被引 ${count}`,
@@ -537,6 +550,17 @@ const translations = {
     refreshCitationsSummary: (s) =>
       `Done: ${s.ok} ok, ${s.notfound} not found, ${s.ambiguous} need review, ${s.blocked} rate-limited, ${s.error} failed (of ${s.total})` +
       (s.blocked ? ". Rate-limited (429) — just click refresh again later to fill them in" : ""),
+    fillBibliography: "Fill paper details",
+    fillBibliographyBusy: "Filling…",
+    fillBibliographyTitle: "Fill missing authors, year, venue and truncated abstracts from arXiv IDs, DOIs and paper pages",
+    fillBibliographyRunning: "Already filling paper details, please wait…",
+    fillBibliographyNone: "Nothing to fill: authors and years are complete, or the missing ones have no identifier to look up",
+    fillBibliographyStart: (count) => `Filling authors, year, venue and full abstracts for ${count} papers: arXiv papers in one batch, the rest one by one…`,
+    fillBibliographyProgress: (done, total) => `Filling paper details: ${done}/${total}`,
+    fillBibliographySummary: (s) =>
+      `Done: ${s.filled} updated, ${s.unchanged} already complete, ${s.notfound} not found, ${s.ambiguous} ambiguous, ${s.error} failed (of ${s.total})` +
+      (s.error ? ". Failures are usually network or rate limits — try again later" : ""),
+    bibliographyFilledToast: (title) => `Paper details filled: ${title}`,
     refreshOneCitation: "Update citations",
     refreshOneCitationBusy: "Updating…",
     refreshOneCitationOk: (count) => `Citations updated: ${count}`,
@@ -1666,6 +1690,8 @@ function applyLanguage() {
   els.paperLibrarySort.options[3].textContent = t("sortByTitle");
   els.paperLibrarySort.options[4].textContent = t("sortByCitations");
   if (!state.citationRefreshStarted) els.refreshCitationsButton.textContent = t("refreshCitations");
+  if (!state.bibliographyFilling) els.fillBibliographyButton.textContent = t("fillBibliography");
+  els.fillBibliographyButton.title = t("fillBibliographyTitle");
   setText("#paperMapTitle", t("mapTitle"));
   setText("#paperMapHint", t("mapHint"));
   setPlaceholder("#paperMapFilter", t("mapFilterPlaceholder"));
@@ -3908,6 +3934,60 @@ els.refreshCitationsButton.addEventListener("click", async () => {
   toast(citationSummaryText(summary));
 });
 
+function renderBibliographyViews(paperId) {
+  renderPapers();
+  renderPaperLibrary();
+  if (state.activePaperId === paperId && !state.paperDetailEditing) renderPaperDetail(paperId);
+}
+
+function storeFilledPapers(papers = []) {
+  for (const paper of papers) {
+    const index = state.papers.findIndex((item) => item.id === paper.id);
+    if (index !== -1) state.papers[index] = paper;
+  }
+}
+
+// 旧论文（作者/年份功能上线前收藏的、从阅读器里存的）批量补全。
+// 每次只发一小批：有 arXiv 编号的在存储层合并成一次请求，其余逐篇限速。
+els.fillBibliographyButton.addEventListener("click", async () => {
+  if (state.bibliographyFilling) {
+    toast(t("fillBibliographyRunning"));
+    return;
+  }
+  const targets = state.papers.filter((paper) => needsBibliography(paper)).map((paper) => paper.id);
+  if (!targets.length) {
+    toast(t("fillBibliographyNone"));
+    return;
+  }
+  state.bibliographyFilling = true;
+  const done = setBusy(els.fillBibliographyButton, t("fillBibliographyBusy"));
+  const summary = { total: 0, filled: 0, unchanged: 0, notfound: 0, ambiguous: 0, error: 0 };
+  toast(t("fillBibliographyStart", targets.length));
+  try {
+    for (let start = 0; start < targets.length; start += 20) {
+      let result;
+      try {
+        result = await api("/api/papers/bibliography", { method: "POST", body: JSON.stringify({ paperIds: targets.slice(start, start + 20) }) });
+      } catch (error) {
+        summary.total += Math.min(20, targets.length - start);
+        summary.error += Math.min(20, targets.length - start);
+        console.warn("[Paper_Mind] 论文信息补全失败", error);
+        continue;
+      }
+      for (const key of Object.keys(summary)) summary[key] += result.summary?.[key] || 0;
+      storeFilledPapers(result.papers);
+      renderPapers();
+      renderPaperLibrary();
+      if (start + 20 < targets.length) toast(t("fillBibliographyProgress", Math.min(start + 20, targets.length), targets.length));
+    }
+    if (state.activePaperId && !state.paperDetailEditing) renderPaperDetail(state.activePaperId);
+    toast(t("fillBibliographySummary", summary));
+  } finally {
+    state.bibliographyFilling = false;
+    done();
+  }
+});
+
 els.tagLibraryFilter.addEventListener("input", () => {
   state.tagSearchRequest++;
   state.tagDisplayLimit = 48;
@@ -5055,6 +5135,12 @@ chrome.runtime?.onMessage?.addListener((message) => {
     return;
   }
   if (!message?.paper?.id) return;
+  if (message.type === "bibliography-filled") {
+    storeFilledPapers([message.paper]);
+    renderBibliographyViews(message.paper.id);
+    toast(t("bibliographyFilledToast", message.paper.title || ""));
+    return;
+  }
   if (!["auto-recommend-similar-done", "auto-translate-abstract-done", "clip-archive-images-done"].includes(message.type)) return;
   if (state.clipArchiveRestore) {
     state.clipArchiveRestore();

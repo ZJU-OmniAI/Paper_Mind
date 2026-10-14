@@ -2,51 +2,40 @@
 // Match paper identity before reading its count; popularity is never identity evidence.
 // 文档：https://api.semanticscholar.org/
 
+import { arxivIdFromUrl, cleanPaperTitle, doiFromUrl, resolvePaperSource } from "./paper-source.js";
+
 const S2_BASE = "https://api.semanticscholar.org/graph/v1/paper";
 const S2_FIELDS = "title,citationCount,externalIds,authors,year";
-const METADATA_FIELDS = "title,authors,year,venue,journal,url";
+const METADATA_FIELDS = "title,authors,year,venue,journal,url,abstract";
 const S2_TIMEOUT_MS = 15000;
 const S2_RETRY_DELAY_MS = 3000;
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
+// 只认来源地址本身（阅读器地址会先还原成论文地址），从不从备注里猜编号。
+// 识别规则在 paper-source.js：arxiv / alphaxiv / Hugging Face Papers / ar5iv 等路径里的 arXiv 编号，
+// 新式（2605.29829）与旧式（hep-th/9901001）都认；DOI 只认出版商路径里的。
 function sourceUrl(input) {
+  const resolved = resolvePaperSource(String(input?.sourceUrl || "").trim());
   try {
-    const url = new URL(String(input?.sourceUrl || "").trim());
+    const url = new URL(resolved.url);
     return /^(https?:)$/.test(url.protocol) ? url : null;
   } catch { return null; }
 }
 
-// 识别 arxiv.org / alphaxiv.org 上的 arXiv 编号，支持新式（2605.29829）与旧式（hep-th/9901001）。
 function extractArxivId(input) {
   const url = sourceUrl(input);
-  if (!url || !/^(?:www\.|export\.)?(?:arxiv|alphaxiv)\.org$/i.test(url.hostname)) return "";
-  let path;
-  try { path = decodeURIComponent(url.pathname); } catch { return ""; }
-  const modern = path.match(/^\/(?:abs|pdf|html|overview)\/(\d{4}\.\d{4,5})(?:v\d+)?(?:\.pdf)?\/?$/i);
-  if (modern) return modern[1];
-  const legacy = path.match(/^\/(?:abs|pdf|html)\/([a-z-]+(?:\.[a-z]{2})?\/\d{7})(?:v\d+)?(?:\.pdf)?\/?$/i);
-  return legacy ? legacy[1].toLowerCase() : "";
+  return url ? arxivIdFromUrl(url) : "";
 }
 
 function extractDoi(input) {
   const url = sourceUrl(input);
-  if (!url) return "";
-  let path;
-  try { path = decodeURIComponent(url.pathname); } catch { return ""; }
-  const match = path.match(/(?:^|\/)(10\.\d{4,9}\/\S+)$/i);
-  if (!match) return "";
-  return match[1].replace(/[.,;]+$/, "").toLowerCase();
+  return url ? doiFromUrl(url) : "";
 }
 
 // 去掉标题里的站点后缀和常见前缀，提升标题检索命中率。
 function cleanTitle(title) {
-  return String(title || "")
-    .replace(/\s*[|｜]\s*(alphaXiv|arXiv|OpenReview|Papers With Code|Hugging Face).*$/i, "")
-    .replace(/^\s*(Abstract|摘要)\s*[:：]\s*/i, "")
-    .replace(/^\s*\[\d{4}\.\d{4,5}(?:v\d+)?\]\s*/i, "")
-    .replace(/\s+/g, " ")
-    .trim();
+  return cleanPaperTitle(title);
 }
 
 function normalizeForCompare(value) {
@@ -152,7 +141,7 @@ export const __testing = { extractArxivId, extractDoi, cleanTitle };
 
 async function fetchS2Metadata(input) {
   const toMetadata = paper => ({ authors: (paper.authors || []).map(author => author.name).filter(Boolean),
-    year: paper.year ? String(paper.year) : '', venue: paper.venue || paper.journal?.name || '' });
+    year: paper.year ? String(paper.year) : '', venue: paper.venue || paper.journal?.name || '', abstract: paper.abstract || '' });
   const ids = [extractArxivId(input) && `arXiv:${extractArxivId(input)}`, extractDoi(input) && `DOI:${extractDoi(input)}`].filter(Boolean);
   for (const id of ids) {
     const paper = await requestS2(`${S2_BASE}/${encodeURIComponent(id)}?fields=${encodeURIComponent(METADATA_FIELDS)}`, S2_MAX_RETRY);
@@ -164,7 +153,7 @@ async function fetchS2Metadata(input) {
   // Title-only matches must be exact after punctuation/case normalization. An
   // ambiguous title never silently supplies a different paper's bibliographic facts.
   const exact = (result?.data || []).filter(paper => normalizeForCompare(paper.title) === normalizeForCompare(title));
-  const distinct = new Map(exact.map(paper => [JSON.stringify(toMetadata(paper)), paper]));
+  const distinct = new Map(exact.map(paper => [JSON.stringify({ ...toMetadata(paper), abstract: '' }), paper]));
   if (distinct.size !== 1) return { found: false, ambiguous: distinct.size > 1 };
   const paper = [...distinct.values()][0];
   return { ...toMetadata(paper), title: paper.title, matchedBy: 'title', sourceUrl: paper.url || '', found: true };
@@ -185,6 +174,8 @@ async function fetchCrossrefMetadata(input) {
     authors: (item.author || []).map(author => author.name || [author.given,author.family].filter(Boolean).join(' ')).filter(Boolean),
     year: String((item['published-print'] || item.published || item.issued)?.['date-parts']?.[0]?.[0] || ''),
     venue: item['container-title']?.[0] || '',
+    // Crossref 的摘要是 JATS XML（<jats:p>…</jats:p>）
+    abstract: String(item.abstract || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').replace(/^(?:abstract|摘要)\s*/i, '').trim(),
     sourceUrl: item.DOI ? `https://doi.org/${item.DOI}` : ''
   });
   const candidates = doi ? [payload.message].filter(item=>item?.DOI?.toLowerCase() === doi)

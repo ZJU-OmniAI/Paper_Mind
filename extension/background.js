@@ -157,6 +157,26 @@ async function autoTranslateForPaper(paperId) {
   }
 }
 
+/* ----- 保存后补全论文信息（作者 / 年份 / 出处 / 完整摘要） ----- */
+
+// 单独排队：查 arXiv / Semantic Scholar 只要几秒，不该排在几十秒的 LLM 任务后面；
+// 串行执行，连续保存多篇时也不会同时打满学术数据库的限流
+let bibliographyQueue = Promise.resolve();
+
+async function fillBibliographyForPaper(paperId) {
+  const stopKeepAlive = startKeepAlive();
+  try {
+    const result = await handleApi(`/api/papers/${encodeURIComponent(paperId)}/bibliography`, { method: "POST" });
+    if (result?.status === "filled" && result.paper) {
+      chrome.runtime.sendMessage({ type: "bibliography-filled", paperId, paper: result.paper, filled: result.filled }).catch(() => {});
+    }
+  } catch (err) {
+    console.warn("论文信息补全失败", paperId, err?.message || err);
+  } finally {
+    stopKeepAlive();
+  }
+}
+
 // Separate queue: saving papers never waits for descriptions, translations or recommendations.
 let descriptionRunning = false;
 let descriptionRequested = false;
@@ -293,6 +313,8 @@ chrome.runtime.onMessage.addListener((message, sender) => {
     autoRecommendQueue = autoRecommendQueue.then(() => autoRecommendForPaper(message.paperId));
   } else if (message.type === "clip-archive-images") {
     queueClipArchive(message.paperId, { clipId: message.clipId || "", refresh: Boolean(message.refresh) });
+  } else if (message.type === "auto-fill-bibliography") {
+    bibliographyQueue = bibliographyQueue.then(() => fillBibliographyForPaper(message.paperId));
   }
 });
 

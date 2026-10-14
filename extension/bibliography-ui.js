@@ -1,10 +1,10 @@
 import { normalizeBibliography } from './bibliography.js';
-import { fetchPaperMetadata } from './citations.js';
+import { lookupPaperMetadata } from './paper-metadata.js';
 
 export function bibliographyEditor(container, { getContext, getLanguage }) {
   container.innerHTML = `<div class="bibliography-heading"><strong data-zh="论文信息" data-en="Publication details"></strong><button type="button" class="secondary-button small-button" data-lookup-bibliography data-zh="补全空缺信息" data-en="Fill missing details"></button></div>
     <div class="bibliography-fields"><label class="bibliography-authors"><span data-zh="作者（用分号分隔）" data-en="Authors (separate with semicolons)"></span><input data-bib-field="authors" autocomplete="off" /></label><label><span data-zh="年份" data-en="Year"></span><input data-bib-field="year" inputmode="numeric" pattern="[12][0-9]{3}" maxlength="4" placeholder="2026" /></label><label class="bibliography-venue"><span data-zh="发表出处（会议 / 期刊）" data-en="Venue (conference / journal)"></span><input data-bib-field="venue" autocomplete="off" /></label></div>
-    <p class="bibliography-status" data-zh="可手动修改；补查使用 Semantic Scholar / Crossref，填入后请核对并保存。" data-en="Editable. Lookup uses Semantic Scholar / Crossref; review the filled details before saving."></p><p class="bibliography-status" role="status"></p>`;
+    <p class="bibliography-status" data-zh="可手动修改；补查按 arXiv 编号 / 论文页 / DOI 查询，最后才按标题查 Semantic Scholar / Crossref，填入后请核对并保存。" data-en="Editable. Lookup uses the arXiv ID, paper page or DOI, then the exact title on Semantic Scholar / Crossref; review the filled details before saving."></p><p class="bibliography-status" role="status"></p>`;
   const fields = Object.fromEntries([...container.querySelectorAll('[data-bib-field]')].map(el => [el.dataset.bibField, el]));
   const status = container.querySelector('[role="status"]'), button = container.querySelector('button');
   const ui = (zh, en) => getLanguage() === 'en' ? en : zh;
@@ -21,7 +21,7 @@ export function bibliographyEditor(container, { getContext, getLanguage }) {
     button.disabled = true;
     message(ui('正在补查空缺信息…', 'Looking up missing details…'));
     try {
-      const result = await fetchPaperMetadata(context);
+      const result = await lookupPaperMetadata({ ...context, allowTitleSearch: true });
       if (request !== revision || JSON.stringify(context) !== JSON.stringify(getContext())) return;
       if (!result.found) return message(ui(result.ambiguous ? '存在同名论文，请手动核对信息。' : '没有找到可靠匹配，可手动填写。', result.ambiguous ? 'Ambiguous title. Please check the details manually.' : 'No reliable match found. You can enter details manually.'));
       const normalized = normalizeBibliography(result);
@@ -46,6 +46,8 @@ export function bibliographyEditor(container, { getContext, getLanguage }) {
       for (const [key, field] of Object.entries(fields)) if (!onlyMissing || !field.value.trim()) field.value = key === 'authors' ? normalized.authors.join('; ') : normalized[key];
       message('');
     },
-    invalidate() { revision++; message(''); }
+    invalidate() { revision++; message(''); },
+    // 弹窗自动补全后告诉用户信息是从哪儿来的
+    status(text) { message(text); }
   };
 }

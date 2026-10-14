@@ -1,5 +1,7 @@
 import { normalizeReadingStatus, tagKey, splitTags, suggestTags } from "./library-tools.js";
 import { pagePaperMetadata } from "./bibliography.js";
+import { cleanPaperTitle, isPaperHost, isProjectHost, isWeakTitle, resolvePaperSource } from "./paper-source.js";
+import { isTruncatedAbstract, lookupPaperMetadata, sameTitleIgnoringCase } from "./paper-metadata.js";
 import { bibliographyEditor } from "./bibliography-ui.js";
 import { handleApi } from "./storage.js";
 import { renderWorkflowLabels } from "./workflow-ui.js";
@@ -30,6 +32,16 @@ const state = {
   paperCount: 0,
   selectedTags: [],
   currentTab: null,
+  // 保存用的论文地址：阅读器页面（LLM_in_PDF 等）会还原成原论文地址
+  source: null,
+  sourceUrl: "",
+  page: null,
+  lookup: null,
+  readToken: 0,
+  // 自动填进去的值；用户改过就不再被联网结果覆盖
+  autoFilled: { title: "", abstract: "" },
+  // "paper"：论文自己的摘要；"description" / "clip"：网页简介或正文开头，查到论文摘要时可以替换
+  abstractKind: "",
   language: localStorage.getItem("paperTagLanguage") || "zh",
   loaded: false,
   submitting: false,
@@ -92,7 +104,7 @@ const els = {
 };
 
 const captureBibliography = bibliographyEditor(document.getElementById('captureBibliography'), {
-  getContext: () => ({ title: els.title.value.trim(), sourceUrl: state.currentTab?.url || '' }),
+  getContext: () => ({ title: els.title.value.trim(), sourceUrl: state.sourceUrl, doi: state.page?.doi || '' }),
   getLanguage: () => state.language
 });
 
@@ -151,7 +163,14 @@ const translations = {
     mergeSeparate: "单独保存",
     mergeHint: "并入后：正文作为一份材料挂到那篇论文下，标题和摘要不会被覆盖",
     saveMerge: (title) => `并入《${title}》`,
-    savedMergedIntoPaper: (title, images) => `已并入《${title}》✓${images ? ` 后台正在存 ${images} 张图…` : ""}`
+    savedMergedIntoPaper: (title, images) => `已并入《${title}》✓${images ? ` 后台正在存 ${images} 张图…` : ""}`,
+    lookupRunning: "正在按论文编号联网补全作者、年份和摘要…",
+    lookupFilled: (provider, fields) => `已从 ${provider} 补全${fields}，请核对后保存。`,
+    lookupNotFound: "没有查到这篇论文的信息，可手动填写。",
+    lookupAmbiguous: "存在同名论文，没有自动填写，请手动核对。",
+    lookupFailed: (error) => `联网补全失败（${error}），可点「补全空缺信息」重试或手动填写。`,
+    fieldNames: { title: "标题", authors: "作者", year: "年份", venue: "出处", abstract: "完整摘要" },
+    fieldJoin: "、"
   },
   en: {
     title: "Save Paper",
@@ -207,7 +226,14 @@ const translations = {
     mergeSeparate: "Keep separate",
     mergeHint: "Merging attaches this page as one more material; the paper's title and abstract stay unchanged",
     saveMerge: (title) => `Merge into "${title}"`,
-    savedMergedIntoPaper: (title, images) => `Merged into "${title}" ✓${images ? ` saving ${images} images...` : ""}`
+    savedMergedIntoPaper: (title, images) => `Merged into "${title}" ✓${images ? ` saving ${images} images...` : ""}`,
+    lookupRunning: "Looking up authors, year and abstract from the paper identifier…",
+    lookupFilled: (provider, fields) => `Filled ${fields} from ${provider}. Review before saving.`,
+    lookupNotFound: "No record found for this paper. You can enter the details manually.",
+    lookupAmbiguous: "Several papers share this title; nothing was filled. Please check manually.",
+    lookupFailed: (error) => `Lookup failed (${error}). Retry with "Fill missing details" or enter them manually.`,
+    fieldNames: { title: "title", authors: "authors", year: "year", venue: "venue", abstract: "full abstract" },
+    fieldJoin: ", "
   }
 };
 
@@ -329,7 +355,7 @@ async function detectExistingPaper() {
   state.existingPaper = null;
   state.forceCreate = false;
   const title = els.title.value.replace(/\s+/g, " ").trim();
-  const sourceUrl = state.currentTab?.url || "";
+  const sourceUrl = state.sourceUrl;
   if (title || sourceUrl) {
     try {
       const duplicate = await api("/api/papers/check-duplicate", {
@@ -466,42 +492,84 @@ function moveSuggestion(delta) {
 
 /* ----- read current page ----- */
 
-function cleanPageTitle(value) {
-  return String(value || "")
-    .replace(/^\[\d{4}\.\d{4,5}(v\d+)?\]\s*/, "")
-    .trim();
+function setAutoValue(field, value, key) {
+  field.value = value;
+  state.autoFilled[key] = value;
 }
 
-// alphaXiv/arXiv 页面的 og:description 只有截断到 ~200 字符的摘要；
-// URL 里带 arXiv 编号时直接从 arXiv 官方 API 拿完整摘要
-function arxivIdFromUrl(url) {
-  const match = String(url || "").match(/(?:arxiv\.org|alphaxiv\.(?:io|org))\/(?:abs|pdf|html|paper)\/(\d{4}\.\d{4,5})(v\d+)?/i);
-  return match ? match[1] + (match[2] || "") : "";
+function isAutoValue(field, key) {
+  return field.value === state.autoFilled[key];
 }
 
-async function fetchArxivAbstract(arxivId) {
-  const response = await fetch(`https://export.arxiv.org/api/query?id_list=${encodeURIComponent(arxivId)}`);
-  if (!response.ok) return "";
-  const xml = await response.text();
-  const match = xml.match(/<summary>([\s\S]*?)<\/summary>/);
-  if (!match) return "";
-  const textarea = document.createElement("textarea");
-  textarea.innerHTML = match[1];
-  return textarea.value.replace(/\s+/g, " ").trim();
-}
-
-async function fillFullAbstractFromArxiv(tabUrl, truncatedAbstract) {
-  const arxivId = arxivIdFromUrl(tabUrl);
-  if (!arxivId) return;
-  try {
-    const fullAbstract = await fetchArxivAbstract(arxivId);
-    // 只在拿到更完整的版本、且用户没改过摘要框时覆盖，避免覆盖手动编辑
-    if (fullAbstract && fullAbstract.length > els.abstract.value.trim().length && els.abstract.value.trim() === truncatedAbstract) {
-      els.abstract.value = fullAbstract;
-    }
-  } catch {
-    // arXiv API 不可达时保留页面上抓到的截断版
+// 只填空缺：作者/年份/出处为空才填；标题只替换占位标题和网页标题（用户改过的不动）；
+// 摘要只替换空的、网页简介或截断的开头
+function applyLookup(result) {
+  const filled = [];
+  const title = cleanPaperTitle(result.title);
+  const current = els.title.value.replace(/\s+/g, " ").trim();
+  if (title && result.matchedBy !== "title" && title !== current && isAutoValue(els.title, "title")
+    && (isWeakTitle(current) || state.page?.titleSource !== "meta" || sameTitleIgnoringCase(current, title))) {
+    setAutoValue(els.title, title, "title");
+    filled.push("title");
   }
+  const before = captureBibliography.read();
+  captureBibliography.set(result, { onlyMissing: true });
+  const after = captureBibliography.read();
+  if (!before.authors.length && after.authors.length) filled.push("authors");
+  if (!before.year && after.year) filled.push("year");
+  if (!before.venue && after.venue) filled.push("venue");
+  const abstract = String(result.abstract || "").replace(/\s+/g, " ").trim();
+  const currentAbstract = els.abstract.value.trim();
+  if (abstract && isAutoValue(els.abstract, "abstract") && (!currentAbstract || state.abstractKind !== "paper" || isTruncatedAbstract(currentAbstract, abstract))) {
+    setAutoValue(els.abstract, abstract, "abstract");
+    state.abstractKind = "paper";
+    filled.push("abstract");
+  }
+  return filled;
+}
+
+// 页面上缺的信息按论文身份联网补：阅读器 / PDF 靠地址里的 arXiv 编号、OpenReview 编号、会议落地页、DOI；
+// 项目主页和代码仓库靠页面上的 arXiv 链接（标题对得上才用）；PDF 和论文站点最后按标题精确检索。
+// 返回标题是否被换掉（换了要重新查重）。
+async function completeFromIdentity(token) {
+  const page = state.page || {};
+  const source = state.source || {};
+  const bibliography = captureBibliography.read();
+  const title = els.title.value.trim();
+  const missing = !bibliography.authors.length || !bibliography.year || isWeakTitle(title) || state.abstractKind !== "paper";
+  // arXiv 论文总是查一次：页面上一般没有会议出处，arXiv 的备注里常写着"CVPR 2025"
+  if (!source.arxivId && !missing) return false;
+  const doi = source.doi || page.doi || "";
+  const input = {
+    sourceUrl: state.sourceUrl,
+    title,
+    doi,
+    // 项目主页上读到了作者但没有年份/出处时，也去核对它链接的 arXiv 论文
+    arxivCandidates: bibliography.authors.length && bibliography.year ? [] : page.arxivIds || [],
+    titleCandidates: [...(page.titleCandidates || []), title, state.currentTab?.title || ""].filter(Boolean),
+    looseTitleMatch: isProjectHost(state.sourceUrl),
+    // 只有 PDF、本地文件和论文站点才按标题查；别的扩展页面（新标签页之类）的标题不发出去
+    allowTitleSearch: Boolean(source.pdf || source.local || page.scholarly || isPaperHost(state.sourceUrl))
+  };
+  const identified = Boolean(source.arxivId || source.openreviewId || source.landingUrl || doi);
+  if (!identified && !input.arxivCandidates.length && !input.allowTitleSearch) return false;
+  captureBibliography.status(t("lookupRunning"));
+  let result;
+  try {
+    result = await lookupPaperMetadata(input);
+  } catch (error) {
+    if (token === state.readToken) captureBibliography.status(t("lookupFailed", error.message));
+    return false;
+  }
+  if (token !== state.readToken) return false;
+  if (!result?.found) {
+    captureBibliography.status(result?.ambiguous ? t("lookupAmbiguous") : identified ? t("lookupNotFound") : "");
+    return false;
+  }
+  const filled = applyLookup(result);
+  const names = translations[state.language]?.fieldNames || translations.zh.fieldNames;
+  captureBibliography.status(filled.length ? t("lookupFilled", result.provider, filled.map((field) => names[field]).join(t("fieldJoin"))) : "");
+  return filled.includes("title");
 }
 
 /* ----- 网页剪藏 ----- */
@@ -547,7 +615,7 @@ function renderMergePanel() {
 async function detectMergeTarget() {
   state.mergeTarget = null;
   state.mergeChoice = "merge";
-  const sourceUrl = state.currentTab?.url || "";
+  const sourceUrl = state.sourceUrl;
   if (!state.clip?.markdown && !els.title.value.trim() && !sourceUrl) {
     renderMergePanel();
     return;
@@ -583,11 +651,15 @@ async function readPageClip(tab) {
     if (!clip?.ok) return;
     if (clip.textLength < CLIP_MIN_TEXT_LENGTH && !clip.imageCount) return;
     state.clip = clip;
-    // arXiv/alphaXiv 有专门的摘要来源，整页剪下来反而是噪声，这类页面默认不勾
-    state.clipEnabled = !arxivIdFromUrl(tab.url);
-    if (state.clipEnabled) {
+    // arXiv/alphaXiv/HF Papers 有专门的摘要来源，整页剪下来反而是噪声，这类页面默认不勾
+    state.clipEnabled = !state.source?.arxivId;
+    // 页面上读到了论文自己的摘要就留着，只有网页简介时才换成正文开头
+    if (state.clipEnabled && state.abstractKind !== "paper" && isAutoValue(els.abstract, "abstract")) {
       const excerpt = clipExcerpt(clip.markdown, 600);
-      if (excerpt) els.abstract.value = excerpt;
+      if (excerpt) {
+        setAutoValue(els.abstract, excerpt, "abstract");
+        state.abstractKind = "clip";
+      }
     }
   } catch {
     // chrome:// 、应用商店等页面不允许注入脚本，静默跳过
@@ -596,33 +668,52 @@ async function readPageClip(tab) {
   }
 }
 
-async function readCurrentPage() {
+async function readCurrentPage({ lookup = true } = {}) {
+  const token = ++state.readToken;
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   state.currentTab = tab;
+  state.page = null;
+  state.lookup = null;
+  state.abstractKind = "";
   captureBibliography.set();
   if (!tab) return;
 
-  els.title.value = cleanPageTitle(tab.title);
-  const urlLine = tab.url ? t("sourcePage", tab.url) : "";
+  const source = resolvePaperSource(tab.url);
+  state.source = source;
+  // 阅读器页面存原论文地址；本地 PDF 没有网址，保留阅读器地址以便查重
+  state.sourceUrl = source.reader && !source.local ? source.url : tab.url || "";
+  setAutoValue(els.title, isWeakTitle(tab.title) ? "" : cleanPaperTitle(tab.title), "title");
+  setAutoValue(els.abstract, "", "abstract");
+  const urlLine = state.sourceUrl ? t("sourcePage", state.sourceUrl) : "";
   els.conversation.value = urlLine;
 
+  let page = null;
   try {
     const [result] = await chrome.scripting.executeScript({
       target: { tabId: tab.id },
       func: pagePaperMetadata
     });
-    const page = result?.result || {};
+    page = result?.result || null;
+  } catch {
+    // 别的扩展的页面（PDF 阅读器）、chrome:// 页面、应用商店不允许注入脚本：只能靠地址里的编号联网查
+  }
+  if (token !== state.readToken) return;
+  state.page = page;
+  if (page) {
     captureBibliography.set(page, { onlyMissing: true });
-    const pageTitle = cleanPageTitle(page.title);
-    if (pageTitle && (!els.title.value || els.title.value.length > pageTitle.length + 20)) els.title.value = pageTitle;
-    if (page.description) els.abstract.value = page.description;
+    const pageTitle = cleanPaperTitle(page.title);
+    const current = els.title.value;
+    if (pageTitle && !isWeakTitle(pageTitle) && (!current || page.titleSource === "meta" || current.length > pageTitle.length + 20)) setAutoValue(els.title, pageTitle, "title");
+    if (page.description) {
+      setAutoValue(els.abstract, page.description, "abstract");
+      state.abstractKind = page.abstractSource === "paper" ? "paper" : "description";
+    }
     if (page.selectedText) {
       els.conversation.value = `${urlLine}${urlLine ? "\n\n" : ""}${t("selectedText")}\n${page.selectedText}`;
     }
-    fillFullAbstractFromArxiv(tab.url, els.abstract.value.trim());
-  } catch {
-    // Some pages, such as chrome:// URLs or extension stores, do not allow script injection.
   }
+  // 联网补全不阻塞弹窗：先显示页面上读到的，查到再补进来
+  if (lookup) state.lookup = completeFromIdentity(token).catch(() => false);
   await readPageClip(tab);
 }
 
@@ -662,7 +753,7 @@ function collectPayload() {
     memory: document.getElementById("captureMemory").value.trim(),
     readingStatus: document.getElementById("captureReadingStatus").value,
     replacePersonalFields: Boolean(state.existingPaper && !state.forceCreate && !isMergingIntoPaper()),
-    sourceUrl: state.currentTab?.url || "",
+    sourceUrl: state.sourceUrl,
     valueScore: normalizeValueScore(els.valueScore.value),
     manualTags: [...state.selectedTags],
     clip: state.clipEnabled && state.clip ? buildClipRecord(state.clip) : null,
@@ -733,7 +824,7 @@ async function submitPaper(duplicateAction = "") {
     if (result.paper?.id) {
       api(`/api/papers/${encodeURIComponent(result.paper.id)}/citation`, { method: "POST" }).catch(() => {});
     }
-    await readCurrentPage();
+    await readCurrentPage({ lookup: false });
     await detectExistingPaper();
   } catch (err) {
     setMessage(err.message, "error");
@@ -771,6 +862,12 @@ async function initialize() {
     await Promise.all([loadState(), readCurrentPage()]);
     await detectExistingPaper();
     await detectMergeTarget();
+    // 阅读器里一开始只有编号，联网查到真标题后再判断一次是否已收藏
+    const token = state.readToken;
+    if (await state.lookup && token === state.readToken) {
+      if (!state.existingPaper) await detectExistingPaper();
+      await detectMergeTarget();
+    }
   } catch (err) {
     els.serverStatus.textContent = t("disconnected");
     setMessage(t("storageError", err.message), "error");

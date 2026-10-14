@@ -180,7 +180,7 @@ There is no tag-count cap. Search names, aliases and descriptions before adding 
 <details>
 <summary><strong>Why are an author, year or venue missing?</strong></summary>
 
-Some pages lack complete academic metadata. Edit the fields manually, or use **Fill missing details** in the paper's edit view to query Semantic Scholar / Crossref. Lookups fill empty fields for review before saving. Missing facts are not invented by an LLM.
+Some pages lack complete academic metadata, and PDFs opened in another extension's reader (such as LLM_in_PDF) cannot be read at all. In those cases the popup looks the paper up by the arXiv ID, OpenReview ID, conference PDF or DOI in the address, and saves the paper's own address as its source. Papers saved before this lookup existed can be completed with **Fill paper details** in the library toolbar; a single record can use **Fill missing details** in its edit view. Lookups only fill empty fields for review. Missing facts are not invented by an LLM.
 
 </details>
 
