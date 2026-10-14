@@ -8,7 +8,7 @@
 
 <p>基于标签与个人记忆的轻量论文管理插件，支持本地收藏、渐进检索和可选的大模型辅助。</p>
 
-[![Version](https://img.shields.io/badge/version-1.6.0-0c7d72.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-1.7.0-0c7d72.svg)](CHANGELOG.md)
 [![Chrome Extension](https://img.shields.io/badge/Chrome-Manifest_V3-4285F4.svg)](extension/manifest.json)
 [![License](https://img.shields.io/badge/license-Apache_2.0-0c7d72.svg)](LICENSE)
 

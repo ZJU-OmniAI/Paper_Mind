@@ -2,7 +2,7 @@
 
 Notable changes to Paper_Mind. Versions follow the `version` field in `extension/manifest.json`.
 
-## Unreleased
+## 1.7.0
 
 - Fixed empty authors and abstracts, and placeholder titles such as `arXiv:2405.19209 · LLM_in_PDF`, when saving from pages the popup cannot read: PDFs opened in the LLM_in_PDF reader (`chrome-extension://…/reader/reader.html?id=…` / `?url=…`) or another extension's PDF viewer. The popup resolves the wrapped paper, fills the title, authors, year, venue and full abstract from its arXiv ID, OpenReview ID, conference landing page (NeurIPS, CVF, ACL, PMLR, JMLR, IJCAI, AAAI, RSS, IEEE) or DOI, and saves the paper's own address instead of the reader address. Lookups never overwrite fields edited while they run.
 - Page reading covers more sites: case-insensitive Highwire / Dublin Core / eprints tags, `citation_authors` lists (PubMed), IEEE Xplore records, ScienceDirect author lists, academic project page templates and GitHub README titles. Abstracts come from the page's own Abstract section instead of citation-string descriptions (ACL, PMLR) or ~200-character previews (alphaXiv), and a clip excerpt no longer replaces a real abstract. Author names read "First Last" everywhere; arXiv HTML, ar5iv, Hugging Face Papers, papers.cool and Emergent Mind pages are identified by their arXiv ID.

@@ -8,7 +8,7 @@
 
 <p>A lightweight paper manager built around tags and personal memories, with local storage, progressive filtering, and optional LLM assistance.</p>
 
-[![Version](https://img.shields.io/badge/version-1.6.0-0c7d72.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-1.7.0-0c7d72.svg)](CHANGELOG.md)
 [![Chrome Extension](https://img.shields.io/badge/Chrome-Manifest_V3-4285F4.svg)](extension/manifest.json)
 [![License](https://img.shields.io/badge/license-Apache_2.0-0c7d72.svg)](LICENSE)
 
