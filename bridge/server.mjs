@@ -6,6 +6,13 @@ import os from 'node:os';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { generate, health, validateRequest } from './cli.mjs';
+import { BRIDGE_QUEUE_TIMEOUT_MS } from '../extension/request-budget.js';
+
+export function bridgeRequestLimitBytes(value = 32) {
+  const bytes = Number(value) * 1024 * 1024;
+  if (!Number.isSafeInteger(bytes) || bytes <= 0) throw new Error('Invalid PAPER_MIND_BRIDGE_MAX_REQUEST_MB');
+  return bytes;
+}
 
 export async function loadToken(directory) {
   await mkdir(directory, { recursive: true, mode: 0o700 });
@@ -18,8 +25,12 @@ export async function loadToken(directory) {
   return token;
 }
 
-export function createBridge({ token, run = generate, inspect = health, list = getModels } = {}) {
+export function createBridge({ token, run = generate, inspect = health, list = getModels,
+  maxRequestBytes = bridgeRequestLimitBytes(process.env.PAPER_MIND_BRIDGE_MAX_REQUEST_MB),
+  queueTimeoutMs = BRIDGE_QUEUE_TIMEOUT_MS } = {}) {
   if (typeof token !== 'string' || token.length < 32) throw new Error('Bridge token must contain at least 32 characters');
+  if (!Number.isSafeInteger(maxRequestBytes) || maxRequestBytes <= 0) throw new Error('Invalid bridge request byte limit');
+  if (!Number.isSafeInteger(queueTimeoutMs) || queueTimeoutMs <= 0 || queueTimeoutMs > BRIDGE_QUEUE_TIMEOUT_MS) throw new Error('Invalid bridge queue timeout');
   let active = 0;
   let running = 0;
   const waiting = [];
@@ -51,20 +62,25 @@ export function createBridge({ token, run = generate, inspect = health, list = g
     }
     if (req.method !== 'POST' || req.url !== '/v1/generate') return reply(404, { error: 'Not found' });
     if (!/^application\/json(?:;|$)/i.test(req.headers['content-type'] || '')) return reply(415, { error: 'Use application/json' });
+    const rejectLargeRequest = () => {
+      req.resume();
+      reply(413, { error: `桥接请求超过 ${maxRequestBytes / 1024 / 1024} MiB 传输保护，资料未截断。可调高 PAPER_MIND_BRIDGE_MAX_REQUEST_MB 后重启桥接（自动启动服务需重新安装） / Bridge request exceeds the transport limit; no source was truncated. Increase PAPER_MIND_BRIDGE_MAX_REQUEST_MB and restart or reinstall the managed bridge.` });
+    };
+    if (Number(req.headers['content-length']) > maxRequestBytes) return rejectLargeRequest();
     if (active >= 8) return reply(429, { error: '本机模型正在处理其他请求，请稍后重试 / Bridge busy; retry shortly' });
     active++;
     const controller = new AbortController(); controllers.add(controller);
-    let heartbeat;
+    const startedAt = Date.now();
+    let heartbeat, body, phase = 'request';
     let acquired = false;
     res.on('close', () => { if (!res.writableEnded) controller.abort(); });
     try {
       let size = 0; const chunks = [];
-      for await (const chunk of req) {
+      for await (const chunk of req.iterator({ destroyOnReturn: false })) {
         size += chunk.length;
-        if (size > 1024 * 1024) { reply(413, { error: 'Request too large' }); return; }
+        if (size > maxRequestBytes) return rejectLargeRequest();
         chunks.push(chunk);
       }
-      let body;
       try { body = validateRequest(JSON.parse(Buffer.concat(chunks).toString('utf8'))); }
       catch (error) { return reply(400, { error: error.message }); }
       // Send headers promptly: extension service workers limit how long a fetch
@@ -72,18 +88,29 @@ export function createBridge({ token, run = generate, inspect = health, list = g
       res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' });
       res.write(' ');
       heartbeat = setInterval(() => { if (!res.destroyed) res.write('\n'); }, 15000);
+      phase = 'queue';
       if (running >= 2) await new Promise((resolve, reject) => {
-        const entry = { resolve: () => { controller.signal.removeEventListener('abort', abort); resolve(); } };
-        const abort = () => { const index = waiting.indexOf(entry); if (index >= 0) waiting.splice(index, 1); reject(new Error('Request cancelled')); };
+        const cleanup = () => { clearTimeout(timer); controller.signal.removeEventListener('abort', abort); };
+        const fail = error => { const index = waiting.indexOf(entry); if (index >= 0) waiting.splice(index, 1); cleanup(); reject(error); };
+        const entry = { resolve: () => { cleanup(); resolve(); } };
+        const abort = () => fail(Object.assign(new Error('Request cancelled'), { code: 'REQUEST_CANCELLED' }));
+        const timer = setTimeout(() => fail(Object.assign(new Error('等待本机模型空闲超时；此请求尚未执行，请稍后手动重试 / Local model queue timed out before execution; retry later'), { code: 'QUEUE_TIMEOUT' })), queueTimeoutMs);
         waiting.push(entry);
         controller.signal.addEventListener('abort', abort, { once: true });
         if (controller.signal.aborted) abort();
       });
       else running++;
       acquired = true;
+      phase = 'generation';
       const result = await run(body, controller.signal);
       reply(200, result);
-    } catch (error) { reply(502, { error: error.message || 'Local model failed' }); }
+    } catch (error) {
+      const code = ['MODEL_TIMEOUT', 'QUEUE_TIMEOUT', 'REQUEST_CANCELLED'].includes(error.code) ? error.code : 'LOCAL_MODEL_FAILED';
+      // Only operational metadata: never prompts, credentials, CLI output, or
+      // provider error text (which can contain parts of the submitted sources).
+      if (code !== 'REQUEST_CANCELLED') console.warn('[Paper Mind bridge] request failed', { provider: body?.provider || '', phase, elapsedMs: Date.now() - startedAt, code });
+      reply(502, { error: error.message || 'Local model failed', code });
+    }
     finally {
       clearInterval(heartbeat); active--; controllers.delete(controller);
       if (acquired) running--;

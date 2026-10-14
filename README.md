@@ -39,11 +39,13 @@ https://github.com/user-attachments/assets/046375e1-bd08-4663-93ac-0858b0aeb835
 | **Progressive filtering** | Select a tag, see suggestions with exact remaining counts, then combine tags, reading status and ratings to narrow the results. |
 | **Personal memory** | Write a one-line memory while saving. See it alongside matching excerpts in search results to recognize the right paper. |
 | **Meaningful tags** | Give each paper several tags, with no count limit. Reuse names and aliases, review merges, and generate AI descriptions from your tags and linked papers. |
+| **Topic analysis within each tag** | Compare the design thinking of papers under one tag: a design matrix, design-space chart, design spectra and similarity heatmap show who is alike and where they diverge. Tick a few papers to compare them directly. Click to generate or update. |
 | **Reading and discovery** | Track To read, Reading, Read and Revisit separately. Explore papers with shared tags, with optional AI abstract translation and content recommendations. |
 | **Research topic packs** | Save inclusion and exclusion rules for a research direction. Newly saved papers appear when they match. |
+| **Deep exploration** | Choose 2–4 tags: their design principles are distilled and fused into new ideas, with a fusion map showing which principles each idea borrows. Ask follow-up questions with source excerpts, and refine a selected idea through 1–3 automatic research rounds. |
 | **Local data management** | Use English or Chinese, light or dark mode, JSON import/export and scheduled backups. Basic capture and search require no account. |
 
-**Core workflows work without a model.** Optional AI supports concept matching, tag descriptions, semantic search, translation, content recommendations and tag-merge suggestions.
+**Core workflows work without a model.** Optional AI supports concept matching, tag descriptions, topic analysis, semantic search, translation, content recommendations, tag-merge suggestions and Deep exploration.
 
 ## Quick start
 
@@ -96,6 +98,26 @@ To update an existing installation, update the local project files, click **Relo
 
 > Videos and screenshots use the actual interface with an isolated sample library. Paper details, notes and AI output are demonstration content.
 
+### Understand a research topic through its papers
+
+Open **Tags → a tag → Topic analysis** and click **Generate topic analysis**. At least two papers need saved material to start. The assistant first extracts a method profile for each directly tagged paper, then synthesizes an overview, commonalities, differences and tradeoffs, research inspirations, a reading path and open questions. Profiles retain source excerpts and distinguish paper claims from your personal understanding. Inspirations are hypotheses with proposed validation steps, not verified discoveries.
+
+The report has five views. **Overview** states the key takeaway, places each paper on two macro design axes in a **design-space chart** (closer papers think more alike), shows every axis as a **design spectrum**, and marks what all papers share in a **shared-foundation matrix**. **Design matrix** gives one row per paper and one column per design question; the same colour in a column means the same choice. Rows are ordered by design similarity, with a similarity heatmap, the most alike and most different pairs, and each dimension’s approach map. **Compare papers** is described below, **Methods** shows each paper’s block diagram and **Ideas** shows hypothesis-to-test diagrams. Axis positions are relative readings of saved material (−2 to +2); each needs evidence from that paper and none is a score or ranking. Full explanations, note interpretations and evidence remain expandable. Structural connections do not imply chronology, causality or ranking; flow arrows require supporting saved evidence. Existing reports open without a model request; older reports gain the new charts through **Generate design charts**, a single synthesis step that reuses saved profiles.
+
+**Compare papers**: tick 2–8 papers of the tag in the matrix, the charts or the comparison picker, optionally state a focus, and choose **Compare**. The complete saved material of those papers is read to produce a one-line design stance per paper, a comparison table whose identical choices share a colour (marked as same or all different), design spectra and follow-up questions. Comparisons are kept with the tag, download as Markdown and travel with JSON backups.
+
+Analysis reads each paper’s complete saved abstract, personal notes, memory sentence and every clip’s Markdown, without character-based source truncation. It uses the saved abstract translation only when the original is empty, and gives particular attention to your notes. Adding or editing papers, or removing them from the tag, marks the report as no longer covering the current material; those changes do not start a model request. Click **Update analysis** to refresh new or changed profiles and regenerate the synthesis, excluding removed papers. Unchanged profiles are reused. Once you start a task, its steps continue in the background and save progress. Further source changes require another update click to continue. Failed requests preserve completed work and the previous analysis so a manual retry can continue.
+
+Topic analysis starts only when you click to generate, update, retry or reanalyze. Opening a tag or saving papers does not start it, and there is no automatic topic-analysis switch. It retains the tag’s last successful backend, model and effort. On first use it inherits an existing successful model choice for that tag, or current settings. Unavailable models produce an error; full reanalysis and an explicit switch to current model settings are available. Results and cached profiles stay local and travel with JSON backups. Model context limits still apply.
+
+### Fuse design principles across tags for new ideas
+
+Open **Deep exploration** in the manager after configuring a model and choose 2–4 tags to fuse. A balanced sample of at most eight distinct papers is shown and can be adjusted. The assistant distills 2–3 evidence-backed design principles per tag, then combines principles from different tags into testable ideas. A **fusion map** links each tag’s principles to the ideas, and each idea card shows “principle from A + principle from B → new idea” with how they combine. Tags with a saved topic analysis also send its summary as background, never as evidence. Continue discussing the analysis in the same chat. Answers include source excerpts and suggested follow-up questions. Each report supports up to 20 follow-up exchanges; failures can be retried without losing saved conversation history. To compare papers within one tag, use that tag’s **Compare papers**; earlier comparisons that fit no single tag stay readable under earlier comparisons in the session list.
+
+Select a generated idea to run 1–3 consecutive rounds of critique, revision and experiment design. The budget of three automatic research rounds is separate from the 20 follow-up exchanges.
+
+The chat shows the selected source papers before you start. New explorations send each selected paper’s complete saved text, including abstracts and translations, personal notes and every clip’s Markdown, plus saved paper information, tags and link previews, without character-based truncation. Links are not automatically opened. Follow-ups reuse that saved source snapshot; start a new exploration to include updates or replace an older excerpted snapshot. If the material exceeds the chosen model’s context capacity, the request fails visibly instead of silently cutting source text. Reports, conversation history and source excerpts are saved locally, travel with JSON backups and can be downloaded as Markdown. This first version analyzes saved library text: it does not search the web or run experiments, and generated hypotheses still need verification.
+
 ## Model setup
 
 Choose a backend in **Manager → Model settings**:
@@ -131,10 +153,11 @@ Select a provider or **Compatible API**, enter the base URL, model ID and any re
 
 ## Data and privacy
 
-- **Your library stays on your machine.** Papers, tags, memory sentences and reading progress live in the extension's IndexedDB. Model settings use browser local storage.
+- **Your library stays on your machine.** Papers, tags, memory sentences, reading progress, topic analyses and research reports live in the extension's IndexedDB. Model settings use browser local storage.
 - **Export your backups.** JSON import/export is at the bottom of model settings. Automatic backups are scheduled for 4 PM and require Chrome to be running. API keys and bridge tokens are excluded.
 - **Keep clipped images with your archive.** Images are saved under Chrome's downloads directory. JSON stores their paths, not their bytes. Preserve the image folders when moving your library; enable **Allow access to file URLs** to display local images.
-- **AI sends relevant text to your chosen service.** After configuration, tag descriptions, abstract translation and related-paper recommendations may run in the background. A local CLI can still call a remote model. Automatic tag descriptions can be disabled in Settings.
+- **AI sends relevant text to your chosen service.** After configuration, tag descriptions, abstract translation and related-paper recommendations may run in the background. Topic analysis requires a click to start; it sends complete abstracts, personal notes, memories and clip Markdown for paper profiles, then synthesizes saved profiles. A local CLI can still call a remote model. Automatic tag descriptions can be disabled in Settings.
+- **Research runs start when you request them.** Paper comparisons, cross-tag fusion, chat follow-ups and automatic research send the displayed source selection and its complete saved text, plus your question and relevant earlier analysis or conversation; fusion also sends the saved topic-analysis summaries of the chosen tags. Opening the chat or an existing report does not start a model request.
 
 See the [privacy policy](PRIVACY.md) for details.
 

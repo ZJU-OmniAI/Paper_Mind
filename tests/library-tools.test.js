@@ -77,3 +77,15 @@ test('search evidence locates late clip matches and highlights literal Unicode t
   assert.equal(parts.map(p=>p.text).join(''),'<img src=x> ＲＡＧ [a+b]');
   assert.deepEqual(paperSearchEvidence(paper,[],'does-not-exist'),[]);
 });
+
+test('saved quotes match across whitespace and punctuation width but always return the exact saved text', async () => {
+  const { matchSavedQuote } = await import('../extension/library-tools.js');
+  const body = '笔记：每个文本块都检索一次，用超大检索库换模型参数规模；检索器是冻结的。\n“引号”里的说法 — 也要核对…\nEmoji 🧪 test, then  spaces.';
+  assert.equal(matchSavedQuote(body, '每个文本块都检索一次,用超大检索库换模型参数规模;检索器是冻结的。'), '每个文本块都检索一次，用超大检索库换模型参数规模；检索器是冻结的。');
+  assert.equal(matchSavedQuote(body, '"引号"里的说法 - 也要核对...'), '“引号”里的说法 — 也要核对…');
+  assert.equal(matchSavedQuote(body, 'Emoji 🧪 test, then spaces.'), 'Emoji 🧪 test, then  spaces.');
+  assert.equal(matchSavedQuote(body, '每个文本块都检索两次，用超大检索库'), '', 'a changed word never matches');
+  assert.equal(matchSavedQuote(body, 'Emoji 🧪 test, then spaces!'), '', 'a different punctuation mark never matches');
+  assert.equal(matchSavedQuote(body, ' ， '), '');
+  assert.equal(matchSavedQuote(null, 'anything'), '');
+});

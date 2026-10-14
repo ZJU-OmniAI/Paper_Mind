@@ -57,6 +57,46 @@ test('keyboard tag suggestions use aliases and descriptions, Enter selects witho
   expect(errors).toEqual([]);
 });
 
+test('a delayed tag refresh preserves keyboard selection without restoring selection after typing',async({page})=>{
+  const errors=await setup(page);
+  await page.locator('#libraryAddPaper').click();
+  const input=page.locator('#manualTagList input').first();
+  async function holdNextStorageRead() {
+    await page.evaluate(()=>{
+      const get=chrome.storage.local.get.bind(chrome.storage.local);
+      let pending=true;
+      window.__tagRefreshWaiting=false;
+      chrome.storage.local.get=async keys=>{
+        if(pending){pending=false;window.__tagRefreshWaiting=true;await new Promise(resolve=>window.__releaseTagRefresh=resolve);}
+        return get(keys);
+      };
+    });
+  }
+  await holdNextStorageRead();
+  await input.fill('RAG');
+  await expect.poll(()=>page.evaluate(()=>window.__tagRefreshWaiting)).toBe(true);
+  await input.press('ArrowDown');
+  await expect(page.locator('#manualTagList .tag-suggestion.active')).toHaveAttribute('data-tag-value','检索增强生成');
+  await page.evaluate(()=>{window.__previousTagOption=document.querySelector('#manualTagList .tag-suggestion');window.__releaseTagRefresh();});
+  await expect.poll(()=>page.evaluate(()=>!window.__previousTagOption.isConnected)).toBe(true);
+  await expect(page.locator('#manualTagList .tag-suggestion.active')).toHaveAttribute('aria-selected','true');
+  await input.press('Enter');
+  await expect(input).toHaveValue('检索增强生成');
+  await expect(page.locator('#manualTagList .manual-tag-row')).toHaveCount(1);
+
+  await page.locator('#paperTitle').focus();
+  await holdNextStorageRead();
+  await input.focus();
+  await expect.poll(()=>page.evaluate(()=>window.__tagRefreshWaiting)).toBe(true);
+  await input.press('ArrowDown');
+  await input.fill('new-tag-after-refresh-started');
+  await page.evaluate(()=>{window.__previousTagOption=document.querySelector('#manualTagList .tag-suggestion');window.__releaseTagRefresh();});
+  await expect.poll(()=>page.evaluate(()=>!window.__previousTagOption.isConnected)).toBe(true);
+  await expect(page.locator('#manualTagList .tag-suggestion.active')).toHaveCount(0);
+  await expect(input).not.toHaveAttribute('aria-activedescendant',/.+/);
+  expect(errors).toEqual([]);
+});
+
 test('tag detail, settings and language without tag caps remain usable',async({page})=>{
   const errors=await setup(page);
   await page.locator('[data-view="tags"]').click();
@@ -228,14 +268,21 @@ test('backend settings connect local CLI and compatible API, mask credentials an
   await page.locator('[data-view="settings"]').click();
   await page.locator('[name="provider"][value="codex"]').check();
   await expect(page.locator('#localBackendSettings')).toBeVisible();await expect(page.locator('#presetBackendSettings')).toBeHidden();
+  await expect(page.locator('#codexModelGroup')).toBeVisible();await expect(page.locator('#claudeModelGroup')).toBeHidden();
+  await expect(page.locator('#bridgeSetup')).toHaveAttribute('open','');
   await page.locator('#bridgeToken').fill('synthetic-bridge-token');
   await page.route('http://127.0.0.1:39321/health',route=>route.fulfill({json:{ok:true,backends:{claude:{status:'auth'},codex:{status:'ready',version:'test-cli'}}}}));
   await page.route('http://127.0.0.1:39321/models?refresh=1',route=>route.fulfill({json:{claude:{source:'cli',models:[{id:'sonnet',label:'Sonnet',efforts:['low','high']},{id:'haiku',label:'Haiku',efforts:[]}]},codex:{source:'cli',models:[{id:'fixture-model',label:'Fixture model',efforts:['low','medium','high']}]}}}));
-  await page.locator('#checkBridge').click();await expect(page.locator('#bridgeHealth')).toContainText('可以使用');
+  await page.locator('#checkBridge').click();await expect(page.locator('#bridgeHealth')).toContainText('已安装并登录');
   await expect(page.locator('#localCatalogStatus')).toContainText('已读取');
   await page.locator('#codexModelSelect').selectOption('fixture-model');
   await expect(page.locator('#codexEffort option')).toHaveCount(4);
   await page.locator('#codexEffort').selectOption('high');
+  await expect(page.locator('#settingsSelectionSummary')).toContainText('Codex');
+  await expect(page.locator('#settingsSelectionSummary')).toContainText('Fixture model');
+  await expect(page.locator('#settingsSelectionSummary')).toContainText('high');
+  await page.locator('[name="provider"][value="claude"]').check();
+  await expect(page.locator('#claudeModelGroup')).toBeVisible();await expect(page.locator('#codexModelGroup')).toBeHidden();
   await page.locator('#claudeModelSelect').selectOption('sonnet');
   await page.locator('#claudeEffort').selectOption('high');
   await page.locator('#claudeModelSelect').selectOption('haiku');
@@ -244,13 +291,32 @@ test('backend settings connect local CLI and compatible API, mask credentials an
   await page.locator('#claudeModelSelect').selectOption('__custom__');
   await page.locator('#claudeModel').fill('custom-claude');
   await page.locator('#claudeEffort').selectOption('medium');
+  await expect(page.locator('#settingsSelectionSummary')).toContainText('custom-claude');
+  await page.locator('[name="provider"][value="codex"]').check();
+  await expect(page.locator('#codexModelSelect')).toHaveValue('fixture-model');
+  await expect(page.locator('#codexEffort')).toHaveValue('high');
   await page.locator('#settingsForm button[type="submit"]').click();await expect(page.locator('#toast')).toContainText('保存');await expect(page.locator('#bridgeToken')).toHaveValue('');
   await page.reload();await page.locator('[data-view="settings"]').click();await expect(page.locator('[name="provider"][value="codex"]')).toBeChecked();
+  await expect(page.locator('#bridgeSetup')).not.toHaveAttribute('open','');
+  await expect(page.locator('#bridgeToken')).toBeHidden();
+  await page.locator('#bridgeSetup summary').click();await expect(page.locator('#bridgeToken')).toBeVisible();
   await expect(page.locator('#bridgeToken')).toHaveAttribute('placeholder',/已保存/);
+  await page.locator('#bridgeSetup summary').click();
   await expect(page.locator('#codexModel')).toHaveValue('fixture-model');
   await expect(page.locator('#codexEffort')).toHaveValue('high');
   await expect(page.locator('#claudeModel')).toHaveValue('custom-claude');
   await expect(page.locator('#claudeEffort')).toHaveValue('medium');
+  const desktopModel=await page.locator('#codexModelSelect').boundingBox(),desktopEffort=await page.locator('#codexEffort').boundingBox();
+  expect(Math.abs(desktopModel.y-desktopEffort.y)).toBeLessThan(2);
+  expect(desktopEffort.x).toBeGreaterThan(desktopModel.x+desktopModel.width);
+  await page.screenshot({path:'test-results/model-settings-desktop.png',fullPage:true,animations:'disabled'});
+  await page.setViewportSize({width:390,height:844});await page.emulateMedia({colorScheme:'dark'});
+  await page.locator('#localBackendSettings').scrollIntoViewIfNeeded();
+  const mobileModel=await page.locator('#codexModelSelect').boundingBox(),mobileEffort=await page.locator('#codexEffort').boundingBox();
+  expect(mobileEffort.y).toBeGreaterThan(mobileModel.y+mobileModel.height);
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBe(true);
+  await page.screenshot({path:'test-results/model-settings-mobile-dark.png',fullPage:true,animations:'disabled'});
+  await page.setViewportSize({width:1440,height:1000});await page.emulateMedia({colorScheme:'light'});
   await page.route('http://127.0.0.1:39321/models?refresh=1',route=>route.fulfill({status:503,json:{error:'Catalog offline'}}));
   await page.locator('#refreshLocalModels').click();
   await expect(page.locator('#localCatalogStatus')).toContainText('Catalog offline');
@@ -258,6 +324,7 @@ test('backend settings connect local CLI and compatible API, mask credentials an
   await expect(page.locator('#codexEffort')).toHaveValue('high');
   await page.locator('[name="provider"][value="custom"]').check();await expect(page.locator('#customBackendSettings')).toBeVisible();
   await page.locator('#customBaseUrl').fill('http://127.0.0.1:11434/v1');await page.locator('#customModel').fill('test-local-model');
+  await expect(page.locator('#settingsSelectionSummary')).toContainText('test-local-model');
   await page.locator('#settingsForm button[type="submit"]').click();await expect(page.locator('#toast')).toContainText('保存');
   await page.reload();await page.locator('[data-view="settings"]').click();await expect(page.locator('#customModel')).toHaveValue('test-local-model');
   await page.locator('#languageSelect').selectOption('en');await expect(page.locator('#customBackendSettings')).toContainText('optional for local servers');

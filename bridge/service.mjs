@@ -5,14 +5,14 @@ import net from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { loadToken } from './server.mjs';
+import { loadToken, bridgeRequestLimitBytes } from './server.mjs';
 
 export const SERVICE_LABEL = 'org.paper-mind.bridge';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const serviceDir = path.join(os.homedir(), '.paper-mind', 'service');
 const plistPath = path.join(os.homedir(), 'Library', 'LaunchAgents', `${SERVICE_LABEL}.plist`);
 const configPath = path.join(serviceDir, 'config.json');
-const files = ['bridge/server.mjs', 'bridge/cli.mjs', 'bridge/models.mjs', 'extension/local-models.js'];
+export const SERVICE_RUNTIME_FILES = Object.freeze(['bridge/server.mjs', 'bridge/cli.mjs', 'bridge/models.mjs', 'extension/local-models.js', 'extension/request-budget.js']);
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 const exists = async file => { try { await access(file); return true; } catch { return false; } };
 
@@ -26,6 +26,21 @@ export function serviceConfig({ env = process.env, previous = {}, node = process
     PAPER_MIND_BRIDGE_PORT: String(port), PAPER_MIND_BRIDGE_DIR: directory,
     PAPER_MIND_BRIDGE_MANAGED: '1'
   };
+  // launchd does not inherit the installing shell's proxy configuration. Copy
+  // only these network settings, never the shell's model credentials or app
+  // internals. A current value in either case replaces the whole saved pair;
+  // otherwise an old lowercase value could silently override a new uppercase
+  // one. An explicitly empty value therefore also clears that saved pair.
+  for (const upper of ['HTTP_PROXY', 'HTTPS_PROXY', 'ALL_PROXY', 'NO_PROXY']) {
+    const keys = [upper, upper.toLowerCase()];
+    const source = keys.some(key => Object.hasOwn(env, key)) ? env : previous.environment || {};
+    for (const key of keys) if (typeof source[key] === 'string' && source[key]) environment[key] = source[key];
+  }
+  const requestLimit = env.PAPER_MIND_BRIDGE_MAX_REQUEST_MB ?? previous.environment?.PAPER_MIND_BRIDGE_MAX_REQUEST_MB;
+  if (requestLimit !== undefined) {
+    bridgeRequestLimitBytes(requestLimit);
+    environment.PAPER_MIND_BRIDGE_MAX_REQUEST_MB = String(requestLimit);
+  }
   for (const key of ['PAPER_MIND_CLAUDE_BIN', 'PAPER_MIND_CODEX_BIN']) {
     const value = env[key] || previous.environment?.[key];
     if (value) {
@@ -125,7 +140,7 @@ export async function manageService(action) {
   if (action === 'install') {
     // Read all runtime files before stopping a working installation. A private
     // copy avoids depending on a moved checkout or macOS Desktop/Documents access.
-    const runtime = await Promise.all(files.map(async name => [name, await readFile(path.join(root, name))]));
+    const runtime = await Promise.all(SERVICE_RUNTIME_FILES.map(async name => [name, await readFile(path.join(root, name))]));
     if (!isLoaded(target) && await portBusy(config.port)) throw new Error(`端口 ${config.port} 已占用，请先停止正在手动运行的桥接 / Stop the existing manual bridge first`);
     if (isLoaded(target)) launchctl('bootout', target);
     for (let attempt = 0; attempt < 20 && await portBusy(config.port); attempt++) await delay(250);

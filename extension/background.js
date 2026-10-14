@@ -1,7 +1,10 @@
 import { handleApi } from "./storage.js";
 import { archiveClipImages } from "./clip-archive.js";
+import { createTagAnalysisRunner } from "./tag-analysis-worker.js";
 
 const DAILY_BACKUP_ALARM = "daily-json-backup";
+const PAPER_ANALYSIS_ALARM = "paper-analyses-update";
+const LEGACY_PAPER_GRAPH_ALARM = "paper-graphs-update";
 const BACKUP_META_KEY = "paperTagDailyBackupMeta";
 const BACKUP_HOUR = 16;
 const BACKUP_MINUTE = 0;
@@ -106,6 +109,20 @@ function startKeepAlive() {
   }, 20000);
   return () => clearInterval(timer);
 }
+
+// Wakeups may come from source edits or legacy callers. Storage selects only
+// explicitly requested manual analyses; a wakeup never authorizes model work.
+const paperAnalysisRunner = createTagAnalysisRunner({
+  updateNext: body => handleApi("/api/paper-analyses/update-next", { method: "POST", body }),
+  notify: message => chrome.runtime.sendMessage(message).catch(() => {}),
+  keepAlive: startKeepAlive,
+  scheduleWake: async () => {
+    if (!await chrome.alarms.get(PAPER_ANALYSIS_ALARM)) {
+      await chrome.alarms.create(PAPER_ANALYSIS_ALARM, { delayInMinutes: 1, periodInMinutes: 1 });
+    }
+  },
+  clearWake: () => chrome.alarms.clear(PAPER_ANALYSIS_ALARM)
+});
 
 async function autoRecommendForPaper(paperId) {
   const stopKeepAlive = startKeepAlive();
@@ -262,6 +279,7 @@ async function sweepPendingClipArchives() {
 
 chrome.runtime.onMessage.addListener((message, sender) => {
   if (sender.id !== chrome.runtime.id) return;
+  if (["auto-update-paper-analyses", "auto-update-paper-graphs"].includes(message?.type)) { paperAnalysisRunner.request(); return; }
   if (message?.type === "auto-describe-tags") { queueTagDescriptions({ retry: Boolean(message.retry) }); return; }
   if (message?.target === "offscreen") return;
   if (message?.type === "clip-archive-sweep") {
@@ -282,6 +300,7 @@ chrome.runtime.onInstalled.addListener(() => {
   scheduleDailyBackup();
   sweepPendingClipArchives();
   queueTagDescriptions();
+  paperAnalysisRunner.request({ recover: true });
 });
 
 chrome.runtime.onStartup.addListener(() => {
@@ -289,9 +308,12 @@ chrome.runtime.onStartup.addListener(() => {
   runDailyBackup().catch(() => {});
   sweepPendingClipArchives();
   queueTagDescriptions();
+  paperAnalysisRunner.request({ recover: true });
 });
 
 chrome.alarms.onAlarm.addListener((alarm) => {
+  if (alarm.name === LEGACY_PAPER_GRAPH_ALARM) { chrome.alarms.clear(LEGACY_PAPER_GRAPH_ALARM).catch(() => {}); return; }
+  if (alarm.name === PAPER_ANALYSIS_ALARM) { paperAnalysisRunner.request({ recover: true }); return; }
   if (alarm.name !== DAILY_BACKUP_ALARM) return;
   runDailyBackup()
     .catch(() => {})
@@ -301,3 +323,8 @@ chrome.alarms.onAlarm.addListener((alarm) => {
 });
 
 scheduleDailyBackup().catch(() => {});
+// Retire the old pairwise graph queue when this extension version loads.
+chrome.alarms.clear(LEGACY_PAPER_GRAPH_ALARM).catch(() => {});
+// Resume unfinished manual requests after a service worker is recreated,
+// including a crash between saving the request and sending its wakeup.
+paperAnalysisRunner.request({ recover: true });

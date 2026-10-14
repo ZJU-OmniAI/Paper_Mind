@@ -1,4 +1,5 @@
 import { validatedEffort } from './local-models.js';
+import { bridgeResponseTimeoutMs } from './request-budget.js';
 // The extension never launches processes itself. Only this authenticated loopback
 // endpoint can dispatch the two supported local CLIs.
 export const isLocalProvider = (provider) => ["claude", "codex"].includes(provider);
@@ -44,17 +45,22 @@ export function extraConfig(config, body) {
 
 export async function bridgeRequest(config, path, body) {
   if (!config.bridgeToken) throw new Error("请先启动 npm run bridge，并在模型设置中填写连接码 / Configure the local bridge first");
-  let response;
+  const endpoint = `${validatedBridgeUrl(config.bridgeUrl)}${path}`;
+  const signal = AbortSignal.timeout(body ? bridgeResponseTimeoutMs(body.timeoutMs) : 20000);
+  let response, result;
   try {
-    response = await fetch(`${validatedBridgeUrl(config.bridgeUrl)}${path}`, {
+    response = await fetch(endpoint, {
       method: body ? "POST" : "GET", redirect: "error",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${config.bridgeToken}` },
-      ...(body ? { body: JSON.stringify(body) } : {}), signal: AbortSignal.timeout(body ? 310000 : 20000)
+      ...(body ? { body: JSON.stringify(body) } : {}), signal
     });
+    result = await response.json();
+    if (!result || typeof result !== 'object' || Array.isArray(result)) throw new Error('Invalid bridge response');
   } catch (error) {
-    throw new Error(error.name === "TimeoutError" ? "本机模型调用超时 / Local model timed out" : "无法连接本机服务：macOS 可运行 npm run bridge:install；手动启动使用 npm run bridge / Start the bridge; on macOS, bridge:install enables autostart");
+    if (signal.aborted || error.name === "TimeoutError") throw new Error("本机服务响应超时，请检查模型状态后重试 / Local backend timed out; check model status and retry");
+    if (response) throw new Error("本机服务响应中断或格式无效，请检查桥接日志后重试 / Bridge response was interrupted or invalid; check the bridge logs and retry");
+    throw new Error("无法连接本机服务：macOS 可运行 npm run bridge:install；手动启动使用 npm run bridge / Start the bridge; on macOS, bridge:install enables autostart");
   }
-  const result = await response.json();
   if (response.status === 404 && path.startsWith("/models")) throw new Error("请重启 npm run bridge 后刷新模型列表 / Restart npm run bridge to load models");
   if (!response.ok || result.error) throw new Error(result.error || `Bridge HTTP ${response.status}`);
   return result;

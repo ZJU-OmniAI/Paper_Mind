@@ -4,6 +4,8 @@ import { bibliographyEditor } from "./bibliography-ui.js";
 import { hasCitationCount, citationNeedsRefresh, citationSourceLink } from "./citation-state.js";
 import { handleApi } from "./storage.js";
 import { renderWorkflowLabels } from "./workflow-ui.js";
+import { createResearchWorkspace } from "./research-ui.js";
+import { createTagAnalysis } from "./tag-analysis-ui.js";
 
 const VALUE_SCORE_LABELS = {
   zh: {
@@ -229,6 +231,7 @@ const translations = {
     paperDetail: "论文详情",
     search: "智能检索",
     topics: "研究主题包",
+    research: "深度探索",
     tags: "标签库",
     settings: "模型设置",
     paperCount: "论文",
@@ -386,7 +389,7 @@ const translations = {
     clickTag: "点击左侧标签",
     modelSettings: "模型设置",
     apiKeyLocal: "API Key 和连接码仅保存在本机",
-    defaultModel: "默认模型",
+    defaultModel: "智能化后端",
     saveSettings: "保存设置",
     testModel: "测试模型",
     refreshAllModels: "刷新全部模型列表",
@@ -489,6 +492,7 @@ const translations = {
     paperDetail: "Paper Detail",
     search: "Smart Search",
     topics: "Topic Packs",
+    research: "Deep exploration",
     tags: "Tags",
     settings: "Model Settings",
     paperCount: "Papers",
@@ -646,7 +650,7 @@ const translations = {
     clickTag: "Click a tag on the left",
     modelSettings: "Model Settings",
     apiKeyLocal: "API keys and bridge tokens stay on this device",
-    defaultModel: "Default Model",
+    defaultModel: "Model backend",
     saveSettings: "Save Settings",
     testModel: "Test Model",
     refreshAllModels: "Refresh All Model Lists",
@@ -1624,6 +1628,7 @@ function applyLanguage() {
   document.querySelector('[data-view="papers"]').textContent = t("papers");
   document.querySelector('[data-view="search"]').textContent = t("search");
   document.querySelector('[data-view="topics"]').textContent = t("topics");
+  document.querySelector('[data-view="research"]').textContent = t("research");
   document.querySelector('[data-view="tags"]').textContent = t("tags");
   document.querySelector('[data-view="settings"]').textContent = t("settings");
   document.querySelectorAll(".stats small")[0].textContent = t("paperCount");
@@ -1736,7 +1741,7 @@ function applyLanguage() {
 
   setText("#view-settings .panel-head h3", t("modelSettings"));
   setText("#view-settings .panel-head .muted", t("apiKeyLocal"));
-  setText("#view-settings fieldset:not(.tag-policy-settings) legend", t("defaultModel"));
+  setText("#providerLegend", t("defaultModel"));
   setText("#settingsForm .primary-button", t("saveSettings"));
   setText("#openModelTest", t("testModel"));
   setText("#refreshAllModels", t("refreshAllModels"));
@@ -1882,6 +1887,7 @@ function renderAll() {
   renderTagCurationStatus();
   renderTagTree();
   renderTagDetail();
+  researchWorkspace.render();
   if (state.activePaperId && !state.paperDetailEditing) renderPaperDetail(state.activePaperId);
 }
 
@@ -2019,6 +2025,7 @@ function renderModelPicker(provider) {
   input.hidden = !isCustom;
   input.placeholder = isCustom ? t("customModelPlaceholder") : view.defaultModel;
   renderModelHint(provider);
+  renderSettingsSelection();
 }
 
 function renderModelHint(provider) {
@@ -2130,6 +2137,8 @@ function renderSettings() {
   const cfg = state.config;
   for (const id of ["bridgeUrl", "claudeModel", "codexModel", "customModel", "customBaseUrl"]) document.getElementById(id).value = cfg[id] || "";
   document.getElementById("bridgeToken").placeholder = cfg.hasBridgeToken ? ui("已保存，留空不修改", "Saved; leave blank to keep") : ui("粘贴桥接终端显示的连接码", "Paste the token printed by the bridge");
+  document.getElementById("bridgeSetup").open = !cfg.hasBridgeToken;
+  document.getElementById("bridgeSetupStatus").textContent = cfg.hasBridgeToken ? ui("连接码已保存", "Token saved") : ui("首次使用需配置", "Setup required");
   document.getElementById("customKey").placeholder = cfg.hasCustomKey ? t("keySavedPlaceholder") : t("keyMissingPlaceholder");
   document.getElementById("customJsonMode").checked = cfg.customJsonMode === true;
   document.getElementById("autoDescribeTags").checked = cfg.autoDescribeTags !== false;
@@ -3154,10 +3163,11 @@ function matchingTags(query, context = "", selected = []) {
 }
 
 let suggestionListId = 0;
-function renderTagSuggestions(input) {
+function renderTagSuggestions(input, { preserveActive = false } = {}) {
   const box = input.closest(".tag-combobox");
   const suggestions = box?.querySelector(".tag-suggestions");
   if (!suggestions) return;
+  const activeValue = preserveActive ? suggestions.querySelector(".tag-suggestion.active")?.dataset.tagValue : undefined;
   const selected = [...(input.closest(".manual-tag-list")?.querySelectorAll(".manual-tag-input") || [])].filter((el) => el !== input).map((el) => el.value);
   const matches = matchingTags(input.value, paperContextTextForTagInput(input), selected);
   const current = input.value.trim();
@@ -3187,7 +3197,14 @@ function renderTagSuggestions(input) {
   suggestions.setAttribute("role", "listbox");
   input.setAttribute("aria-controls", suggestions.id);
   input.removeAttribute("aria-activedescendant");
-  suggestions.querySelectorAll(".tag-suggestion").forEach((option, index) => { option.id = `${suggestions.id}-${index}`; option.setAttribute("role", "option"); option.setAttribute("aria-selected", "false"); });
+  suggestions.querySelectorAll(".tag-suggestion").forEach((option, index) => {
+    option.id = `${suggestions.id}-${index}`;
+    option.setAttribute("role", "option");
+    const active = activeValue !== undefined && option.dataset.tagValue === activeValue;
+    option.classList.toggle("active", active);
+    option.setAttribute("aria-selected", String(active));
+    if (active) input.setAttribute("aria-activedescendant", option.id);
+  });
 }
 
 function hideTagSuggestions(root = document) {
@@ -3363,6 +3380,7 @@ function renderTagDetail() {
     els.selectedTagName.textContent = t("tagDetail");
     els.selectedTagMeta.textContent = t("clickTag");
     els.tagDetail.innerHTML = `<div class="empty">${escapeHtml(t("clickTag"))}</div>`;
+    tagAnalysis.mount(null, null);
     return;
   }
 
@@ -3370,13 +3388,22 @@ function renderTagDetail() {
   els.selectedTagName.textContent = tag.name;
   els.selectedTagMeta.textContent = t("tagPaperCountLong", directPapers.length);
 
+  // Keep the analysis panel element across background refreshes of the same tag,
+  // so an open board, a typed comparison question or its focus are not torn down.
+  const analysisHost = document.getElementById("tagPaperAnalysis");
+  const keptAnalysis = analysisHost?.dataset.analysisTagId === tag.id ? analysisHost : null;
+  const keptFocus = keptAnalysis?.contains(document.activeElement) ? document.activeElement : null;
+  const keptRange = typeof keptFocus?.selectionStart === "number" ? [keptFocus.selectionStart, keptFocus.selectionEnd] : null;
+  const keptScroll = keptAnalysis?.scrollTop || 0;
   els.tagDetail.innerHTML = `
     <div class="tag-description-block"><p>${escapeHtml(tagDescriptionLabel(tag))}</p>${!isSystemTag(tag) ? `<small class="muted">${escapeHtml(tag.descriptionModel ? `${tag.descriptionProvider} / ${tag.descriptionModel} · ${formatDate(tag.descriptionUpdatedAt)}` : ui("根据你提供的标签和关联论文生成", "Based on your tag and linked papers"))} ${tag.descriptionStatus === "stale" ? ui(" · 待更新", " · Update pending") : ""}</small>${tag.descriptionError ? `<p class="description-error">${escapeHtml(tag.descriptionError)}</p>` : ""}` : ""}</div>
     <div class="button-row">
       <button class="secondary-button" type="button" data-filter-from-tag="${escapeHtml(tag.id)}">${ui("在论文库中筛选", "Filter library")}</button>
+      ${!isSystemTag(tag) ? `<button class="secondary-button" type="button" data-research-tag="${escapeHtml(tag.id)}">${ui("与其他标签融合", "Fuse with other tags")}</button>` : ""}
       ${!isSystemTag(tag) ? `<button class="secondary-button" type="button" data-describe-tag="${escapeHtml(tag.id)}">${ui("重新生成说明", "Regenerate description")}</button>` : ""}
       ${isSystemTag(tag) ? `<span class="muted">${state.language === "en" ? "System tag · cannot be deleted" : "系统标签 · 不可删除"}</span>` : `<button class="secondary-button danger-button" data-delete-tag-id="${tag.id}" type="button">${state.language === "en" ? "Delete Tag" : "删除标签"}</button>`}
     </div>
+    <section id="tagPaperAnalysis" aria-label="${ui("专题分析", "Topic analysis")}"></section>
     <div class="relation-row">
       <strong>${state.language === "en" ? "Aliases" : "别名"}</strong>
       <div class="chip-row">${(tag.aliases || []).length ? tag.aliases.map((name) => `<span class="tag-chip">${escapeHtml(name)}</span>`).join("") : `<span class="empty">${state.language === "en" ? "None" : "无"}</span>`}</div>
@@ -3386,6 +3413,13 @@ function renderTagDetail() {
       <div class="paper-list">${renderPaperCardsHtml(directPapers)}</div>
     </div>
   `;
+  if (keptAnalysis) {
+    document.getElementById("tagPaperAnalysis").replaceWith(keptAnalysis);
+    keptAnalysis.scrollTop = keptScroll;
+    keptFocus?.focus({ preventScroll: true });
+    if (keptRange) keptFocus.setSelectionRange(...keptRange);
+  }
+  tagAnalysis.mount(document.getElementById("tagPaperAnalysis"), tag);
 }
 
 function mergeStillValid(merge) {
@@ -3405,7 +3439,7 @@ function splitMergeTags(tags) {
 function renderMergeReview() {
   state.pendingMerges = state.pendingMerges.filter(mergeStillValid);
   const total = state.pendingMerges.length;
-  els.mergeReviewMeta.textContent = total ? `还有 ${total} 条建议待审核，已确认 ${state.reviewedMergeCount} 条` : `审核完成，已确认 ${state.reviewedMergeCount} 条合并`;
+  els.mergeReviewMeta.textContent = total ? ui(`还有 ${total} 条建议待审核，已确认 ${state.reviewedMergeCount} 条`, `${total} suggestions left; ${state.reviewedMergeCount} approved`) : ui(`审核完成，已确认 ${state.reviewedMergeCount} 条合并`, `Review complete; ${state.reviewedMergeCount} merges approved`);
 
   if (!total) {
     els.mergeReviewList.innerHTML = `
@@ -3419,6 +3453,7 @@ function renderMergeReview() {
     .map((merge, index) => {
       const sourceTags = splitMergeTags(merge.tags);
       const allTags = uniq([merge.canonical, ...sourceTags]);
+      const impact = merge.impact;
       return `
         <article class="merge-review-card" data-merge-index="${index}">
           <div class="merge-route">
@@ -3435,7 +3470,8 @@ function renderMergeReview() {
             ${allTags.map((name) => `<span class="tag-chip">${escapeHtml(name)}</span>`).join("")}
           </div>
           <p>${escapeHtml(merge.reason || (state.language === "en" ? "The LLM considers these tags highly similar" : "LLM 认为这些标签语义十分相似"))}</p>
-          <small>${state.language === "en" ? "Confidence" : "置信度"}：${(Number(merge.confidence || 0) * 100).toFixed(0)}%</small>
+          <small>${ui("模型把握程度（供参考）", "Model confidence (estimate)")}：${(Number(merge.confidence || 0) * 100).toFixed(0)}%</small>
+          ${impact ? `<div class="relation-row"><strong>${ui("合并影响预览", "Merge preview")}</strong><p>${escapeHtml(ui(`合并后共关联 ${impact.paperCount} 篇论文，其中 ${impact.sharedPaperCount} 篇被多个标签共享。所有论文和原标签名称（作为别名）都会保留。`, `${impact.paperCount} papers after merging; ${impact.sharedPaperCount} are shared across these tags. All papers and original names (as aliases) will be preserved.`))}</p>${(impact.tags || []).map((tag) => `<p><strong>${escapeHtml(tag.name)}</strong> · ${tag.paperCount} ${ui("篇", "papers")}<br><small>${(tag.papers || []).slice(0, 2).map((paper) => escapeHtml(paper.title) + (paper.memory ? ` — ${escapeHtml(paper.memory)}` : "")).join("<br>")}</small></p>`).join("")}<p>${impact.topicPacks?.length ? escapeHtml(ui(`将更新 ${impact.topicPacks.length} 个主题包的筛选规则：${impact.topicPacks.map((pack) => pack.name).join("、")}。合并后匹配的论文范围可能变化。`, `Filter rules in ${impact.topicPacks.length} topic packs will update: ${impact.topicPacks.map((pack) => pack.name).join(", ")}. Their matching papers may change.`)) : ui("不影响主题包筛选规则。", "No topic-pack filters are affected.")}</p></div>` : ""}
           <div class="button-row">
             <button class="primary-button small-button" type="button" data-approve-merge="${index}">${state.language === "en" ? "Merge" : "确认合并"}</button>
             <button class="secondary-button small-button" type="button" data-skip-merge="${index}">${state.language === "en" ? "Skip" : "跳过"}</button>
@@ -3618,7 +3654,9 @@ function switchView(name) {
   const viewId = `view-${name.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`)}`;
   document.querySelectorAll(".view").forEach((view) => view.classList.toggle("active", view.id === viewId));
   els.viewTitle.textContent = t(name) || t("appName");
+  tagAnalysis.setActive(name === "tags");
   if (name === "settings") autoRefreshModelCatalogs();
+  if (name === "research") researchWorkspace.render();
 }
 
 function manualTagInputs() {
@@ -3719,13 +3757,15 @@ document.body.addEventListener("input", (event) => {
   renderTagSuggestions(input);
 });
 
+let tagSuggestionFocusVersion = 0;
 document.body.addEventListener("focusin", (event) => {
+  const focusVersion = ++tagSuggestionFocusVersion;
   const input = event.target.closest(".manual-tag-input");
   if (!input) return;
   renderTagSuggestions(input);
   syncState({ force: true })
     .then(() => {
-      if (document.activeElement === input && input.getAttribute("aria-expanded") === "true") renderTagSuggestions(input);
+      if (focusVersion === tagSuggestionFocusVersion && document.activeElement === input && input.getAttribute("aria-expanded") === "true") renderTagSuggestions(input, { preserveActive: true });
     })
     .catch(() => {});
 });
@@ -4611,6 +4651,10 @@ els.refreshGraphButton.addEventListener("click", async () => {
     state.pendingMerges = result.merges || [];
     state.reviewedMergeCount = 0;
     renderAll();
+    if (!result.llmUsed) {
+      toast(t("llmUnavailable", result.error));
+      return;
+    }
     renderMergeReview();
     els.mergeReviewDialog.showModal();
     const mergeCount = state.pendingMerges.length;
@@ -4993,6 +5037,11 @@ els.translateAbstractButton.addEventListener("click", async () => {
 // 后台自动任务（翻译摘要 / 相似推荐）完成后，实时更新管理页数据；
 // 如果正好开着这篇论文的详情页，直接刷新对应区块
 chrome.runtime?.onMessage?.addListener((message) => {
+  if (message?.type === "paper-analyses-updated") {
+    if (message.error) toast(message.error);
+    api("/api/state").then((data) => { state.tags = data.tags; state.papers = data.papers; renderTagDetail(); }).catch(() => {});
+    return;
+  }
   if (message?.type === "tag-descriptions-updated") {
     api("/api/state").then((data) => { state.tags = data.tags; renderTagTree(); renderTagDetail(); renderPaperLibrary(); }).catch(() => {});
     return;
@@ -5033,6 +5082,18 @@ chrome.runtime?.onMessage?.addListener((message) => {
 resetTopicForm();
 // 打开管理页时让后台补跑没存成的剪藏图片（service worker 被回收过就会卡在 pending）
 chrome.runtime?.sendMessage?.({ type: "clip-archive-sweep" })?.catch?.(() => {});
+const tagAnalysis = createTagAnalysis({ getState: () => state, api, openPaper: showPaper, toast, syncLibrary: () => syncState({ force: true }) });
+const researchWorkspace = createResearchWorkspace({
+  root: document.getElementById("view-research"), getState: () => state, api,
+  refresh: () => syncState({ force: true }), openPaper: showPaper, toast
+});
+document.body.addEventListener("click", event => {
+  const button = event.target.closest("[data-research-tag]");
+  if (!button) return;
+  researchWorkspace.selectTag(button.dataset.researchTag);
+  switchView("research");
+});
+
 loadState()
   .then(() => {
     const hashMatch = location.hash.match(/^#paper=(.+)$/);
@@ -5128,6 +5189,7 @@ function renderLocalEffort(provider, selected, modelChanged = false) {
     unsupported ? (modelChanged ? ui('新模型不支持原 effort，已恢复默认。', 'Previous effort is unsupported; reset to default.') : ui('请重新选择 effort，或刷新目录确认。', 'Choose another effort or refresh the catalog.')) : '',
     entry?.efforts?.length === 0 ? ui('此模型未提供 effort 档位。', 'This model exposes no effort levels.') : ''
   ].filter(Boolean).join(' ');
+  renderSettingsSelection();
 }
 
 function renderLocalModelPicker(provider, selectedEffort) {
@@ -5194,7 +5256,28 @@ function renderBackendPanels() {
   document.getElementById('customBackendSettings').hidden = provider !== 'custom';
   document.getElementById('presetBackendSettings').hidden = ['claude', 'codex', 'custom'].includes(provider);
   document.querySelector('.key-actions').hidden = ['claude', 'codex', 'custom'].includes(provider);
+  document.querySelectorAll('[data-local-provider]').forEach(group => { group.hidden = group.dataset.localProvider !== provider; });
+  renderSettingsSelection();
 }
+
+function renderSettingsSelection() {
+  const provider = document.querySelector('input[name="provider"]:checked')?.value || 'qwen';
+  const local = ['claude', 'codex'].includes(provider);
+  const name = provider === 'claude' ? 'Claude Code' : provider === 'codex' ? 'Codex' : provider === 'custom' ? ui('兼容 API', 'Compatible API') : PROVIDER_VIEWS[provider].name;
+  const select = document.getElementById(provider + 'ModelSelect');
+  const model = local || provider === 'custom' ? document.getElementById(provider + 'Model').value.trim() : currentModelValue(provider);
+  const label = local && select?.value !== '__custom__' ? select.selectedOptions[0]?.textContent || model : model;
+  const summary = [name, label || ui('尚未选择模型', 'Choose a model')];
+  if (local) {
+    const effort = document.getElementById(provider + 'Effort');
+    summary.push(`effort: ${effort.selectedOptions[0]?.textContent || ui('CLI 默认', 'CLI default')}`);
+  }
+  const output = document.getElementById('settingsSelectionSummary');
+  const value = summary.join(' · ');
+  if (output.textContent !== value) output.textContent = value;
+}
+els.settingsForm.addEventListener('input', renderSettingsSelection);
+els.settingsForm.addEventListener('change', renderSettingsSelection);
 document.querySelectorAll('input[name="provider"]').forEach(input => input.addEventListener('change', renderBackendPanels));
 document.getElementById('checkBridge').addEventListener('click', async () => {
   const done = setBusy(document.getElementById('checkBridge'), ui('正在检测…', 'Checking…'));
@@ -5203,7 +5286,7 @@ document.getElementById('checkBridge').addEventListener('click', async () => {
   try {
     const result = await api('/api/bridge-health', { method: 'POST', body: JSON.stringify(collectExtraSettings()) });
     output.textContent = Object.entries(result.backends).map(([name, info]) => {
-      const status = info.status === 'ready' ? ui('已登录，可以使用', 'Signed in and ready') : info.status === 'auth' ? ui('需要在终端登录', 'Sign in in your terminal') : ui('未检测到可用 CLI', 'CLI not available');
+      const status = info.status === 'ready' ? ui('已安装并登录；实际调用请测试模型', 'Installed and signed in; test the model to verify generation') : info.status === 'auth' ? ui('需要在终端登录', 'Sign in in your terminal') : ui('未检测到可用 CLI', 'CLI not available');
       return `${name === 'claude' ? 'Claude Code' : 'Codex'}: ${status}${info.version ? ' · ' + info.version : ''}`;
     }).join(' / ');
     await refreshLocalModels();

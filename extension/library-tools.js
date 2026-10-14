@@ -242,7 +242,47 @@ export function mergeStoreChanges(base, edited, current) {
   }
   result.meta = { ...current.meta };
   for (const [key, value] of Object.entries(edited.meta || {})) {
-    if (!equal(base.meta?.[key], value)) result.meta[key] = value;
+    if (key === 'researchReports') {
+      if (!equal(base.meta?.libraryGeneration, current.meta?.libraryGeneration) && !equal(base.meta?.researchReports, value)) conflict();
+      const before = base.meta?.researchReports || {};
+      const changed = value || {};
+      const live = current.meta?.researchReports || {};
+      const reports = { ...live };
+      for (const id of new Set([...Object.keys(before), ...Object.keys(changed)])) {
+        if (equal(before[id], changed[id])) continue;
+        if (!equal(live[id], before[id]) && !equal(live[id], changed[id])) conflict();
+        if (Object.hasOwn(changed, id)) reports[id] = changed[id]; else delete reports[id];
+      }
+      result.meta.researchReports = reports;
+    } else if (!equal(base.meta?.[key], value)) result.meta[key] = value;
   }
   return result;
+}
+
+// Model quotes of saved text often differ only in whitespace, full-width versus
+// ASCII punctuation or quote-mark style (common with Chinese notes). Match on a
+// folded form, then return the EXACT saved substring, so stored evidence never
+// contains model edits. Different words or different punctuation never match.
+const QUOTE_FOLDS = { '，': ',', '、': ',', '；': ';', '：': ':', '！': '!', '？': '?', '。': '.', '（': '(', '）': ')', '【': '[', '】': ']', '《': '<', '》': '>', '“': '"', '”': '"', '„': '"', '「': '"', '」': '"', '『': '"', '』': '"', '‘': "'", '’': "'", '—': '-', '–': '-', '－': '-', '…': '...' };
+function foldQuoteText(text) {
+  const units = [], starts = [], ends = [];
+  let offset = 0;
+  for (const char of text) {
+    const code = char.codePointAt(0), next = offset + char.length;
+    if (!/\s/u.test(char)) {
+      const folded = QUOTE_FOLDS[char] ?? (code >= 0xff01 && code <= 0xff5e ? String.fromCharCode(code - 0xfee0) : char);
+      for (let index = 0; index < folded.length; index++) { units.push(folded[index]); starts.push(offset); ends.push(next); }
+    }
+    offset = next;
+  }
+  return { text: units.join(''), starts, ends };
+}
+
+export function matchSavedQuote(body, quote) {
+  if (typeof body !== 'string' || typeof quote !== 'string' || !quote.trim()) return '';
+  if (body.includes(quote)) return quote;
+  const target = foldQuoteText(quote).text;
+  if (target.length < 4) return '';
+  const folded = foldQuoteText(body), at = folded.text.indexOf(target);
+  return at < 0 ? '' : body.slice(folded.starts[at], folded.ends[at + target.length - 1]);
 }

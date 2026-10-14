@@ -22,6 +22,7 @@
           <button class="nav-item" data-view="library">论文录入</button>
           <button class="nav-item" data-view="search">智能检索</button>
           <button class="nav-item" data-view="topics">研究主题包</button>
+          <button class="nav-item" data-view="research">深度探索</button>
           <button class="nav-item" data-view="tags">标签库</button>
           <button class="nav-item" data-view="settings">模型设置</button>
         </nav>
@@ -434,6 +435,8 @@
           </section>
         </section>
 
+        <section class="view" id="view-research"></section>
+
         <section class="view" id="view-settings">
           <form class="panel settings-panel" id="settingsForm">
             <div class="panel-head">
@@ -441,15 +444,10 @@
               <span class="muted">API Key 仅保存在 Chrome 插件本地存储</span>
             </div>
 
-            <p class="muted" id="modelProcessingNotice" data-zh="配置并保存模型后，相关查询、标签和论文文字会发送给你选择的后端；保存论文也可能自动触发摘要翻译和库内推荐。下方开关只控制自动标签说明。本机 CLI 不等于离线推理。基础收藏和检索无需配置模型。" data-en="After you configure and save a model, relevant queries, tags and paper text are sent to your chosen backend. Saving a paper may also trigger abstract translation and library recommendations. The switch below controls only automatic tag descriptions. A local CLI does not guarantee offline inference. Core capture and search do not require a model."></p>
+            <p class="muted" id="modelProcessingNotice" data-zh="配置并保存模型后，相关查询、标签和论文文字会发送给你选择的后端；保存论文也可能自动触发摘要翻译和库内推荐。下方开关控制自动标签说明；标签专题分析仅在点击生成或更新按钮后执行。本机 CLI 不等于离线推理。基础收藏和检索无需配置模型。" data-en="After you configure and save a model, relevant queries, tags and paper text are sent to your chosen backend. Saving a paper may also trigger abstract translation and library recommendations. The switch below controls automatic tag descriptions. Topic analysis runs only after you click its analyze or update button. A local CLI does not guarantee offline inference. Core capture and search do not require a model."></p>
 
-            <fieldset class="tag-policy-settings">
-              <legend id="tagPolicyLegend">标签管理</legend>
-              <label class="checkbox-label"><input id="autoDescribeTags" type="checkbox" checked /><span id="autoDescribeTagsLabel">保存后自动用 LLM 生成或更新标签说明</span></label>
-              <p class="muted" id="tagPolicyHint">优先复用已有标签与别名。标签数量不设上限。自动说明会将关联论文的摘要、笔记和正文片段发送给你配置的模型。</p>
-            </fieldset>
-            <fieldset>
-              <legend>默认模型</legend>
+            <fieldset class="provider-settings">
+              <legend id="providerLegend">默认模型</legend>
               <div class="segmented">
                 <label><input type="radio" name="provider" value="claude" /> Claude Code</label><label><input type="radio" name="provider" value="codex" /> Codex</label><label><input type="radio" name="provider" value="custom" /> <span data-zh="兼容 API" data-en="Compatible API"></span></label>
                 <label><input type="radio" name="provider" value="qwen" checked /> Qwen/百炼</label>
@@ -460,20 +458,24 @@
             </fieldset>
 
             <section id="localBackendSettings" class="backend-panel" hidden>
-              <h3 data-zh="使用本机 Claude Code / Codex" data-en="Use local Claude Code / Codex"></h3>
+              <details id="bridgeSetup" class="bridge-setup">
+              <summary><span data-zh="本机连接与首次设置" data-en="Local connection and setup"></span><small id="bridgeSetupStatus"></small></summary>
               <ol class="bridge-steps"><li data-zh="首次使用先登录：claude auth login 或 codex login。" data-en="Sign in once: claude auth login or codex login."></li><li data-zh="macOS：在项目目录运行一次 npm run bridge:install，启用登录自启动，无需保持终端开启。其他系统运行 npm run bridge 并保持终端开启。" data-en="macOS: run npm run bridge:install once in the project for automatic startup, with no terminal to keep open. Other systems: run npm run bridge and keep the terminal open."></li><li data-zh="首次配置时，macOS 运行 npm run bridge:token 查看连接码；手动模式复制启动终端中的连接码。填入下方，检测连接后保存。已有连接码可继续使用。" data-en="For first-time setup on macOS, run npm run bridge:token. In manual mode, copy the token from the startup terminal. Paste it below, check the connection and save. Existing tokens remain valid."></li></ol>
               <div class="settings-grid"><label><span data-zh="桥接地址" data-en="Bridge URL"></span><input id="bridgeUrl" placeholder="http://127.0.0.1:39321" /></label><label><span data-zh="连接码" data-en="Connection token"></span><input id="bridgeToken" type="password" autocomplete="off" /></label>
               </div>
-              <fieldset class="local-model-group"><legend>Claude Code</legend><div class="settings-grid">
-                <label><span data-zh="模型" data-en="Model"></span><select id="claudeModelSelect"></select><input id="claudeModel" class="model-custom-input" aria-label="Claude Code custom model" placeholder="Model ID" hidden /></label>
-                <label><span data-zh="思考强度 · effort" data-en="Reasoning effort"></span><select id="claudeEffort"></select></label>
+              <div class="button-row bridge-actions"><button id="checkBridge" type="button" class="secondary-button" data-zh="检测本机连接" data-en="Check local connection"></button><label class="checkbox-label"><input id="clearBridgeToken" type="checkbox"/><span data-zh="清除连接码" data-en="Clear token"></span></label></div><p id="bridgeHealth" class="muted" role="status"></p>
+              </details>
+              <div class="model-selection-heading"><div><p class="eyebrow" data-zh="本次使用" data-en="YOUR SELECTION"></p><h3 data-zh="模型与思考强度" data-en="Model and reasoning effort"></h3></div><button id="refreshLocalModels" type="button" class="secondary-button" data-zh="刷新模型列表" data-en="Refresh models"></button></div>
+              <fieldset class="local-model-group" id="claudeModelGroup" data-local-provider="claude"><legend>Claude Code</legend><div class="settings-grid">
+                <label><span data-zh="模型" data-en="Model"></span><select id="claudeModelSelect" aria-describedby="claudeModelHint"></select><input id="claudeModel" class="model-custom-input" aria-label="Claude Code custom model" placeholder="Model ID" hidden /></label>
+                <label><span data-zh="思考强度 · effort" data-en="Reasoning effort"></span><select id="claudeEffort" aria-describedby="localEffortHint"></select></label>
               </div><p id="claudeModelHint" class="model-hint muted"></p></fieldset>
-              <fieldset class="local-model-group"><legend>Codex</legend><div class="settings-grid">
-                <label><span data-zh="模型" data-en="Model"></span><select id="codexModelSelect"></select><input id="codexModel" class="model-custom-input" aria-label="Codex custom model" placeholder="Model ID" hidden /></label>
-                <label><span data-zh="思考强度 · effort" data-en="Reasoning effort"></span><select id="codexEffort"></select></label>
+              <fieldset class="local-model-group" id="codexModelGroup" data-local-provider="codex"><legend>Codex</legend><div class="settings-grid">
+                <label><span data-zh="模型" data-en="Model"></span><select id="codexModelSelect" aria-describedby="codexModelHint"></select><input id="codexModel" class="model-custom-input" aria-label="Codex custom model" placeholder="Model ID" hidden /></label>
+                <label><span data-zh="思考强度 · effort" data-en="Reasoning effort"></span><select id="codexEffort" aria-describedby="localEffortHint"></select></label>
               </div><p id="codexModelHint" class="model-hint muted"></p></fieldset>
-              <p class="muted" data-zh="默认由 CLI 决定模型和思考强度；effort 越高通常耗时越久。刷新可读取本机模型目录，实际可用性以测试结果为准。CLI 仍通过模型服务处理内容。" data-en="Default leaves model and effort to the CLI. Higher effort usually takes longer. Refresh to read the local catalog; test to verify access. CLIs still send content to model services."></p>
-              <div class="button-row"><button id="checkBridge" type="button" class="secondary-button" data-zh="检测本机连接" data-en="Check local connection"></button><button id="refreshLocalModels" type="button" class="secondary-button" data-zh="刷新模型列表" data-en="Refresh models"></button><label class="checkbox-label"><input id="clearBridgeToken" type="checkbox"/><span data-zh="清除连接码" data-en="Clear token"></span></label></div><p id="bridgeHealth" class="muted" role="status"></p><p id="localCatalogStatus" class="muted" role="status"></p>
+              <p id="localEffortHint" class="muted" data-zh="选择 CLI 默认时由后端决定；更高的 effort 通常需要更长时间。可用档位随模型变化。" data-en="CLI default lets the backend decide. Higher effort usually takes longer. Available levels depend on the model."></p>
+              <p id="localCatalogStatus" class="muted" role="status"></p>
             </section>
             <section id="customBackendSettings" class="backend-panel" hidden><h3 data-zh="OpenAI 兼容 Chat Completions API" data-en="OpenAI-compatible Chat Completions API"></h3><div class="settings-grid"><label><span>Base URL</span><input id="customBaseUrl" placeholder="https://api.example.com/v1" /></label><label><span data-zh="模型名称" data-en="Model ID"></span><input id="customModel" placeholder="填写服务商提供的模型 ID / Model ID" /></label><label><span data-zh="API Key（本地服务可留空）" data-en="API key (optional for local servers)"></span><input id="customKey" type="password" autocomplete="off" /></label><label class="checkbox-label"><input id="clearCustomKey" type="checkbox" /><span data-zh="清除 API Key" data-en="Clear API key"></span></label></div><label class="checkbox-label"><input id="customJsonMode" type="checkbox" /><span data-zh="发送 JSON mode 参数（服务商支持时开启）" data-en="Send JSON mode parameter (enable if supported)"></span></label><p class="muted" data-zh="填写 API 根地址，程序会追加 /chat/completions。可接其他厂商、Ollama 或 LM Studio 的兼容接口。" data-en="Enter the API base URL; /chat/completions is appended. Supports compatible provider, Ollama and LM Studio endpoints."></p></section>
             <div class="settings-grid" id="presetBackendSettings">
@@ -557,11 +559,21 @@
               <label><input type="checkbox" id="clearDeepseekKey" /> 清除 DeepSeek Key</label>
             </div>
 
-            <div class="button-row">
+            <div class="settings-model-actions">
+              <div class="settings-selection"><span data-zh="本次选择" data-en="Selected for this request"></span><strong id="settingsSelectionSummary" role="status"></strong><small id="settingsSelectionHint" data-zh="保存后生效；测试模型使用当前选择。" data-en="Save to apply. Test model uses this selection."></small></div>
+              <div class="button-row">
               <button class="primary-button" type="submit">保存设置</button>
               <button class="secondary-button" type="button" id="openModelTest">测试模型</button>
               <button class="secondary-button" type="button" id="refreshAllModels">刷新全部模型列表</button>
+              </div>
             </div>
+
+            <fieldset class="tag-policy-settings">
+              <legend id="tagPolicyLegend">标签管理</legend>
+              <label class="checkbox-label"><input id="autoDescribeTags" type="checkbox" checked /><span id="autoDescribeTagsLabel">保存后自动用 LLM 生成或更新标签说明</span></label>
+              <p class="muted" id="topicAnalysisPolicyHint" data-zh="专题分析重点参考完整个人笔记与对话记录，同时读取记忆线索、完整摘要及全部剪藏 Markdown。先逐篇理解方法与个人思考，再综合比较共同点、差异与取舍，提出待验证的启发。新增论文或修改材料后，仅提示当前报告尚未覆盖的变化；点击标签详情中的“生成专题分析”或“更新分析”后才调用模型，只重读受影响的论文，再更新整体分析。已完成的阅读结果会保存。默认沿用该标签上次成功的模型与 effort，首次使用当前设置。" data-en="Topic analysis prioritizes complete personal notes and conversations, alongside memory cues, complete abstracts and all clip Markdown. It first reads each paper’s method and your thinking, then synthesizes common ground, differences, tradeoffs and ideas to test. New papers or source edits only show what the saved report has not covered. Click “Analyze this topic” or “Update analysis” in tag details to run the model, reread affected papers and refresh the synthesis. Completed reading is saved. Each tag reuses its last successful model and effort, with current settings used for its first analysis."></p>
+              <p class="muted" id="tagPolicyHint">优先复用已有标签与别名。标签数量不设上限。自动说明会将关联论文的摘要、笔记和正文片段发送给你配置的模型。</p>
+            </fieldset>
 
             <section class="data-transfer">
               <div>
@@ -607,7 +619,7 @@
       <form class="model-test-form" id="modelTestForm">
         <label>
           <span>测试问题</span>
-          <textarea id="modelTestQuestion" rows="4" placeholder="输入一个问题，测试当前保存的 Qwen 或智谱模型"></textarea>
+          <textarea id="modelTestQuestion" rows="4" placeholder="输入简短问题，测试设置页当前选择的模型" data-placeholder-zh="输入简短问题，测试设置页当前选择的模型" data-placeholder-en="Ask a short question to test the model currently selected in settings"></textarea>
         </label>
         <button class="primary-button" type="submit">发送问题</button>
       </form>
