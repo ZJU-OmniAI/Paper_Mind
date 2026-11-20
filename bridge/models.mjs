@@ -7,6 +7,7 @@ import { EFFORTS } from '../extension/local-models.js';
 // Only capability requests, never a user message or generation. Bound both
 // runtime and total output, and reap the child before deleting its workspace.
 export async function probeModels(provider, { timeout = 12000 } = {}) {
+  const bin = await resolveCli(provider);
   const cwd = await mkdtemp(path.join(os.tmpdir(), 'paper-mind-models-'));
   try {
     return await new Promise((resolve, reject) => {
@@ -15,7 +16,7 @@ export async function probeModels(provider, { timeout = 12000 } = {}) {
           '--permission-mode', 'dontAsk', '--strict-mcp-config', '--mcp-config', '{"mcpServers":{}}',
           '--disable-slash-commands', '--tools', '', '--no-session-persistence', '--settings', '{"disableAllHooks":true}']
         : ['app-server'];
-      const child = spawnCli(resolveCli(provider), args, cwd);
+      const child = spawnCli(bin, args, cwd);
       let buffer = '', bytes = 0, finished = false, result, failure;
       const models = [], cursors = new Set();
       const finish = (data, error) => {

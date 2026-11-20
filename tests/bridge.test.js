@@ -2,11 +2,11 @@ import test from 'node:test';
 import http from 'node:http';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { mkdtemp, rm, stat, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, rm, stat, symlink, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { bridgeRequestLimitBytes, createBridge, loadToken } from '../bridge/server.mjs';
-import { runProcess, validateRequest, cliArgs } from '../bridge/cli.mjs';
+import { runProcess, validateRequest, cliArgs, resolveCli, parseCliVersion, compareCliVersions } from '../bridge/cli.mjs';
 import { probeModels, normalizeModels } from '../bridge/models.mjs';
 
 const token='a'.repeat(64);
@@ -310,4 +310,42 @@ test('CLI capability probes paginate, sanitize effort metadata, reject errors an
     await writeFile(fake,'console.log(JSON.stringify({id:1,error:{message:"fixture"}}));setInterval(()=>{},1000);');
     await assert.rejects(probeModels('codex'),/目录/);
   } finally {if(previous===undefined)delete process.env[key];else process.env[key]=previous;}
+});
+
+test('CLI versions follow semantic-version order, with releases above their pre-releases',()=>{
+  assert.deepEqual(parseCliVersion('codex-cli 0.169.0-alpha.11.1'),{parts:[0,169,0],pre:['alpha','11','1']});
+  assert.deepEqual(parseCliVersion('2.1.323 (Claude Code)'),{parts:[2,1,323],pre:[]});
+  assert.equal(parseCliVersion('Error: native binary not installed'),null);
+  const ordered=['0.159.2','0.169.0-alpha','0.169.0-alpha.1','0.169.0-alpha.11.1','0.169.0-beta','0.169.0-beta.2','0.169.0-beta.11','0.169.0-rc.1','0.169.0','0.171.0','2.1.323'].map(parseCliVersion);
+  for (let i=1;i<ordered.length;i++) {
+    assert.ok(compareCliVersions(ordered[i-1],ordered[i])<0,`${i-1} < ${i}`);
+    assert.ok(compareCliVersions(ordered[i],ordered[i-1])>0,`${i} > ${i-1}`);
+  }
+  assert.equal(compareCliVersions(parseCliVersion('1.2.3'),parseCliVersion('v1.2.3')),0);
+  assert.ok(compareCliVersions(parseCliVersion('0.0.1'),null)>0);
+});
+
+test('the bridge runs the newest working CLI install instead of the first one on PATH',{skip:process.platform==='win32'},async t=>{
+  const dir=await mkdtemp(path.join(os.tmpdir(),'paper-mind-cli-versions-'));
+  t.after(()=>rm(dir,{recursive:true,force:true}));
+  const install=async(name,script)=>{
+    await mkdir(path.join(dir,name),{recursive:true});
+    await writeFile(path.join(dir,name,'codex'),'#!/bin/sh\n'+script+'\n',{mode:0o755});
+    return path.join(dir,name,'codex');
+  };
+  const broken=await install('broken','echo "Error: native binary not installed" >&2; exit 1');
+  const npm=await install('npm','echo "codex-cli 900.1.0"');
+  const app=await install('app','echo "codex-cli 900.2.0-alpha.11.1"');
+  await mkdir(path.join(dir,'alias'));
+  await symlink(npm,path.join(dir,'alias','codex'));
+  const keys=['PATH','PAPER_MIND_CODEX_BIN'],previous=keys.map(key=>process.env[key]);
+  t.after(()=>keys.forEach((key,i)=>{if(previous[i]===undefined)delete process.env[key];else process.env[key]=previous[i];}));
+  delete process.env.PAPER_MIND_CODEX_BIN;
+  process.env.PATH=['broken','alias','npm','app'].map(name=>path.join(dir,name)).concat(previous[0]||'').join(path.delimiter);
+  assert.equal(await resolveCli('codex'),app);
+  // An in-place upgrade of an earlier copy is noticed without restarting the bridge.
+  await writeFile(npm,'#!/bin/sh\necho "codex-cli 900.10.0"\n',{mode:0o755});
+  assert.equal(await resolveCli('codex'),path.join(dir,'alias','codex'));
+  process.env.PAPER_MIND_CODEX_BIN=broken;
+  assert.equal(await resolveCli('codex'),broken);
 });

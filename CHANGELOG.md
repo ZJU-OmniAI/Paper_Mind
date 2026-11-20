@@ -2,6 +2,10 @@
 
 Notable changes to Paper_Mind. Versions follow the `version` field in `extension/manifest.json`.
 
+## Unreleased
+
+- Fixed newly released Codex models (for example GPT-6.2-Sol) missing from the local model list. The bridge ran the first `codex` on `PATH`, often a stale npm copy, and still looked for the retired standalone Codex app. It now also finds the Codex CLI bundled with the macOS ChatGPT app and, when several Claude Code or Codex installs coexist, runs the newest one whose `--version` succeeds; broken installs are skipped and in-place upgrades are noticed without a restart. `PAPER_MIND_CLAUDE_BIN` / `PAPER_MIND_CODEX_BIN` still take precedence. Managed macOS installations must run `npm run bridge:install` once to load the new runtime.
+
 ## 1.7.0
 
 - Fixed empty authors and abstracts, and placeholder titles such as `arXiv:2405.19209 · LLM_in_PDF`, when saving from pages the popup cannot read: PDFs opened in the LLM_in_PDF reader (`chrome-extension://…/reader/reader.html?id=…` / `?url=…`) or another extension's PDF viewer. The popup resolves the wrapped paper, fills the title, authors, year, venue and full abstract from its arXiv ID, OpenReview ID, conference landing page (NeurIPS, CVF, ACL, PMLR, JMLR, IJCAI, AAAI, RSS, IEEE) or DOI, and saves the paper's own address instead of the reader address. Lookups never overwrite fields edited while they run.
